@@ -206,20 +206,6 @@ export default function Header() {
                         <p className="text-[11px] text-gray-500">{language === "hi" ? "पता एवं संवाद" : "Location & helpline"}</p>
                       </div>
                     </Link>
-
-                    <div className="my-1 border-t border-gray-100" />
-
-                    <Link
-                      href="/quiz/upload"
-                      onClick={() => setMoreDropdownOpen(false)}
-                      className="flex items-center gap-3 p-2.5 rounded-xl bg-amber-50/70 hover:bg-amber-100 text-amber-900 transition-colors"
-                    >
-                      <Upload className="w-4 h-4 text-amber-700 shrink-0" />
-                      <div>
-                        <p className="text-xs font-bold">{language === "hi" ? "CSV क्विज़ अपलोड (Admin)" : "CSV Bulk Quiz Upload"}</p>
-                        <p className="text-[10px] text-amber-800/80">{language === "hi" ? "10/15 प्रश्न एक साथ अपलोड करें" : "One-shot 10–15 question importer"}</p>
-                      </div>
-                    </Link>
                   </div>
                 </div>
               )}
@@ -395,14 +381,6 @@ export default function Header() {
                   >
                     <Phone className="w-4 h-4 text-amber-600" />
                     <span>{t.nav.contact}</span>
-                  </Link>
-                  <Link
-                    href="/quiz/upload"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-2.5 rounded-lg text-sm font-bold text-amber-900 hover:text-amber-700"
-                  >
-                    <Upload className="w-4 h-4 text-amber-700" />
-                    <span>CSV Bulk Quiz Upload</span>
                   </Link>
                 </div>
               )}

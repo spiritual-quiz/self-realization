@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import confetti from "canvas-confetti";
@@ -27,7 +28,9 @@ import {
   Flame,
   Music,
   Timer,
-  AlertTriangle
+  Printer,
+  ShieldCheck,
+  FileText
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { parseCSVToQuestions, SAMPLE_CSV_CONTENT, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
@@ -47,7 +50,7 @@ function QuizPlayInner() {
   const [quizTitle, setQuizTitle] = useState("Bhagavad-gītā Wisdom Challenge");
   const [questions, setQuestions] = useState<ParsedQuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [timerDuration, setTimerDuration] = useState<number>(10); // Default 10s
+  const [timerDuration, setTimerDuration] = useState<number>(10);
 
   // Gaming & Timer State
   const [timeLeft, setTimeLeft] = useState<number>(10);
@@ -66,10 +69,10 @@ function QuizPlayInner() {
   const [soundFxEnabled, setSoundFxEnabled] = useState(true);
   const [bgMusicPlaying, setBgMusicPlaying] = useState(false);
   
-  // Completion & Review State
+  // Completion & Certificate State
   const [isComplete, setIsComplete] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [reviewMode, setReviewMode] = useState(false);
+  const [certificateId, setCertificateId] = useState("");
   const [showThinking, setShowThinking] = useState(false);
 
   // Audio References
@@ -77,7 +80,6 @@ function QuizPlayInner() {
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 4 Pastel Card Styles with High Contrast
   const pastelStyles = {
@@ -115,10 +117,10 @@ function QuizPlayInner() {
       setTimeLeft(10);
     }
 
+    setCertificateId("SR-" + Math.random().toString(36).substring(2, 8).toUpperCase());
+
     return () => {
-      if (bgAudioRef.current) {
-        bgAudioRef.current.pause();
-      }
+      if (bgAudioRef.current) bgAudioRef.current.pause();
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [quizIdParam]);
@@ -130,9 +132,7 @@ function QuizPlayInner() {
       bgAudioRef.current.pause();
       setBgMusicPlaying(false);
     } else {
-      bgAudioRef.current.play().then(() => {
-        setBgMusicPlaying(true);
-      }).catch(() => {});
+      bgAudioRef.current.play().then(() => setBgMusicPlaying(true)).catch(() => {});
     }
   };
 
@@ -173,7 +173,7 @@ function QuizPlayInner() {
     };
   }, [currentIndex, quizStarted, isAnswered, isComplete, timerDuration]);
 
-  // Handle Timeout (Time Up)
+  // Handle Timeout
   const handleTimeOut = () => {
     if (isAnswered) return;
     setIsAnswered(true);
@@ -217,7 +217,6 @@ function QuizPlayInner() {
     ]);
 
     if (isCorrect) {
-      // Streak calculation & bonus
       const newStreak = streak + 1;
       setStreak(newStreak);
       if (newStreak > maxStreak) setMaxStreak(newStreak);
@@ -227,19 +226,17 @@ function QuizPlayInner() {
       setFloatingScore(pointsEarned);
       playFx("correct");
 
-      // Grand Floral Petal Celebration Burst
       confetti({
-        particleCount: 65,
+        particleCount: 70,
         spread: 80,
         origin: { y: 0.6 },
         colors: ["#D97706", "#F59E0B", "#F43F5E", "#10B981", "#8B5CF6"],
         shapes: ["circle"],
       });
 
-      // Clear floating score after animation
       setTimeout(() => setFloatingScore(null), 1200);
 
-      // Auto-advance after 2.8 seconds
+      // Auto-advance after 2.8 seconds on correct
       setTimeout(() => {
         handleNextQuestion();
       }, 2800);
@@ -264,24 +261,23 @@ function QuizPlayInner() {
         setBgMusicPlaying(true);
       }
       confetti({
-        particleCount: 150,
+        particleCount: 160,
         spread: 100,
         origin: { y: 0.5 },
       });
     }
   };
 
-  // Download PDF Certificate
+  // Reliable PDF Certificate Generator & Downloader
   const handleDownloadCertificate = async () => {
     setGeneratingPdf(true);
     try {
       const totalMarks = questions.reduce((a, b) => a + b.points, 0);
       const percentage = (score / totalMarks) * 100;
-      const certId = "SR-Q-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
       const pdfBytes = await generateQuizCertificatePdf({
-        certificateId: certId,
-        participantName: participantName || "Sincere Devotee",
+        certificateId,
+        participantName: participantName.trim() || "Devotee Seeker",
         quizTitle,
         score,
         totalMarks,
@@ -289,16 +285,20 @@ function QuizPlayInner() {
         dateStr: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
       });
 
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+      // Safe Uint8Array buffer creation for mobile & desktop
+      const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `SelfRealization_Certificate_${certId}.pdf`;
+      a.download = `SelfRealization_${participantName.replace(/\s+/g, "_")}_Certificate.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch (e) {
-      console.error("PDF generation failed:", e);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e: any) {
+      console.error("PDF generation error:", e);
+      // Fallback: window.print()
+      window.print();
     } finally {
       setGeneratingPdf(false);
     }
@@ -323,7 +323,7 @@ function QuizPlayInner() {
               {quizTitle}
             </h1>
             <p className="text-sm text-gray-600 mt-2">
-              Bilingual dual-display • {timerDuration > 0 ? `${timerDuration}s Timer` : "Unlimited Time"} • Streak multipliers • Instant Certificate
+              Bilingual dual-display • {timerDuration > 0 ? `${timerDuration}s Timer` : "Unlimited Time"} • Question Images • Instant Certificate
             </p>
           </div>
 
@@ -332,7 +332,6 @@ function QuizPlayInner() {
               e.preventDefault();
               if (participantName.trim()) {
                 setQuizStarted(true);
-                // Prompt background music start on user interaction
                 if (bgAudioRef.current) {
                   bgAudioRef.current.play().then(() => setBgMusicPlaying(true)).catch(() => {});
                 }
@@ -342,7 +341,7 @@ function QuizPlayInner() {
           >
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700 uppercase">
-                Participant Name (for Certificate) *
+                Participant Name (Printed on Certificate) *
               </label>
               <input
                 type="text"
@@ -389,14 +388,17 @@ function QuizPlayInner() {
     );
   }
 
-  // 2. Completion Screen
+  // 2. Completion Screen with On-Screen Certificate & Detailed Wrong Answers Breakdown
   if (isComplete) {
     const totalMarks = questions.reduce((a, b) => a + b.points, 0);
     const percentage = (score / totalMarks) * 100;
+    const dateFormatted = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 
     return (
-      <div className="max-w-2xl mx-auto px-4 py-12 animate-fade-in space-y-8 pb-24">
-        <div className="bg-white rounded-3xl p-8 sm:p-12 border border-amber-200 shadow-2xl text-center space-y-6 relative overflow-hidden">
+      <div className="max-w-4xl mx-auto px-4 py-10 animate-fade-in space-y-10 pb-28">
+        
+        {/* Score Summary Banner */}
+        <div className="bg-white rounded-3xl p-8 sm:p-10 border border-amber-200 shadow-xl text-center space-y-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-amber-500 via-emerald-500 to-amber-600" />
 
           <div className="w-20 h-20 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-inner text-4xl animate-bounce">
@@ -411,7 +413,7 @@ function QuizPlayInner() {
               Congratulations, {participantName}!
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              You have completed the {quizTitle} with flying colors.
+              You have completed the {quizTitle} with sincerity and dedication.
             </p>
           </div>
 
@@ -435,70 +437,183 @@ function QuizPlayInner() {
               <p className="text-xs text-gray-500 font-semibold uppercase mt-1">Best Streak</p>
             </div>
           </div>
+        </div>
 
-          {/* Download Official Certificate */}
-          <div className="space-y-3 pt-2">
+        {/* ON-SCREEN OFFICIAL CERTIFICATE (Guaranteed to render & print in all browsers) */}
+        <div className="bg-[#FAF8F5] p-6 sm:p-10 rounded-3xl border-4 border-amber-600 shadow-2xl relative text-center space-y-6 overflow-hidden">
+          {/* Inner Golden Border */}
+          <div className="border border-amber-300 rounded-2xl p-6 sm:p-8 space-y-5 bg-white relative">
+            <div className="text-xs font-bold tracking-widest text-amber-700 uppercase">
+              SelfRealization • Digital Outreach Platform
+            </div>
+
+            <h3 className="text-2xl sm:text-3xl font-serif font-black text-amber-950 tracking-tight">
+              CERTIFICATE OF DEVOTIONAL EXCELLENCE
+            </h3>
+
+            <p className="text-xs sm:text-sm italic text-gray-600 font-serif">
+              This is proudly presented to
+            </p>
+
+            <div className="py-2">
+              <span className="text-2xl sm:text-4xl font-bold font-serif text-amber-700 underline decoration-amber-400 decoration-2 underline-offset-8">
+                {participantName}
+              </span>
+            </div>
+
+            <p className="text-xs sm:text-sm text-gray-700 max-w-xl mx-auto leading-relaxed">
+              for successfully passing and demonstrating spiritual understanding in <br />
+              <strong className="text-amber-900 text-sm sm:text-base">“{quizTitle}”</strong> <br />
+              securing a score of <strong>{score} / {totalMarks} ({percentage.toFixed(1)}%)</strong>.
+            </p>
+
+            <div className="pt-6 border-t border-amber-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
+              <div className="text-left font-mono">
+                <p>Date: {dateFormatted}</p>
+                <p className="text-[10px] text-gray-400">Certificate ID: {certificateId}</p>
+              </div>
+
+              <div className="w-12 h-12 rounded-full border-2 border-amber-500 bg-amber-50 flex items-center justify-center text-amber-700 font-serif font-black text-sm">
+                ॐ
+              </div>
+
+              <div className="text-right">
+                <div className="w-36 h-px bg-amber-900 mx-auto sm:ml-auto mb-1" />
+                <p className="font-bold text-amber-950">Director of Outreach</p>
+                <p className="text-[10px] text-gray-500">SelfRealization Platform</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Certificate Download & Print Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <button
               type="button"
               onClick={handleDownloadCertificate}
               disabled={generatingPdf}
-              className="w-full py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 shadow-xl transition-all flex items-center justify-center gap-2 transform active:scale-98"
+              className="py-3.5 px-6 rounded-2xl font-bold text-sm bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 text-white shadow-lg flex items-center justify-center gap-2 transform active:scale-95"
             >
-              <Award className="w-5 h-5 text-amber-200" />
-              <span>{generatingPdf ? "Creating Official PDF..." : "Download Official Certificate (PDF)"}</span>
+              <Download className="w-4 h-4 text-amber-200" />
+              <span>{generatingPdf ? "Creating PDF..." : "Download Official PDF Certificate"}</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setReviewMode(!reviewMode)}
-              className="w-full py-3 px-5 rounded-xl font-bold text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 transition-colors"
+              onClick={() => window.print()}
+              className="py-3.5 px-6 rounded-2xl font-bold text-sm bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 shadow-sm flex items-center justify-center gap-2"
             >
-              {reviewMode ? "Hide Answers Review" : "Review All Questions & Explanations"}
+              <Printer className="w-4 h-4 text-amber-700" />
+              <span>Print / Save as PDF</span>
             </button>
-          </div>
-
-          {/* Invitation to Free Weekly Classes */}
-          <div className="p-6 bg-gradient-to-br from-amber-950 via-stone-900 to-amber-950 text-white rounded-2xl border border-amber-800 text-left space-y-3">
-            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Next Devotional Step</span>
-            <h4 className="text-lg font-bold text-amber-50">Deepen your realization with our Weekly Free Class</h4>
-            <p className="text-xs text-amber-200/80">
-              Join live interactive Zoom sessions and in-person discussions with senior practitioners every week.
-            </p>
-            <Link
-              href="/live-classes"
-              className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white rounded-xl shadow-md transition-colors"
-            >
-              <span>Join a Free Class</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
         </div>
 
-        {/* Answer Review Section */}
-        {reviewMode && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-md space-y-4 animate-fade-in">
-            <h3 className="text-lg font-bold text-gray-900">Question & Answer Review</h3>
-            <div className="space-y-4">
-              {questions.map((q, idx) => {
-                const log = answersLog.find((a) => a.questionId === q.id);
-                return (
-                  <div key={q.id} className="p-4 rounded-xl border border-amber-100 bg-amber-50/30 space-y-2 text-xs">
-                    <p className="font-bold text-gray-900">{idx + 1}. {q.question.hi} / {q.question.en}</p>
-                    <div className="flex gap-4">
-                      <span className="text-gray-500">Your choice: <strong className={log?.isCorrect ? "text-emerald-700" : "text-rose-700"}>{log?.selected}</strong></span>
-                      <span className="text-emerald-700">Correct: <strong>{q.correctAnswer}</strong></span>
-                    </div>
-                    {q.explanation.hi && (
-                      <p className="text-amber-900 bg-white p-2.5 rounded-lg border border-amber-200">
-                        <strong>Explanation:</strong> {q.explanation.hi} / {q.explanation.en}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+        {/* DETAILED QUESTION & ANSWER REVIEW (Wrong Answer Analysis) */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-lg space-y-6">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div>
+              <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-amber-600" />
+                <span>Detailed Question Review & Explanations</span>
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Review your selections, correct answers, and scriptural purports.
+              </p>
             </div>
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900">
+              {questions.length} Total Questions
+            </span>
           </div>
-        )}
+
+          <div className="space-y-5">
+            {questions.map((q, idx) => {
+              const log = answersLog.find((a) => a.questionId === q.id);
+              const isCorrect = log?.isCorrect;
+
+              return (
+                <div
+                  key={q.id}
+                  className={`p-5 rounded-2xl border-2 space-y-3 ${
+                    isCorrect
+                      ? "bg-emerald-50/40 border-emerald-200"
+                      : "bg-rose-50/40 border-rose-200"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${isCorrect ? "bg-emerald-600" : "bg-rose-600"}`}>
+                          {idx + 1}
+                        </span>
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isCorrect ? "text-emerald-700" : "text-rose-700"}`}>
+                          {isCorrect ? "Correct Answer ✓" : "Incorrect Answer ✕"}
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900 pt-1">{q.question.hi}</p>
+                      <p className="text-xs text-gray-600 italic">{q.question.en}</p>
+                    </div>
+
+                    <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-white border border-gray-200 shrink-0">
+                      {isCorrect ? `+${q.points} Pts` : "0 Pts"}
+                    </span>
+                  </div>
+
+                  {/* Options Comparison */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                    {(['A', 'B', 'C', 'D'] as const).map((opt) => {
+                      const wasSelected = log?.selected === opt;
+                      const isTargetCorrect = q.correctAnswer === opt;
+
+                      let pillClass = "bg-white border-gray-200 text-gray-600";
+                      if (isTargetCorrect) {
+                        pillClass = "bg-emerald-100 border-2 border-emerald-500 text-emerald-950 font-bold";
+                      } else if (wasSelected && !isTargetCorrect) {
+                        pillClass = "bg-rose-100 border-2 border-rose-500 text-rose-950 font-bold line-through";
+                      }
+
+                      return (
+                        <div key={opt} className={`p-2.5 rounded-xl border flex items-center gap-2 ${pillClass}`}>
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-white/80 border shrink-0">
+                            {opt}
+                          </span>
+                          <span className="truncate">{q.options[opt].hi} / {q.options[opt].en}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Full Scriptural Purport / Explanation */}
+                  {q.explanation.hi && (
+                    <div className="p-3.5 bg-white rounded-xl border border-amber-200 text-xs text-gray-800 space-y-1">
+                      <p className="font-bold text-amber-900 uppercase text-[10px] tracking-wider">व्याख्या / Explanation:</p>
+                      <p className="leading-relaxed">{q.explanation.hi}</p>
+                      <p className="text-gray-600 italic leading-relaxed">{q.explanation.en}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Free Class Invitation */}
+        <div className="p-6 bg-gradient-to-br from-amber-950 via-stone-900 to-amber-950 text-white rounded-3xl border border-amber-800 text-left flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Next Step</span>
+            <h4 className="text-xl font-bold text-amber-50">Join our Weekly Free Bhagavad-gītā Class</h4>
+            <p className="text-xs sm:text-sm text-amber-200/80 max-w-xl">
+              Meet experienced mentors, clarify spiritual doubts, and experience the bliss of Vaishnava sanga.
+            </p>
+          </div>
+          <Link
+            href="/live-classes"
+            className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-md shrink-0 flex items-center gap-2"
+          >
+            <span>Join a Free Class</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
       </div>
     );
   }
@@ -511,7 +626,7 @@ function QuizPlayInner() {
   const isTimerUrgent = timeLeft <= 3 && timerDuration > 0;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 pb-32">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 pb-36">
       
       {/* Top Gaming Dashboard (HUD) */}
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-amber-200 shadow-sm flex items-center justify-between gap-4">
@@ -522,7 +637,7 @@ function QuizPlayInner() {
             {currentIndex + 1}/{questions.length}
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Vedic Challenge</p>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Vedic Arena</p>
             <p className="text-sm font-black text-gray-900">{score} Points</p>
           </div>
         </div>
@@ -546,11 +661,11 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* BG Music Toggle with Equalizer bars */}
+          {/* BG Music Toggle */}
           <button
             type="button"
             onClick={toggleBgMusic}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all ${
               bgMusicPlaying 
                 ? "bg-amber-600 text-white border-amber-600 shadow-sm" 
                 : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-amber-50"
@@ -591,6 +706,19 @@ function QuizPlayInner() {
         {floatingScore !== null && (
           <div className="absolute top-6 right-8 text-2xl font-black text-amber-600 animate-float-score pointer-events-none z-30">
             +{floatingScore} XP! 🌸
+          </div>
+        )}
+
+        {/* Optional Question Image */}
+        {currentQ.imageUrl && (
+          <div className="relative w-full h-48 sm:h-64 rounded-2xl overflow-hidden border border-amber-200 shadow-inner bg-stone-100">
+            <Image
+              src={currentQ.imageUrl}
+              alt="Question illustration"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 800px"
+            />
           </div>
         )}
 

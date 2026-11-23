@@ -70,24 +70,6 @@ export default function QuizOverviewPage() {
         <LotusAccent className="my-2" />
       </div>
 
-      {/* Admin CSV Upload Banner */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="space-y-1 max-w-xl">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-800">Admin Feature</span>
-          <h3 className="text-xl font-bold text-gray-900">Have a 10 or 15 Question Quiz in CSV?</h3>
-          <p className="text-xs sm:text-sm text-gray-600">
-            Upload your questions in one shot using a CSV file. Includes ready-made sample template!
-          </p>
-        </div>
-        <Link
-          href="/quiz/upload"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm bg-amber-600 hover:bg-amber-700 text-white shadow-md transition-all shrink-0"
-        >
-          <Upload className="w-4 h-4" />
-          <span>Upload Quiz via CSV</span>
-        </Link>
-      </div>
-
       {/* Custom Admin Quizzes if any */}
       {customQuizzes.length > 0 && (
         <div className="space-y-4">
