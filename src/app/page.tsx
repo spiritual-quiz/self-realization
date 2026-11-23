@@ -21,9 +21,11 @@ import {
   ShieldCheck
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
+import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
 
 export default function HomePage() {
   const { t, language } = useLanguage();
+  const [selectedClass, setSelectedClass] = React.useState<ClassItem | null>(null);
 
   // Mock featured data for Phase 1 presentation
   const upcomingClasses = [
@@ -366,9 +368,19 @@ export default function HomePage() {
               </div>
 
               <div className="pt-6">
-                <Link
-                  href="/live-classes"
-                  className={`w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                <button
+                  type="button"
+                  onClick={() => setSelectedClass({
+                    id: item.id,
+                    title: item.title,
+                    isPaid: item.isPaid,
+                    price: item.price,
+                    date: item.date,
+                    time: item.time,
+                    mode: item.mode,
+                    instructor: item.instructor,
+                  })}
+                  className={`w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all transform active:scale-95 ${
                     !item.isPaid
                       ? "bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
                       : "bg-gray-900 hover:bg-black text-white"
@@ -376,7 +388,7 @@ export default function HomePage() {
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>{t.upcomingClasses.registerBtn}</span>
-                </Link>
+                </button>
               </div>
             </div>
           ))}
@@ -634,6 +646,12 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Class Registration Modal */}
+      <ClassRegistrationModal
+        classItem={selectedClass}
+        onClose={() => setSelectedClass(null)}
+      />
 
     </div>
   );

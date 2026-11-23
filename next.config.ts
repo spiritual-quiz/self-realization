@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "firebasestorage.googleapis.com",
       },
+      {
+        protocol: "https",
+        hostname: "www.iskconpune.com",
+      },
+      {
+        protocol: "https",
+        hostname: "iskconpune.com",
+      },
     ],
   },
 };
