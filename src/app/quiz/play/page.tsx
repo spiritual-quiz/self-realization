@@ -23,7 +23,11 @@ import {
   ChevronRight,
   BrainCircuit,
   Smile,
-  Loader2
+  Loader2,
+  Flame,
+  Music,
+  Timer,
+  AlertTriangle
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { parseCSVToQuestions, SAMPLE_CSV_CONTENT, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
@@ -39,29 +43,43 @@ function QuizPlayInner() {
   const [participantPhone, setParticipantPhone] = useState("");
   const [quizStarted, setQuizStarted] = useState(false);
 
-  // Quiz Content State
+  // Quiz Content & Admin Config State
   const [quizTitle, setQuizTitle] = useState("Bhagavad-gītā Wisdom Challenge");
   const [questions, setQuestions] = useState<ParsedQuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [timerDuration, setTimerDuration] = useState<number>(10); // Default 10s
+
+  // Gaming & Timer State
+  const [timeLeft, setTimeLeft] = useState<number>(10);
+  const [streak, setStreak] = useState<number>(0);
+  const [maxStreak, setMaxStreak] = useState<number>(0);
+  const [score, setScore] = useState<number>(0);
+  const [floatingScore, setFloatingScore] = useState<number | null>(null);
+  const [isTimeUp, setIsTimeUp] = useState(false);
 
   // Interaction State
   const [selectedOption, setSelectedOption] = useState<'A' | 'B' | 'C' | 'D' | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
-  const [score, setScore] = useState(0);
   const [answersLog, setAnswersLog] = useState<{ questionId: number; selected: string; correct: string; isCorrect: boolean }[]>([]);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [showThinking, setShowThinking] = useState(false);
+  
+  // Audio Controls
+  const [soundFxEnabled, setSoundFxEnabled] = useState(true);
+  const [bgMusicPlaying, setBgMusicPlaying] = useState(false);
+  
+  // Completion & Review State
   const [isComplete, setIsComplete] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
+  const [showThinking, setShowThinking] = useState(false);
 
   // Audio References
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Pastel Card Colors
+  // 4 Pastel Card Styles with High Contrast
   const pastelStyles = {
     A: "bg-[#E8F5E9] hover:bg-[#D4EDDA] border-[#C3E6CB] text-emerald-950",
     B: "bg-[#E1F5FE] hover:bg-[#CCE5FF] border-[#B8DAFF] text-blue-950",
@@ -69,43 +87,58 @@ function QuizPlayInner() {
     D: "bg-[#F3E5F5] hover:bg-[#EBD3F0] border-[#E5C7EB] text-purple-950",
   };
 
-  // Load Quiz data (From custom upload in localStorage or sample 10-questions)
+  // Load Quiz & Audio Setup
   useEffect(() => {
-    // Audio initializations
     correctAudioRef.current = new Audio("/audio/correct.mp3");
     wrongAudioRef.current = new Audio("/audio/wrong.mp3");
     bgAudioRef.current = new Audio("/audio/bg-music.mp3");
+    if (bgAudioRef.current) {
+      bgAudioRef.current.loop = true;
+      bgAudioRef.current.volume = 0.35;
+    }
 
-    // Check localStorage for custom uploaded quiz matching ID
+    // Check custom uploaded quizzes
     const localQuizzes = JSON.parse(localStorage.getItem("sr_custom_quizzes") || "[]");
     const found = localQuizzes.find((q: any) => q.id === quizIdParam);
 
     if (found && found.questions?.length > 0) {
       setQuizTitle(found.title.en);
       setQuestions(found.questions);
+      if (typeof found.timerSeconds === "number") {
+        setTimerDuration(found.timerSeconds);
+        setTimeLeft(found.timerSeconds);
+      }
     } else {
-      // Default to the 10-question verified sample bank
       const parsed = parseCSVToQuestions(SAMPLE_CSV_CONTENT);
       setQuestions(parsed.questions);
+      setTimerDuration(10);
+      setTimeLeft(10);
     }
+
+    return () => {
+      if (bgAudioRef.current) {
+        bgAudioRef.current.pause();
+      }
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
   }, [quizIdParam]);
 
-  // Thinking Animation timer (triggers after 8 seconds of hesitation)
-  useEffect(() => {
-    if (quizStarted && !isAnswered && !isComplete) {
-      setShowThinking(false);
-      thinkingTimerRef.current = setTimeout(() => {
-        setShowThinking(true);
-      }, 8000);
+  // Toggle Background Music
+  const toggleBgMusic = () => {
+    if (!bgAudioRef.current) return;
+    if (bgMusicPlaying) {
+      bgAudioRef.current.pause();
+      setBgMusicPlaying(false);
+    } else {
+      bgAudioRef.current.play().then(() => {
+        setBgMusicPlaying(true);
+      }).catch(() => {});
     }
-    return () => {
-      if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
-    };
-  }, [currentIndex, quizStarted, isAnswered, isComplete]);
+  };
 
-  // Play Sound helper
-  const playSound = (type: "correct" | "wrong" | "bg") => {
-    if (!soundEnabled) return;
+  // Sound Effects helper
+  const playFx = (type: "correct" | "wrong") => {
+    if (!soundFxEnabled) return;
     try {
       if (type === "correct" && correctAudioRef.current) {
         correctAudioRef.current.currentTime = 0;
@@ -113,19 +146,58 @@ function QuizPlayInner() {
       } else if (type === "wrong" && wrongAudioRef.current) {
         wrongAudioRef.current.currentTime = 0;
         wrongAudioRef.current.play().catch(() => {});
-      } else if (type === "bg" && bgAudioRef.current) {
-        bgAudioRef.current.currentTime = 0;
-        bgAudioRef.current.volume = 0.4;
-        bgAudioRef.current.play().catch(() => {});
       }
-    } catch (e) {
-      // Browser autoplay policies handled gracefully
-    }
+    } catch (e) {}
+  };
+
+  // Countdown Timer Logic
+  useEffect(() => {
+    if (!quizStarted || isAnswered || isComplete || timerDuration === 0) return;
+
+    setTimeLeft(timerDuration);
+    setIsTimeUp(false);
+
+    timerIntervalRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerIntervalRef.current!);
+          handleTimeOut();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [currentIndex, quizStarted, isAnswered, isComplete, timerDuration]);
+
+  // Handle Timeout (Time Up)
+  const handleTimeOut = () => {
+    if (isAnswered) return;
+    setIsAnswered(true);
+    setIsTimeUp(true);
+    setStreak(0);
+    playFx("wrong");
+
+    const currentQ = questions[currentIndex];
+    setAnswersLog((prev) => [
+      ...prev,
+      {
+        questionId: currentQ.id,
+        selected: "TIMEOUT",
+        correct: currentQ.correctAnswer,
+        isCorrect: false,
+      },
+    ]);
   };
 
   // Handle Option Select
   const handleSelectOption = (optKey: 'A' | 'B' | 'C' | 'D') => {
     if (isAnswered) return;
+
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
     setSelectedOption(optKey);
     setIsAnswered(true);
@@ -134,7 +206,6 @@ function QuizPlayInner() {
     const currentQ = questions[currentIndex];
     const isCorrect = optKey === currentQ.correctAnswer;
 
-    // Log answer
     setAnswersLog((prev) => [
       ...prev,
       {
@@ -146,25 +217,35 @@ function QuizPlayInner() {
     ]);
 
     if (isCorrect) {
-      setScore((s) => s + currentQ.points);
-      playSound("correct");
+      // Streak calculation & bonus
+      const newStreak = streak + 1;
+      setStreak(newStreak);
+      if (newStreak > maxStreak) setMaxStreak(newStreak);
 
-      // Falling Petals / Floral Confetti
+      const pointsEarned = currentQ.points + (newStreak > 1 ? (newStreak - 1) * 2 : 0);
+      setScore((s) => s + pointsEarned);
+      setFloatingScore(pointsEarned);
+      playFx("correct");
+
+      // Grand Floral Petal Celebration Burst
       confetti({
-        particleCount: 50,
-        spread: 70,
+        particleCount: 65,
+        spread: 80,
         origin: { y: 0.6 },
-        colors: ["#F59E0B", "#F43F5E", "#EC4899", "#10B981", "#D97706"],
+        colors: ["#D97706", "#F59E0B", "#F43F5E", "#10B981", "#8B5CF6"],
         shapes: ["circle"],
       });
 
-      // Auto-advance after 2.8 seconds on correct answer
+      // Clear floating score after animation
+      setTimeout(() => setFloatingScore(null), 1200);
+
+      // Auto-advance after 2.8 seconds
       setTimeout(() => {
         handleNextQuestion();
       }, 2800);
     } else {
-      playSound("wrong");
-      // Wait for manual click on Continue for wrong answer
+      setStreak(0);
+      playFx("wrong");
     }
   };
 
@@ -174,12 +255,17 @@ function QuizPlayInner() {
       setCurrentIndex((prev) => prev + 1);
       setSelectedOption(null);
       setIsAnswered(false);
+      setIsTimeUp(false);
+      setTimeLeft(timerDuration);
     } else {
       setIsComplete(true);
-      playSound("bg");
+      if (bgAudioRef.current) {
+        bgAudioRef.current.play().catch(() => {});
+        setBgMusicPlaying(true);
+      }
       confetti({
-        particleCount: 120,
-        spread: 90,
+        particleCount: 150,
+        spread: 100,
         origin: { y: 0.5 },
       });
     }
@@ -195,7 +281,7 @@ function QuizPlayInner() {
 
       const pdfBytes = await generateQuizCertificatePdf({
         certificateId: certId,
-        participantName: participantName || "Sincere Spiritual Seeker",
+        participantName: participantName || "Sincere Devotee",
         quizTitle,
         score,
         totalMarks,
@@ -218,37 +304,45 @@ function QuizPlayInner() {
     }
   };
 
-  // 1. Participant Entry Gate (No Password or Login Required)
+  // 1. Participant Entry Gate (Public Access)
   if (!quizStarted) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 animate-fade-in">
-        <div className="bg-white rounded-3xl p-8 sm:p-10 border border-amber-200 shadow-xl space-y-6 text-center">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white mx-auto shadow-md">
-            <HelpCircle className="w-8 h-8" />
+        <div className="bg-white rounded-3xl p-8 sm:p-10 border border-amber-200 shadow-2xl space-y-6 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600" />
+
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white mx-auto shadow-lg shadow-orange-500/20">
+            <Sparkles className="w-8 h-8" />
           </div>
 
           <div>
-            <span className="text-xs uppercase tracking-widest font-bold text-amber-700 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
-              100% Free • No Login Required
+            <span className="text-xs uppercase tracking-widest font-bold text-amber-700 bg-amber-100 px-3.5 py-1 rounded-full border border-amber-300">
+              ⚡ Live Vedic Gaming Arena
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-3">
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mt-3">
               {quizTitle}
             </h1>
             <p className="text-sm text-gray-600 mt-2">
-              Test your understanding of timeless Vedic wisdom. Earn flowers, points, and a downloadable certificate!
+              Bilingual dual-display • {timerDuration > 0 ? `${timerDuration}s Timer` : "Unlimited Time"} • Streak multipliers • Instant Certificate
             </p>
           </div>
 
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (participantName.trim()) setQuizStarted(true);
+              if (participantName.trim()) {
+                setQuizStarted(true);
+                // Prompt background music start on user interaction
+                if (bgAudioRef.current) {
+                  bgAudioRef.current.play().then(() => setBgMusicPlaying(true)).catch(() => {});
+                }
+              }
             }}
-            className="space-y-4 text-left"
+            className="space-y-4 text-left pt-2"
           >
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700 uppercase">
-                Your Name (for Certificate) *
+                Participant Name (for Certificate) *
               </label>
               <input
                 type="text"
@@ -276,18 +370,20 @@ function QuizPlayInner() {
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 shadow-xl shadow-orange-500/25 hover:shadow-2xl transition-all flex items-center justify-center gap-2 transform active:scale-98"
               >
                 <Sparkles className="w-5 h-5 text-amber-200" />
-                <span>Start Quiz Challenge</span>
+                <span>Enter Quiz Arena & Start</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </form>
 
-          <p className="text-[11px] text-gray-400">
-            Bilingual dual Q&A display • Sound FX • Instant Verification
-          </p>
+          <div className="flex items-center justify-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
+            <span>🎵 Devotional Audio</span>
+            <span>🌸 Falling Blossoms</span>
+            <span>📜 Verifiable PDF</span>
+          </div>
         </div>
       </div>
     );
@@ -299,29 +395,31 @@ function QuizPlayInner() {
     const percentage = (score / totalMarks) * 100;
 
     return (
-      <div className="max-w-2xl mx-auto px-4 py-12 animate-fade-in space-y-8">
-        <div className="bg-white rounded-3xl p-8 sm:p-12 border border-amber-200 shadow-2xl text-center space-y-6">
-          <div className="w-20 h-20 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-inner text-4xl">
+      <div className="max-w-2xl mx-auto px-4 py-12 animate-fade-in space-y-8 pb-24">
+        <div className="bg-white rounded-3xl p-8 sm:p-12 border border-amber-200 shadow-2xl text-center space-y-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-amber-500 via-emerald-500 to-amber-600" />
+
+          <div className="w-20 h-20 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-inner text-4xl animate-bounce">
             🏆
           </div>
 
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-amber-700 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
-              Quiz Completed!
+            <span className="text-xs font-bold uppercase tracking-widest text-emerald-800 bg-emerald-100 px-3.5 py-1 rounded-full border border-emerald-300">
+              Devotional Perfection!
             </span>
             <h2 className="text-3xl font-black text-gray-900 mt-2">
               Congratulations, {participantName}!
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              You have completed the {quizTitle} with great devotion.
+              You have completed the {quizTitle} with flying colors.
             </p>
           </div>
 
-          {/* Score Badge */}
+          {/* Gaming Score HUD */}
           <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 flex items-center justify-around">
             <div>
               <p className="text-3xl sm:text-4xl font-black text-amber-700">{score}</p>
-              <p className="text-xs text-gray-500 font-semibold uppercase mt-1">Points Earned</p>
+              <p className="text-xs text-gray-500 font-semibold uppercase mt-1">Total Score</p>
             </div>
             <div className="h-10 w-px bg-amber-200" />
             <div>
@@ -330,21 +428,24 @@ function QuizPlayInner() {
             </div>
             <div className="h-10 w-px bg-amber-200" />
             <div>
-              <p className="text-3xl sm:text-4xl font-black text-purple-700">{questions.length}</p>
-              <p className="text-xs text-gray-500 font-semibold uppercase mt-1">Total Questions</p>
+              <p className="text-3xl sm:text-4xl font-black text-orange-600 flex items-center justify-center gap-1">
+                <Flame className="w-6 h-6 fill-orange-500" />
+                <span>{maxStreak}</span>
+              </p>
+              <p className="text-xs text-gray-500 font-semibold uppercase mt-1">Best Streak</p>
             </div>
           </div>
 
-          {/* Download Certificate CTA */}
+          {/* Download Official Certificate */}
           <div className="space-y-3 pt-2">
             <button
               type="button"
               onClick={handleDownloadCertificate}
               disabled={generatingPdf}
-              className="w-full py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+              className="w-full py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 shadow-xl transition-all flex items-center justify-center gap-2 transform active:scale-98"
             >
               <Award className="w-5 h-5 text-amber-200" />
-              <span>{generatingPdf ? "Generating Official Certificate..." : "Download Official Certificate (PDF)"}</span>
+              <span>{generatingPdf ? "Creating Official PDF..." : "Download Official Certificate (PDF)"}</span>
             </button>
 
             <button
@@ -352,12 +453,12 @@ function QuizPlayInner() {
               onClick={() => setReviewMode(!reviewMode)}
               className="w-full py-3 px-5 rounded-xl font-bold text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 transition-colors"
             >
-              {reviewMode ? "Hide Answer Review" : "Review All Answers & Explanations"}
+              {reviewMode ? "Hide Answers Review" : "Review All Questions & Explanations"}
             </button>
           </div>
 
-          {/* Prominent Invitation to Join Free Class */}
-          <div className="p-6 bg-amber-950 text-white rounded-2xl border border-amber-800 text-left space-y-3">
+          {/* Invitation to Free Weekly Classes */}
+          <div className="p-6 bg-gradient-to-br from-amber-950 via-stone-900 to-amber-950 text-white rounded-2xl border border-amber-800 text-left space-y-3">
             <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Next Devotional Step</span>
             <h4 className="text-lg font-bold text-amber-50">Deepen your realization with our Weekly Free Class</h4>
             <p className="text-xs text-amber-200/80">
@@ -365,7 +466,7 @@ function QuizPlayInner() {
             </p>
             <Link
               href="/live-classes"
-              className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2 bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-xl transition-colors"
+              className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white rounded-xl shadow-md transition-colors"
             >
               <span>Join a Free Class</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -388,7 +489,7 @@ function QuizPlayInner() {
                       <span className="text-emerald-700">Correct: <strong>{q.correctAnswer}</strong></span>
                     </div>
                     {q.explanation.hi && (
-                      <p className="text-amber-900 bg-white p-2 rounded-lg border border-amber-200">
+                      <p className="text-amber-900 bg-white p-2.5 rounded-lg border border-amber-200">
                         <strong>Explanation:</strong> {q.explanation.hi} / {q.explanation.en}
                       </p>
                     )}
@@ -402,68 +503,109 @@ function QuizPlayInner() {
     );
   }
 
-  // 3. Active Quiz Arena
+  // 3. Active Gaming Quiz Arena
   const currentQ = questions[currentIndex];
   if (!currentQ) return null;
 
+  const timerFraction = timerDuration > 0 ? timeLeft / timerDuration : 1;
+  const isTimerUrgent = timeLeft <= 3 && timerDuration > 0;
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 pb-32">
       
-      {/* Top Header: Progress & Sound Control */}
-      <div className="flex items-center justify-between pb-3 border-b border-amber-200">
+      {/* Top Gaming Dashboard (HUD) */}
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-amber-200 shadow-sm flex items-center justify-between gap-4">
+        
+        {/* Left: Progress & Question number */}
         <div className="flex items-center gap-3">
-          <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-            Question {currentIndex + 1} of {questions.length}
-          </span>
-          <span className="text-xs font-bold text-gray-500">
-            Score: {score} Pts
-          </span>
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 font-black text-sm flex items-center justify-center border border-amber-300">
+            {currentIndex + 1}/{questions.length}
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Vedic Challenge</p>
+            <p className="text-sm font-black text-gray-900">{score} Points</p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Center: Live Countdown Timer */}
+        {timerDuration > 0 && (
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-200 bg-amber-50">
+            <Timer className={`w-4 h-4 ${isTimerUrgent ? "text-rose-600 animate-spin" : "text-amber-700"}`} />
+            <span className={`font-mono text-sm font-black ${isTimerUrgent ? "text-rose-600 animate-pulse text-base" : "text-amber-900"}`}>
+              {timeLeft}s
+            </span>
+          </div>
+        )}
+
+        {/* Right: Streak & Background Music Controls */}
+        <div className="flex items-center gap-3">
+          {streak > 1 && (
+            <div className="hidden sm:flex items-center gap-1 px-3 py-1 rounded-full bg-orange-100 border border-orange-300 text-orange-800 text-xs font-black animate-bounce">
+              <Flame className="w-4 h-4 fill-orange-500 text-orange-600" />
+              <span>{streak}x Streak!</span>
+            </div>
+          )}
+
+          {/* BG Music Toggle with Equalizer bars */}
           <button
             type="button"
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
-            title="Toggle Sound Effects"
+            onClick={toggleBgMusic}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all ${
+              bgMusicPlaying 
+                ? "bg-amber-600 text-white border-amber-600 shadow-sm" 
+                : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-amber-50"
+            }`}
+            title="Toggle Devotional Background Music"
           >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-gray-400" />}
+            <Music className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">{bgMusicPlaying ? "Music ON" : "Music OFF"}</span>
+            {bgMusicPlaying && (
+              <div className="flex items-end gap-0.5 h-3">
+                <span className="w-1 bg-white rounded-full equalizer-bar-1" />
+                <span className="w-1 bg-white rounded-full equalizer-bar-2" />
+                <span className="w-1 bg-white rounded-full equalizer-bar-3" />
+              </div>
+            )}
           </button>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="w-full h-2 bg-amber-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300"
-          style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-        />
-      </div>
+      {/* Timer Progress Bar */}
+      {timerDuration > 0 && (
+        <div className="w-full h-2 bg-amber-100 rounded-full overflow-hidden shadow-inner">
+          <div
+            className={`h-full transition-all duration-1000 ${
+              isTimerUrgent ? "bg-rose-500 animate-pulse" : "bg-gradient-to-r from-amber-500 to-orange-500"
+            }`}
+            style={{ width: `${timerFraction * 100}%` }}
+          />
+        </div>
+      )}
 
-      {/* Question Card (Bilingual Dual Display) */}
-      <div className="bg-white rounded-3xl p-6 sm:p-10 border border-amber-200 shadow-vedic space-y-4 relative overflow-hidden">
-        
-        {/* Thinking Encouragement Prompt */}
-        {showThinking && !isAnswered && (
-          <div className="p-3 bg-amber-100/80 rounded-2xl border border-amber-300 flex items-center gap-2.5 text-xs text-amber-900 animate-fade-in">
-            <Smile className="w-5 h-5 text-amber-700 shrink-0 animate-bounce" />
-            <span>Take your time! Reflect on the teachings of the Gita; truth is eternal.</span>
+      {/* Main Question & Pastel Answer Cards Area */}
+      <div className={`bg-white rounded-3xl p-6 sm:p-10 border border-amber-200 shadow-vedic space-y-6 relative overflow-hidden ${
+        isAnswered && selectedOption !== currentQ.correctAnswer ? "animate-shake" : ""
+      }`}>
+
+        {/* Floating Score Animation on Correct Answer */}
+        {floatingScore !== null && (
+          <div className="absolute top-6 right-8 text-2xl font-black text-amber-600 animate-float-score pointer-events-none z-30">
+            +{floatingScore} XP! 🌸
           </div>
         )}
 
+        {/* Question Text (Bilingual Dual Display) */}
         <div className="space-y-2">
-          {/* Hindi Question */}
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug">
+          <h2 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug">
             {currentQ.question.hi}
           </h2>
-          {/* English Question */}
           <p className="text-sm sm:text-base text-gray-600 font-medium italic">
             {currentQ.question.en}
           </p>
         </div>
 
         {/* 4 Pastel Answer Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
           {(['A', 'B', 'C', 'D'] as const).map((optKey) => {
             const isSelected = selectedOption === optKey;
             const isCorrect = currentQ.correctAnswer === optKey;
@@ -471,9 +613,9 @@ function QuizPlayInner() {
             let cardStateClass = pastelStyles[optKey];
             if (isAnswered) {
               if (isCorrect) {
-                cardStateClass = "bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-md";
+                cardStateClass = "bg-emerald-100 border-2 border-emerald-500 text-emerald-950 shadow-lg scale-[1.02] ring-4 ring-emerald-200";
               } else if (isSelected && !isCorrect) {
-                cardStateClass = "bg-rose-100 border-2 border-rose-500 text-rose-950 animate-shake";
+                cardStateClass = "bg-rose-100 border-2 border-rose-500 text-rose-950 ring-4 ring-rose-200 animate-shake";
               } else {
                 cardStateClass = "opacity-40 bg-gray-100 border-gray-200 text-gray-500";
               }
@@ -485,21 +627,21 @@ function QuizPlayInner() {
                 type="button"
                 disabled={isAnswered}
                 onClick={() => handleSelectOption(optKey)}
-                className={`p-5 rounded-2xl border-2 text-left transition-all duration-200 flex items-start gap-3 transform active:scale-98 ${cardStateClass}`}
+                className={`p-5 rounded-2xl border-2 text-left transition-all duration-200 flex items-start gap-3.5 transform active:scale-98 ${cardStateClass}`}
               >
-                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
                   isAnswered && isCorrect ? "bg-emerald-600 text-white" :
                   isAnswered && isSelected && !isCorrect ? "bg-rose-600 text-white" :
-                  "bg-white/80 border border-current"
+                  "bg-white/80 border border-current shadow-xs"
                 }`}>
                   {isAnswered && isCorrect ? <Check className="w-4 h-4 stroke-[3]" /> : optKey}
                 </span>
 
                 <div className="grow">
-                  <p className="text-sm font-bold leading-snug">
+                  <p className="text-sm sm:text-base font-bold leading-snug">
                     {currentQ.options[optKey].hi}
                   </p>
-                  <p className="text-xs opacity-80 mt-0.5">
+                  <p className="text-xs opacity-80 mt-1 font-medium">
                     {currentQ.options[optKey].en}
                   </p>
                 </div>
@@ -508,46 +650,73 @@ function QuizPlayInner() {
           })}
         </div>
 
-        {/* Feedback & Explanation Section */}
+        {/* Dynamic Gaming Animation Banner & Explanation */}
         {isAnswered && (
-          <div className="mt-6 pt-4 border-t border-gray-100 space-y-4 animate-fade-in">
+          <div className="mt-6 pt-5 border-t border-gray-100 space-y-4 animate-pop-in">
             {selectedOption === currentQ.correctAnswer ? (
-              <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>अद्भुत! सही उत्तर! / Correct Answer! (+{currentQ.points} Points)</span>
+              <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center gap-3 text-emerald-900">
+                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 text-xl font-bold">
+                  ✓
+                </div>
+                <div>
+                  <p className="font-black text-base">🌸 अद्भुत! HARI BOL! CORRECT ANSWER!</p>
+                  <p className="text-xs text-emerald-800">Advancing automatically in a moment...</p>
+                </div>
+              </div>
+            ) : isTimeUp ? (
+              <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl flex items-center gap-3 text-amber-950">
+                <div className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-black text-base">⌛ TIME IS UP! (समय समाप्त)</p>
+                  <p className="text-xs text-amber-800">Correct Answer is option {currentQ.correctAnswer}. Review explanation below and click Continue.</p>
+                </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-rose-700 font-bold text-sm">
-                <XCircle className="w-5 h-5 text-rose-600" />
-                <span>पुनः विचार करें! / Not quite right. The correct option is {currentQ.correctAnswer}.</span>
+              <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl flex items-center gap-3 text-rose-950">
+                <div className="w-10 h-10 rounded-full bg-rose-600 text-white flex items-center justify-center shrink-0">
+                  <XCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="font-black text-base">🙏 पुनः विचार करें! (INCORRECT ANSWER)</p>
+                  <p className="text-xs text-rose-800">The correct answer is highlighted in green. Read the explanation and click Continue below.</p>
+                </div>
               </div>
             )}
 
+            {/* Explanation Card */}
             {currentQ.explanation.hi && (
-              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs sm:text-sm text-gray-800 space-y-1">
-                <p className="font-bold text-amber-900">व्याख्या / Explanation:</p>
-                <p>{currentQ.explanation.hi}</p>
-                <p className="text-gray-600 italic">{currentQ.explanation.en}</p>
-              </div>
-            )}
-
-            {/* If wrong answer, wait for manual continue button */}
-            {selectedOption !== currentQ.correctAnswer && (
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleNextQuestion}
-                  className="py-3 px-6 rounded-xl font-bold text-sm bg-amber-600 hover:bg-amber-700 text-white shadow-md flex items-center gap-2"
-                >
-                  <span>Continue / आगे बढ़ें</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+              <div className="p-4 sm:p-5 bg-amber-50/70 rounded-2xl border border-amber-200 text-xs sm:text-sm text-gray-800 space-y-1">
+                <p className="font-bold text-amber-900 uppercase tracking-wider text-xs">व्याख्या / Scriptural Explanation:</p>
+                <p className="leading-relaxed font-medium">{currentQ.explanation.hi}</p>
+                <p className="text-gray-600 italic leading-relaxed">{currentQ.explanation.en}</p>
               </div>
             )}
           </div>
         )}
 
       </div>
+
+      {/* PROMINENT FIXED FLOATING BOTTOM BAR FOR CONTINUE ACTION */}
+      {isAnswered && (selectedOption !== currentQ.correctAnswer || isTimeUp) && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-amber-200 p-4 shadow-2xl animate-fade-in">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+            <div className="hidden sm:block">
+              <p className="text-xs font-bold text-gray-700">Take a breath, absorb the knowledge, and move forward.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleNextQuestion}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl font-black text-base bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white shadow-xl shadow-orange-500/25 transition-all flex items-center justify-center gap-2 transform active:scale-95"
+            >
+              <span>Continue to Next Question / आगे बढ़ें</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

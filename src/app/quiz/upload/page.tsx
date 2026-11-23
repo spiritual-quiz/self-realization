@@ -27,6 +27,7 @@ export default function AdminCSVQuizUploadPage() {
   const [quizTitleEn, setQuizTitleEn] = useState("Bhagavad-gītā Wisdom Challenge");
   const [quizTitleHi, setQuizTitleHi] = useState("श्रीमद्भगवद्गीता ज्ञान प्रश्नोत्तरी");
   const [category, setCategory] = useState("Bhagavad-gītā");
+  const [timerSeconds, setTimerSeconds] = useState<number>(10);
   const [parsedQuestions, setParsedQuestions] = useState<ParsedQuizQuestion[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -94,6 +95,7 @@ export default function AdminCSVQuizUploadPage() {
     const quizData = {
       title: { en: quizTitleEn, hi: quizTitleHi },
       category,
+      timerSeconds,
       questionCount: parsedQuestions.length,
       totalMarks: parsedQuestions.reduce((acc, q) => acc + q.points, 0),
       durationMinutes: Math.ceil(parsedQuestions.length * 1.5),
@@ -216,8 +218,8 @@ export default function AdminCSVQuizUploadPage() {
 
           {/* Quiz Metadata Config */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-sm space-y-6">
-            <h3 className="text-lg font-bold text-gray-900">Quiz Basic Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <h3 className="text-lg font-bold text-gray-900">Quiz Basic Details & Timer</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase">Quiz Title (English)</label>
                 <input
@@ -249,6 +251,24 @@ export default function AdminCSVQuizUploadPage() {
                   <option value="Kṛṣṇa Conscious Philosophy">Kṛṣṇa Conscious Philosophy</option>
                   <option value="Spiritual Science">Spiritual Science</option>
                   <option value="Devotional Culture">Devotional Culture</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 uppercase flex items-center justify-between">
+                  <span>Question Timer</span>
+                  <span className="text-amber-700 font-bold">{timerSeconds > 0 ? `${timerSeconds}s / Q` : "Unlimited"}</span>
+                </label>
+                <select
+                  value={timerSeconds}
+                  onChange={(e) => setTimerSeconds(parseInt(e.target.value, 10))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-amber-300 focus:border-amber-500 text-sm bg-amber-50/50 font-bold text-amber-900"
+                >
+                  <option value="5">⚡ 5 Seconds (Speed Blitz)</option>
+                  <option value="10">⏳ 10 Seconds (Standard Gaming)</option>
+                  <option value="15">⏱ 15 Seconds (Comfortable)</option>
+                  <option value="20">🧘 20 Seconds (Contemplation)</option>
+                  <option value="0">♾️ No Timer (Unlimited Time)</option>
                 </select>
               </div>
             </div>
