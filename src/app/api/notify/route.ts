@@ -54,14 +54,16 @@ If you did not request this, please ensure your account credentials remain secur
       `.trim();
     }
 
-    // 1. Dispatch email via FormSubmit AJAX service (Free, verified forwarding to madhavcarandas@gmail.com)
+    // 1. Dispatch email via FormSubmit AJAX service (with valid Origin & Referer headers)
     let emailDispatched = false;
     try {
       const res = await fetch(`https://formsubmit.co/ajax/${ADMIN_EMAIL}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          "Accept": "application/json",
+          "Referer": "https://selfrealization-platform.vercel.app",
+          "Origin": "https://selfrealization-platform.vercel.app"
         },
         body: JSON.stringify({
           _subject: subject,
@@ -69,13 +71,14 @@ If you did not request this, please ensure your account credentials remain secur
           _captcha: "false",
           type: type || "general",
           name: details.fullName || details.name || "Administrator",
-          email: details.email || "visitor@selfrealization.org",
+          email: details.email || ADMIN_EMAIL,
           phone: details.phone || "N/A",
           details: messageBody
         })
       });
 
-      if (res.ok) {
+      const jsonRes = await res.json().catch(() => null);
+      if (res.ok || jsonRes?.success) {
         emailDispatched = true;
       }
     } catch (e) {
