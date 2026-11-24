@@ -646,60 +646,48 @@ function QuizPlayInner() {
           id="official-devotional-certificate"
           className="official-cert-card relative w-full aspect-[1024/615] rounded-3xl overflow-hidden shadow-2xl border-4 border-amber-600 bg-[#FAF8F5]"
         >
-          {/* Pure Clean Certificate Artwork Background (No Ghost Text) */}
+          {/* Official Clean Blank Certificate Template */}
           <Image
-            src="/images/certificate-bg-pure.jpg"
+            src="/images/certificate-template-blank.jpg"
             alt="Official Certificate"
             fill
             className="object-cover"
             priority
           />
 
-          {/* Dynamic Content Layer Overlaid Exactly on Template */}
-          <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10 pointer-events-none select-none">
+          {/* Dynamic Content Layer Overlaid Exactly on Blank Zones */}
+          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none select-none">
             
-            {/* Top Spacer to align with Ribbon */}
-            <div className="h-24 sm:h-32" />
+            {/* Top Spacer to align with 'This is proudly presented to' */}
+            <div className="h-[39%]" />
 
-            {/* Middle Section: Name, Quiz Title, Score */}
-            <div className="text-center space-y-1 sm:space-y-1.5 px-16 sm:px-28">
-              <p className="text-xs sm:text-sm italic text-gray-700 font-serif">
-                This is proudly presented to
-              </p>
-              <div className="py-0.5">
-                <span className="text-2xl sm:text-4xl md:text-5xl font-serif font-black text-[#3d140a] tracking-wide underline decoration-amber-400 decoration-2 underline-offset-4 drop-shadow-xs">
-                  {participantName}
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-800 font-medium">
-                for successfully passing and demonstrating spiritual understanding in
-              </p>
-              <p className="text-sm sm:text-lg md:text-xl font-serif font-bold text-[#8c1414] tracking-tight">
+            {/* Blank Zone 1: Participant Name (centered between 'presented to' and golden lotus divider) */}
+            <div className="text-center px-12 sm:px-28 -mt-6 sm:-mt-8">
+              <span className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-black text-[#3d140a] tracking-wide drop-shadow-xs">
+                {participantName}
+              </span>
+            </div>
+
+            {/* Spacer to jump past 'for successfully passing...' */}
+            <div className="h-[12%]" />
+
+            {/* Blank Zone 2: Course/Quiz Title and Score Line */}
+            <div className="text-center space-y-0.5 sm:space-y-1 px-12 sm:px-28 -mt-4 sm:-mt-6">
+              <p className="text-xs sm:text-base md:text-lg lg:text-xl font-serif font-black text-[#8c1414] tracking-tight">
                 “{quizTitle}”
               </p>
-              <p className="text-xs sm:text-base font-semibold text-gray-800">
+              <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-gray-800">
                 securing a score of <strong>{score} / {totalMarks} ({percentage.toFixed(1)}%)</strong>.
               </p>
             </div>
 
-            {/* Bottom Section: Date & ID (Left), Logo (Center) */}
-            <div className="flex items-end justify-between text-xs text-gray-800 font-mono pb-2 pl-4 sm:pl-8 pr-4">
-              <div className="space-y-0.5 text-left text-[10px] sm:text-xs font-bold text-[#3d1d07] bg-amber-100/40 p-1 rounded-md">
-                <p>Date: {dateFormatted}</p>
-                <p>ID: {certificateId}</p>
+            {/* Bottom Metadata: Date & ID (Aligned next to 📅 : and 🪪 :) */}
+            <div className="h-[21%] flex items-center justify-between pb-2 pl-[15.5%] pr-8">
+              <div className="space-y-1.5 text-left text-[9px] sm:text-[11px] md:text-xs font-bold text-[#3d1d07] font-mono leading-none">
+                <p>{dateFormatted}</p>
+                <p>{certificateId}</p>
               </div>
-
-              {/* Official Center Transparent Logo */}
-              <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0">
-                <Image
-                  src="/images/logo.png"
-                  alt="SelfRealization"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-
-              <div className="w-16" />
+              <div className="w-1" />
             </div>
 
           </div>

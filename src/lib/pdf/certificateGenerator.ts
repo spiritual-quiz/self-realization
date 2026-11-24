@@ -31,7 +31,7 @@ export async function generateQuizCertificatePdf(data: CertificateData): Promise
 
   // 1. Try embedding the pure clean certificate artwork background
   try {
-    const res = await fetch("/images/certificate-bg-pure.jpg");
+    const res = await fetch("/images/certificate-template-blank.jpg");
     if (res.ok) {
       const bgImgBytes = await res.arrayBuffer();
       const bgImage = await pdfDoc.embedJpg(bgImgBytes);
@@ -62,25 +62,25 @@ export async function generateQuizCertificatePdf(data: CertificateData): Promise
     });
   }
 
-  // 2. Participant Name (Exact center positioning matching template)
+  // 2. Participant Name (Centered in Blank Zone 1 above golden lotus divider)
   const nameText = data.participantName.trim() || "Devotee Participant";
-  const nameSize = nameText.length > 20 ? 24 : 28;
+  const nameSize = nameText.length > 22 ? 24 : 28;
   const nameWidth = fontTimesBold.widthOfTextAtSize(nameText, nameSize);
   page.drawText(nameText, {
     x: (width - nameWidth) / 2,
-    y: height - 230,
+    y: 275,
     size: nameSize,
     font: fontTimesBold,
     color: nameColor,
   });
 
-  // 3. Quiz Title in quotes
+  // 3. Quiz Title (Centered in Blank Zone 2 below passing text)
   const quizTitle = `“${data.quizTitle}”`;
   const quizSize = quizTitle.length > 35 ? 15 : 17;
   const quizWidth = fontTimesBold.widthOfTextAtSize(quizTitle, quizSize);
   page.drawText(quizTitle, {
     x: (width - quizWidth) / 2,
-    y: height - 295,
+    y: 185,
     size: quizSize,
     font: fontTimesBold,
     color: titleColor,
@@ -91,27 +91,25 @@ export async function generateQuizCertificatePdf(data: CertificateData): Promise
   const scoreWidth = fontTimes.widthOfTextAtSize(scoreText, 13);
   page.drawText(scoreText, {
     x: (width - scoreWidth) / 2,
-    y: height - 325,
+    y: 156,
     size: 13,
     font: fontTimes,
     color: darkSlate,
   });
 
-  // 5. Date & Certificate ID (Bottom Left Metadata)
-  const dateStr = `Date: ${data.dateStr}`;
-  page.drawText(dateStr, {
-    x: 130,
-    y: 95,
-    size: 10,
+  // 5. Date & Certificate ID (Bottom Left Metadata aligned with icons)
+  page.drawText(data.dateStr, {
+    x: 138,
+    y: 104,
+    size: 9.5,
     font: fontHelveticaBold,
     color: metaColor,
   });
 
-  const idStr = `ID: ${data.certificateId}`;
-  page.drawText(idStr, {
-    x: 130,
-    y: 78,
-    size: 10,
+  page.drawText(data.certificateId, {
+    x: 138,
+    y: 83,
+    size: 9.5,
     font: fontHelveticaBold,
     color: metaColor,
   });
