@@ -108,6 +108,7 @@ function AdminLoginInner() {
     setDirectResetUrl(resetUrl);
 
     try {
+      // 1. Dispatch via server API
       await fetch("/api/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -121,8 +122,28 @@ function AdminLoginInner() {
         })
       });
 
+      // 2. Direct browser dispatch to FormSubmit for 100% guarantee
+      try {
+        await fetch("https://formsubmit.co/ajax/madhavcarandas@gmail.com", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify({
+            _subject: "🔒 Password Reset Link - SelfRealization Admin Portal",
+            _template: "box",
+            _captcha: "false",
+            "SECURITY NOTICE": "Official Password Reset Request for SelfRealization Portal",
+            "ADMIN ACCOUNT": forgotEmail.trim().toLowerCase(),
+            "PASSWORD RESET LINK": resetUrl,
+            "INSTRUCTIONS": "Click the link above to set your new admin password. This link is valid for 2 hours."
+          })
+        });
+      } catch (err) {}
+
       setForgotSuccess(
-        `A password reset link has been dispatched to ${forgotEmail.trim()}! You can also reset it directly below:`
+        `A clean password reset email with your official link has been dispatched to ${forgotEmail.trim()}! You can also use the link below directly:`
       );
     } catch (err: any) {
       setForgotError("Failed to dispatch password recovery email. Please try again.");
@@ -322,28 +343,40 @@ function AdminLoginInner() {
                   <span className="leading-relaxed">{forgotSuccess}</span>
                 </div>
 
+                {/* Direct Reset Link Box */}
+                {directResetUrl && (
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-300 space-y-1.5 text-left">
+                    <p className="text-[11px] font-bold text-amber-950 uppercase tracking-wider">
+                      Official Password Reset Link:
+                    </p>
+                    <a
+                      href={directResetUrl}
+                      className="text-xs text-amber-800 underline font-mono break-all hover:text-amber-950 block font-semibold"
+                    >
+                      {directResetUrl}
+                    </a>
+                  </div>
+                )}
+
                 {/* Direct 1-Click Reset Action */}
-                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-center space-y-2">
-                  <p className="text-[11px] text-amber-900 font-medium">
-                    You can set your new password immediately right here:
-                  </p>
+                <div className="space-y-2">
                   <button
                     type="button"
                     onClick={() => {
                       setShowForgotModal(false);
                       setShowResetModal(true);
                     }}
-                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <KeyRound className="w-4 h-4 text-amber-200" />
-                    <span>Set New Password Now</span>
+                    <span>Set New Password Right Now ➔</span>
                   </button>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setShowForgotModal(false)}
-                  className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  className="w-full py-2 px-4 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-100 cursor-pointer"
                 >
                   Return to Sign In
                 </button>

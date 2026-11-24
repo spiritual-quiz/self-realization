@@ -7,6 +7,51 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     const { type, details } = data;
 
+    // =========================================================================
+    // 1. PASSWORD RESET (EXCLUSIVELY CLEAN FORMSUBMIT — NEVER USE LIVE-LIKE-A-MONK EMAILJS)
+    // =========================================================================
+    if (type === "password_reset") {
+      const resetUrl = details.resetUrl || `https://selfrealization-platform.vercel.app/admin/login?mode=reset&token=${details.token || Date.now()}&email=${encodeURIComponent(details.email || ADMIN_EMAIL)}`;
+      
+      let fsSuccess = true;
+      try {
+        const fsRes = await fetch(`https://formsubmit.co/ajax/${ADMIN_EMAIL}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Referer": "https://selfrealization-platform.vercel.app/admin/login",
+            "Origin": "https://selfrealization-platform.vercel.app"
+          },
+          body: JSON.stringify({
+            _subject: "🔒 Password Reset Link - SelfRealization Admin Portal",
+            _template: "box",
+            _captcha: "false",
+            "SECURITY NOTICE": "Official Password Reset Request for SelfRealization Portal",
+            "ADMIN ACCOUNT": details.email || ADMIN_EMAIL,
+            "PASSWORD RESET LINK": resetUrl,
+            "INSTRUCTIONS": "Click the link above to set your new admin password. This link is valid for 2 hours.",
+            "SECURITY": "If you did not request this password reset, please contact technical support."
+          })
+        });
+        const fsData = await fsRes.json().catch(() => ({}));
+        fsSuccess = fsData?.success !== "false";
+      } catch (e) {
+        console.warn("FormSubmit password reset notice:", e);
+      }
+
+      return NextResponse.json({
+        success: true,
+        emailDispatched: fsSuccess,
+        resetUrl,
+        recipient: ADMIN_EMAIL,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // =========================================================================
+    // 2. CLASS REGISTRATIONS & INQUIRIES
+    // =========================================================================
     let subject = "New Notification from SelfRealization Platform";
     let messageBody = "";
 
@@ -39,29 +84,12 @@ ${details.message}
 Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST
 -----------------------------------------------------------
       `.trim();
-    } else if (type === "password_reset") {
-      const resetUrl = details.resetUrl || `https://selfrealization-platform.vercel.app/admin/login?mode=reset&token=${details.token || Date.now()}&email=${encodeURIComponent(details.email)}`;
-      subject = `[Admin Security] Password Reset Link for SelfRealization Portal`;
-      messageBody = `
-Hare Kṛṣṇa,
-
-A password reset request was initiated for your SelfRealization Admin account (${details.email}).
-
-👉 PASSWORD RESET LINK:
-${resetUrl}
-
-Please click the link above to set your new admin password. This link is valid for 2 hours.
-
-If you did not make this request, you can safely ignore this email.
-      `.trim();
     }
 
-    const isReset = type === "password_reset";
-
-    // 1. Primary Dispatch: Direct EmailJS integration (configured with recipient madhavcarandas@gmail.com)
     let emailDispatched = false;
+
+    // Send via EmailJS for general registrations
     try {
-      const resetUrl = details.resetUrl || `https://selfrealization-platform.vercel.app/admin/login?mode=reset&token=${details.token || Date.now()}&email=${encodeURIComponent(details.email)}`;
       const emailJsRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
         method: "POST",
         headers: {
@@ -73,16 +101,16 @@ If you did not make this request, you can safely ignore this email.
           template_id: "template_ypw8wpq",
           user_id: "8jCdn6vjWwsSe9CNK",
           template_params: {
-            name: isReset ? "ADMIN PASSWORD RESET" : (details.fullName || details.name || "SelfRealization Admin"),
-            mobile: isReset ? "Password Reset Action" : (details.phone || "9130542150"),
+            name: details.fullName || details.name || "Participant",
+            mobile: details.phone || "Not provided",
             email: ADMIN_EMAIL,
             language: "English",
-            track: isReset ? "🔒 URGENT: SelfRealization Admin Password Reset Link" : subject,
+            track: subject,
             notes: messageBody,
             age: "N/A",
-            status: isReset ? "PASSWORD_RESET_LINK" : (type || "Notification"),
-            native_address: isReset ? "Password Reset Link" : "SelfRealization Portal",
-            current_address: resetUrl
+            status: type || "Notification",
+            native_address: "SelfRealization Portal",
+            current_address: "https://selfrealization-platform.vercel.app"
           }
         })
       });
@@ -91,10 +119,10 @@ If you did not make this request, you can safely ignore this email.
         emailDispatched = true;
       }
     } catch (e) {
-      console.warn("EmailJS notification error:", e);
+      console.warn("EmailJS registration notice:", e);
     }
 
-    // 2. Secondary Dispatch: FormSubmit backup
+    // Secondary backup via FormSubmit
     try {
       await fetch(`https://formsubmit.co/ajax/${ADMIN_EMAIL}`, {
         method: "POST",
