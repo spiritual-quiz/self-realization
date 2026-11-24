@@ -12,7 +12,6 @@ import {
   KeyRound, 
   CheckCircle2, 
   X,
-  HelpCircle,
   Eye,
   EyeOff
 } from "lucide-react";
@@ -28,9 +27,6 @@ export default function AdminLoginPage() {
 
   // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
-  const [recoveryMode, setRecoveryMode] = useState<"pin" | "email">("pin");
-  const [masterPin, setMasterPin] = useState("");
-  const [revealedCreds, setRevealedCreds] = useState<{ email: string; pass: string } | null>(null);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
@@ -61,20 +57,6 @@ export default function AdminLoginPage() {
     }, 600);
   };
 
-  // Instant recovery using Master Admin PIN
-  const handleVerifyMasterPin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotError(null);
-    if (masterPin.trim() === "108" || masterPin.trim().toLowerCase() === "hare krishna" || masterPin.trim() === "2026") {
-      setRevealedCreds({
-        email: "madhavcarandas@gmail.com",
-        pass: "SelfRealization@2026"
-      });
-    } else {
-      setForgotError("Incorrect Master Security PIN. (Hint: Sacred Vedic number 108)");
-    }
-  };
-
   // Email dispatch retrieval
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,10 +80,10 @@ export default function AdminLoginPage() {
 
       const result = await res.json().catch(() => ({ success: true }));
       setForgotSuccess(
-        `Password recovery message dispatched to ${forgotEmail.trim()}. Please check your Inbox and Spam folder. (Note: On the first submission, FormSubmit sends an "Activate Form" verification email from FormSubmit/Submissions. Click that link once to approve forwarding).`
+        `Password retrieval email has been dispatched to ${forgotEmail.trim()}! Please check your Inbox and Spam folder for the recovery message.`
       );
     } catch (err: any) {
-      setForgotError("Network notice: Notification recorded. You can also use the Instant Master PIN tab above for immediate retrieval.");
+      setForgotError("Failed to dispatch password recovery email. Please try again.");
     } finally {
       setForgotLoading(false);
     }
@@ -160,8 +142,7 @@ export default function AdminLoginPage() {
                 onClick={() => {
                   setForgotSuccess(null);
                   setForgotError(null);
-                  setRevealedCreds(null);
-                  setMasterPin("");
+                  setForgotEmail("");
                   setShowForgotModal(true);
                 }}
                 className="text-xs text-amber-700 hover:text-amber-800 hover:underline font-semibold cursor-pointer"
@@ -182,7 +163,7 @@ export default function AdminLoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -216,7 +197,7 @@ export default function AdminLoginPage() {
         </div>
       </div>
 
-      {/* Forgot Password / Recovery Modal */}
+      {/* Forgot Password Recovery Modal */}
       {showForgotModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-amber-200 p-6 sm:p-8 space-y-5">
@@ -233,159 +214,78 @@ export default function AdminLoginPage() {
                 <KeyRound className="w-6 h-6" />
               </div>
               <h2 className="text-xl font-bold text-gray-900">
-                Retrieve Admin Password
+                Recover Admin Password
               </h2>
               <p className="text-xs text-gray-500 leading-relaxed">
-                Choose between instant Master PIN retrieval or receiving a reset link via email.
+                Enter your registered administrator email ID below. We will send your login credentials and password retrieval link directly to your inbox.
               </p>
             </div>
 
-            {/* Recovery Mode Selector Tabs */}
-            <div className="flex bg-amber-50 p-1 rounded-xl border border-amber-200 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => { setRecoveryMode("pin"); setForgotError(null); }}
-                className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  recoveryMode === "pin" ? "bg-amber-600 text-white shadow-xs" : "text-amber-900 hover:text-amber-700"
-                }`}
-              >
-                Instant Master PIN
-              </button>
-              <button
-                type="button"
-                onClick={() => { setRecoveryMode("email"); setForgotError(null); }}
-                className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  recoveryMode === "email" ? "bg-amber-600 text-white shadow-xs" : "text-amber-900 hover:text-amber-700"
-                }`}
-              >
-                Email Dispatch
-              </button>
-            </div>
-
-            {forgotError && (
-              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{forgotError}</span>
-              </div>
-            )}
-
-            {/* TAB 1: Instant Master PIN Recovery */}
-            {recoveryMode === "pin" && !revealedCreds && (
-              <form onSubmit={handleVerifyMasterPin} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-700 uppercase">
-                    Master Admin Security PIN
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={masterPin}
-                    placeholder="Enter Master PIN (Default: 108)"
-                    onChange={(e) => setMasterPin(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
-                  />
-                  <p className="text-[11px] text-gray-500">
-                    Dedicated PIN for authorized temple administrators to recover access without email delays.
-                  </p>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md cursor-pointer"
-                >
-                  Verify PIN & Reveal Password
-                </button>
-              </form>
-            )}
-
-            {/* Revealed Credentials view */}
-            {revealedCreds && (
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 space-y-3 animate-fade-in">
-                <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>PIN Verified! Here are your Admin Credentials:</span>
-                </div>
-                <div className="space-y-1 text-xs text-gray-800 bg-white p-3 rounded-xl border border-amber-200">
-                  <p><span className="font-bold text-gray-600">Admin Email:</span> <code className="font-mono text-amber-800 font-semibold">{revealedCreds.email}</code></p>
-                  <p><span className="font-bold text-gray-600">Password:</span> <code className="font-mono text-emerald-800 font-bold">{revealedCreds.pass}</code></p>
+            {forgotSuccess ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{forgotSuccess}</span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setEmail(revealedCreds.email);
-                    setPassword(revealedCreds.pass);
-                    setShowForgotModal(false);
-                  }}
-                  className="w-full py-2 px-4 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 cursor-pointer"
+                  onClick={() => setShowForgotModal(false)}
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 cursor-pointer"
                 >
-                  Auto-Fill & Return to Sign In
+                  Return to Sign In
                 </button>
               </div>
-            )}
-
-            {/* TAB 2: Email Dispatch Recovery */}
-            {recoveryMode === "email" && (
-              <>
-                {forgotSuccess ? (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">{forgotSuccess}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowForgotModal(false)}
-                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 cursor-pointer"
-                    >
-                      Return to Sign In
-                    </button>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                {forgotError && (
+                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{forgotError}</span>
                   </div>
-                ) : (
-                  <form onSubmit={handleForgotPassword} className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Registered Admin Email</span>
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={forgotEmail}
-                        placeholder="xxxxx@gmail.com"
-                        onChange={(e) => setForgotEmail(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
-                      />
-                    </div>
-
-                    <div className="pt-2 flex items-center justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowForgotModal(false)}
-                        className="px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={forgotLoading}
-                        className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md flex items-center gap-2 disabled:opacity-60 cursor-pointer"
-                      >
-                        {forgotLoading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Sending Link...</span>
-                          </>
-                        ) : (
-                          <>
-                            <KeyRound className="w-4 h-4" />
-                            <span>Send Recovery Email</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </form>
                 )}
-              </>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Registered Admin Email</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    placeholder="xxxxx@gmail.com"
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md flex items-center gap-2 disabled:opacity-60 cursor-pointer"
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Sending Email...</span>
+                      </>
+                    ) : (
+                      <>
+                        <KeyRound className="w-4 h-4" />
+                        <span>Send Recovery Email</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             )}
           </div>
         </div>

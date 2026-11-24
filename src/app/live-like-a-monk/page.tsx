@@ -1,16 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { ExternalLink, RefreshCw, Maximize2, Minimize2, Sparkles, Compass } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react";
 
 export default function LiveLikeAMonkPage() {
   const [loading, setLoading] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
-
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
 
   const handleRefresh = () => {
     setLoading(true);
@@ -18,56 +14,38 @@ export default function LiveLikeAMonkPage() {
   };
 
   return (
-    <div className={`w-full flex flex-col bg-stone-950 ${isFullscreen ? "fixed inset-0 z-50 h-screen" : "min-h-[calc(100vh-80px)]"}`}>
+    <div className="fixed inset-0 z-50 w-screen h-screen bg-[#0d0c0a] flex flex-col overflow-hidden">
       
-      {/* Top Experience Bar */}
-      <div className="bg-gradient-to-r from-amber-950 via-stone-900 to-amber-950 text-amber-200/90 px-4 sm:px-6 py-2.5 text-xs flex items-center justify-between border-b border-amber-800/40 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-full bg-amber-600 flex items-center justify-center text-white text-[10px] font-bold">
-            <Compass className="w-3.5 h-3.5" />
-          </div>
-          <div>
-            <span className="font-bold text-white text-xs sm:text-sm">Live Like a Monk</span>
-            <span className="hidden md:inline text-amber-300/70 text-xs ml-2">
-              • Official ISKCON NVCC Ashram Immersion Experience
-            </span>
-          </div>
+      {/* Sleek Top Navigation Ribbon with prominent Back Button */}
+      <div className="bg-gradient-to-r from-amber-950 via-stone-900 to-amber-950 text-amber-200 px-4 sm:px-6 py-2.5 flex items-center justify-between border-b border-amber-800/60 shadow-lg shrink-0">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-800/80 hover:bg-amber-700 text-white text-xs font-bold shadow-md transition-all transform active:scale-95 border border-amber-500/40"
+          >
+            <ArrowLeft className="w-4 h-4 text-amber-200" />
+            <span>Back to Self Realization</span>
+          </Link>
+          <span className="hidden sm:inline text-xs font-medium text-amber-300/80">
+            | Live Like a Monk • ISKCON NVCC Ashram Immersion
+          </span>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={handleRefresh}
-            title="Reload Page"
+            title="Reload Application"
             className="p-1.5 rounded-lg text-amber-300 hover:text-white hover:bg-white/10 transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Exit Fullscreen" : "View Fullscreen"}
-            className="p-1.5 rounded-lg text-amber-300 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1 text-xs"
-          >
-            {isFullscreen ? (
-              <>
-                <Minimize2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Exit Fullscreen</span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Fullscreen</span>
-              </>
-            )}
           </button>
 
           <a
             href="https://live-like-a-monk.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold text-amber-900 bg-amber-400 hover:bg-amber-300 transition-colors shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-amber-950 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 transition-all shadow-xs"
           >
             <span>Open Dedicated Tab</span>
             <ExternalLink className="w-3 h-3" />
@@ -75,17 +53,17 @@ export default function LiveLikeAMonkPage() {
         </div>
       </div>
 
-      {/* Embedded Application Container */}
-      <div className="relative flex-1 w-full bg-stone-900">
+      {/* 100% Full-Screen Embedded Application (Only Live Like a Monk Menu is shown) */}
+      <div className="relative flex-1 w-full h-[calc(100vh-48px)] bg-[#0d0c0a]">
         {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-stone-950 text-amber-100 z-10 space-y-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d0c0a] text-amber-100 z-10 space-y-4">
             <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
             <div className="text-center space-y-1">
               <p className="text-base font-bold text-white tracking-wide">
                 Loading Live Like a Monk...
               </p>
               <p className="text-xs text-amber-300/80">
-                Connecting to ISKCON NVCC Residential Portal
+                Opening ISKCON NVCC Residential Ashram Portal
               </p>
             </div>
           </div>
@@ -94,7 +72,7 @@ export default function LiveLikeAMonkPage() {
         <iframe
           key={iframeKey}
           src="https://live-like-a-monk.vercel.app/"
-          className={`w-full border-0 block ${isFullscreen ? "h-[calc(100vh-42px)]" : "h-[calc(100vh-125px)] sm:h-[calc(100vh-135px)]"}`}
+          className="w-full h-full border-0 block"
           title="Live Like a Monk"
           onLoad={() => setLoading(false)}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

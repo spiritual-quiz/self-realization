@@ -54,10 +54,44 @@ If you did not request this, please ensure your account credentials remain secur
       `.trim();
     }
 
-    // 1. Dispatch email via FormSubmit AJAX service (with valid Origin & Referer headers)
+    // 1. Primary Dispatch: Direct EmailJS integration (configured with recipient madhavcarandas@gmail.com)
     let emailDispatched = false;
     try {
-      const res = await fetch(`https://formsubmit.co/ajax/${ADMIN_EMAIL}`, {
+      const emailJsRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Origin": "https://live-like-a-monk.vercel.app"
+        },
+        body: JSON.stringify({
+          service_id: "service_1ve1iom",
+          template_id: "template_ypw8wpq",
+          user_id: "8jCdn6vjWwsSe9CNK",
+          template_params: {
+            name: details.fullName || details.name || "SelfRealization Admin",
+            mobile: details.phone || "9130542150",
+            email: ADMIN_EMAIL,
+            language: "English",
+            track: subject,
+            notes: messageBody,
+            age: "N/A",
+            status: type || "Notification",
+            native_address: "SelfRealization Portal",
+            current_address: "https://selfrealization-platform.vercel.app"
+          }
+        })
+      });
+
+      if (emailJsRes.ok) {
+        emailDispatched = true;
+      }
+    } catch (e) {
+      console.warn("EmailJS notification error:", e);
+    }
+
+    // 2. Secondary Dispatch: FormSubmit backup
+    try {
+      await fetch(`https://formsubmit.co/ajax/${ADMIN_EMAIL}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -75,15 +109,8 @@ If you did not request this, please ensure your account credentials remain secur
           phone: details.phone || "N/A",
           details: messageBody
         })
-      });
-
-      const jsonRes = await res.json().catch(() => null);
-      if (res.ok || jsonRes?.success) {
-        emailDispatched = true;
-      }
-    } catch (e) {
-      console.warn("FormSubmit mail forwarder error (will still record notification):", e);
-    }
+      }).catch(() => {});
+    } catch (e) {}
 
     return NextResponse.json({
       success: true,
