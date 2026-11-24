@@ -201,6 +201,20 @@ function QuizPlayInner() {
 
     const uniqueCertId = "SR-" + Math.floor(100000 + Math.random() * 900000);
     setCertificateId(uniqueCertId);
+    
+    // Auto populate participant name & WhatsApp phone into registration form state
+    const cleanName = participantName
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+
+    setClassFormData((prev) => ({
+      ...prev,
+      name: cleanName,
+      whatsapp: participantPhone.trim(),
+    }));
+
     setQuizStarted(true);
     setCurrentIndex(0);
     setScore(0);
@@ -359,6 +373,11 @@ function QuizPlayInner() {
     } else {
       setIsComplete(true);
 
+      // Scroll immediately to the top of the viewport
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      }
+
       // Stop background sound upon quiz completion
       if (bgAudioRef.current) {
         bgAudioRef.current.pause();
@@ -389,6 +408,7 @@ function QuizPlayInner() {
     setClassFormData((prev) => ({
       ...prev,
       name: cleanName,
+      whatsapp: participantPhone ? participantPhone.trim() : prev.whatsapp,
     }));
     setShowClassRegisterModal(true);
   };
@@ -587,7 +607,7 @@ function QuizPlayInner() {
 
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700 uppercase">
-                {language === "hi" ? "व्हाट्सएप नंबर (वैकल्पिक)" : "WhatsApp Number (Optional)"}
+                {language === "hi" ? "व्हाट्सएप नंबर (प्रमाणपत्र व कक्षाओं हेतु)" : "WhatsApp Number (For Certificate & Classes)"}
               </label>
               <input
                 type="tel"
@@ -634,13 +654,12 @@ function QuizPlayInner() {
       .join(" ");
 
     return (
-      <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in ${printMode === "cert-only" ? "cert-only-mode" : "full-report-mode"}`}>
-        
+      <>
         {/* =========================================================================
-            1. FREE CLASSES INVITATION POPUP MODAL (Post-Quiz Completion)
+            1. FREE CLASSES INVITATION POPUP MODAL (Guaranteed Screen Viewport Center)
             ========================================================================= */}
         {showClassOfferModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
             <div className="w-full max-w-lg bg-gradient-to-b from-[#FFFDF8] via-[#FFF9EE] to-[#FFF1D6] border-2 sm:border-4 border-amber-500 rounded-3xl p-6 sm:p-8 shadow-2xl text-center relative overflow-hidden animate-scale-in">
               
               {/* Decorative Aura Accent */}
@@ -689,11 +708,11 @@ function QuizPlayInner() {
         )}
 
         {/* =========================================================================
-            2. FREE CLASSES DETAILED REGISTRATION MODAL (All Fields Mandatory)
+            2. FREE CLASSES DETAILED REGISTRATION MODAL (Only Submit Button, Pre-filled Phone)
             ========================================================================= */}
         {showClassRegisterModal && (
-          <div className="fixed inset-0 z-[105] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fade-in">
-            <div className="w-full max-w-xl bg-gradient-to-b from-[#FFFDF9] via-[#FFF9EE] to-[#FFF3DC] border-2 sm:border-4 border-amber-500 rounded-3xl p-5 sm:p-7 shadow-2xl text-gray-900 relative my-6">
+          <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-start sm:items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
+            <div className="w-full max-w-xl bg-gradient-to-b from-[#FFFDF9] via-[#FFF9EE] to-[#FFF3DC] border-2 sm:border-4 border-amber-500 rounded-3xl p-5 sm:p-7 shadow-2xl text-gray-900 relative my-auto sm:my-6">
               
               {/* Header */}
               <div className="text-center pb-3 border-b border-amber-300/60 mb-4">
@@ -758,7 +777,7 @@ function QuizPlayInner() {
                       />
                     </div>
 
-                    {/* 3. WhatsApp Number */}
+                    {/* 3. WhatsApp Number (Pre-filled from Quiz start form) */}
                     <div>
                       <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
                         व्हाट्सएप नंबर / WhatsApp Number <span className="text-rose-600">*</span>
@@ -892,21 +911,15 @@ function QuizPlayInner() {
 
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="pt-3 flex items-center justify-end gap-3 border-t border-amber-200">
-                    <button
-                      type="button"
-                      onClick={() => setShowClassRegisterModal(false)}
-                      className="px-4 py-2 text-xs sm:text-sm font-bold text-stone-600 hover:text-stone-900 cursor-pointer"
-                    >
-                      छोड़ें / Skip
-                    </button>
+                  {/* Action Button - Only Submit Button (Skip button removed per user request) */}
+                  <div className="pt-3 border-t border-amber-200">
                     <button
                       type="submit"
                       disabled={classFormSubmitting}
-                      className="px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 text-white shadow-lg shadow-amber-700/20 flex items-center gap-2 cursor-pointer transition-all"
+                      className="w-full py-3.5 px-6 rounded-2xl font-black text-sm sm:text-base bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 text-white shadow-xl shadow-amber-700/25 flex items-center justify-center gap-2 cursor-pointer transition-all transform active:scale-98"
                     >
-                      {classFormSubmitting ? "जमा हो रहा है... / Submitting..." : "पंजीकरण जमा करें / Submit Registration"}
+                      <Sparkles className="w-4 h-4 text-amber-200" />
+                      <span>{classFormSubmitting ? "जमा हो रहा है... / Submitting..." : "पंजीकरण जमा करें / Submit Registration"}</span>
                     </button>
                   </div>
                 </form>
@@ -915,6 +928,8 @@ function QuizPlayInner() {
             </div>
           </div>
         )}
+
+        <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in ${printMode === "cert-only" ? "cert-only-mode" : "full-report-mode"}`}>
         
         {/* Print Stylesheet for exact 1-page certificate & report */}
         <style jsx global>{`
@@ -1194,6 +1209,7 @@ function QuizPlayInner() {
         </div>
 
       </div>
+    </>
     );
   }
 
