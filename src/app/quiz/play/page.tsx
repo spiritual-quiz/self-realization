@@ -354,6 +354,45 @@ function QuizPlayInner() {
   const handleDownloadCertificateOnly = async () => {
     setGeneratingPdf(true);
     try {
+      const certElem = document.getElementById("official-devotional-certificate");
+      if (certElem) {
+        const html2canvasModule = await import("html2canvas");
+        const html2canvas = html2canvasModule.default;
+        const canvas = await html2canvas(certElem, {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#FFFDF7",
+        });
+        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        const { PDFDocument } = await import("pdf-lib");
+        const pdfDoc = await PDFDocument.create();
+        // Exact certificate aspect ratio matching 1024x615
+        const page = pdfDoc.addPage([842, 506]);
+        const jpgImage = await pdfDoc.embedJpg(imgData);
+        page.drawImage(jpgImage, {
+          x: 0,
+          y: 0,
+          width: 842,
+          height: 506,
+        });
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `SelfRealization_Certificate_${participantName.replace(/\s+/g, "_") || "Devotee"}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        return;
+      }
+    } catch (e: any) {
+      console.warn("html2canvas capture warning, falling back to direct PDF generation:", e);
+    }
+
+    try {
       const totalMarks = questions.reduce((a, b) => a + b.points, 0);
       const percentage = (score / totalMarks) * 100;
 
@@ -603,10 +642,13 @@ function QuizPlayInner() {
         </div>
 
         {/* OFFICIAL DEVOTIONAL CERTIFICATE (EXACT TEMPLATE & EXACT SIZE) */}
-        <div className="official-cert-card relative w-full aspect-[1024/615] rounded-3xl overflow-hidden shadow-2xl border-4 border-amber-600 bg-[#FAF8F5]">
-          {/* Certificate Artwork Background */}
+        <div 
+          id="official-devotional-certificate"
+          className="official-cert-card relative w-full aspect-[1024/615] rounded-3xl overflow-hidden shadow-2xl border-4 border-amber-600 bg-[#FAF8F5]"
+        >
+          {/* Pure Clean Certificate Artwork Background (No Ghost Text) */}
           <Image
-            src="/images/certificate-bg-clean.jpg"
+            src="/images/certificate-bg-pure.jpg"
             alt="Official Certificate"
             fill
             className="object-cover"
@@ -617,15 +659,15 @@ function QuizPlayInner() {
           <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10 pointer-events-none select-none">
             
             {/* Top Spacer to align with Ribbon */}
-            <div className="h-28 sm:h-36" />
+            <div className="h-24 sm:h-32" />
 
             {/* Middle Section: Name, Quiz Title, Score */}
-            <div className="text-center space-y-1 sm:space-y-2">
+            <div className="text-center space-y-1 sm:space-y-1.5 px-16 sm:px-28">
               <p className="text-xs sm:text-sm italic text-gray-700 font-serif">
                 This is proudly presented to
               </p>
-              <div className="py-1">
-                <span className="text-2xl sm:text-4xl md:text-5xl font-serif font-black text-[#3d140a] tracking-wide underline decoration-amber-400 decoration-2 underline-offset-4">
+              <div className="py-0.5">
+                <span className="text-2xl sm:text-4xl md:text-5xl font-serif font-black text-[#3d140a] tracking-wide underline decoration-amber-400 decoration-2 underline-offset-4 drop-shadow-xs">
                   {participantName}
                 </span>
               </div>
@@ -640,13 +682,24 @@ function QuizPlayInner() {
               </p>
             </div>
 
-            {/* Bottom Section: Date & ID (Left) */}
-            <div className="flex items-end justify-between text-xs text-gray-800 font-mono pb-2 pl-4 sm:pl-8">
-              <div className="space-y-1 text-left text-[11px] sm:text-xs font-bold text-[#3d1d07]">
+            {/* Bottom Section: Date & ID (Left), Logo (Center) */}
+            <div className="flex items-end justify-between text-xs text-gray-800 font-mono pb-2 pl-4 sm:pl-8 pr-4">
+              <div className="space-y-0.5 text-left text-[10px] sm:text-xs font-bold text-[#3d1d07] bg-amber-100/40 p-1 rounded-md">
                 <p>Date: {dateFormatted}</p>
                 <p>ID: {certificateId}</p>
               </div>
-              <div className="w-1" />
+
+              {/* Official Center Transparent Logo */}
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0">
+                <Image
+                  src="/images/logo.png"
+                  alt="SelfRealization"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+
+              <div className="w-16" />
             </div>
 
           </div>
@@ -769,128 +822,109 @@ function QuizPlayInner() {
     );
   }
 
-  // SCREEN 2: ACTIVE QUESTION ARENA (EXACT REPLICA OF UPLOADED DESIGN)
+  // SCREEN 2: ACTIVE QUESTION ARENA (COMPACT, 100% ZERO-SCROLL FOR DESKTOP & MOBILE)
   const currentQ = questions[currentIndex];
   const timerFraction = timerDuration > 0 ? timeLeft / timerDuration : 1;
   const isTimerUrgent = timeLeft <= 3 && timerDuration > 0 && !isAnswered;
 
   return (
-    <div className="relative min-h-[90vh] py-6 sm:py-8 px-3 sm:px-6 flex flex-col items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-[#120822] text-white flex flex-col justify-between overflow-hidden select-none p-2 sm:p-4">
       
-      {/* Devotional Panoramic Background with Yamuna, Krishna & Temple */}
-      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#160D24]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-700/20 via-[#26153B] to-[#0E0617]" />
-        <div className="absolute inset-x-0 bottom-0 h-96 bg-gradient-to-t from-[#0E0617] via-transparent to-transparent" />
+      {/* Devotional Panoramic Background with Yamuna & Golden Glow */}
+      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#120822]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-600/20 via-[#221035] to-[#0D0417]" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#0D0417] via-transparent to-transparent" />
       </div>
 
-      <div className="w-full max-w-5xl space-y-4 animate-fade-in relative z-10">
+      <div className="w-full max-w-5xl mx-auto flex flex-col h-full justify-between gap-1 sm:gap-2 relative z-10">
         
-        {/* 1. TOP ROYAL GOLDEN PLAQUE (Book & Title Banner) */}
-        <div className="text-center space-y-1">
-          <div className="relative inline-block">
-            {/* Radiant Open Bhagavad-gita Book Accent */}
-            <div className="flex items-center justify-center -mb-3 relative z-10">
-              <div className="w-14 h-10 rounded-lg bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 p-0.5 shadow-lg shadow-amber-500/40 flex items-center justify-center">
-                <div className="w-full h-full bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 rounded flex items-center justify-center text-amber-200 text-xs font-serif font-black">
-                  📖 गीता
-                </div>
-              </div>
-            </div>
-
-            {/* Ornate Golden Banner Plate */}
-            <div className="bg-gradient-to-r from-amber-800 via-[#8A2B06] to-amber-800 border-2 border-amber-300/80 px-8 sm:px-12 py-2 rounded-2xl shadow-xl shadow-amber-900/40">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-serif font-black text-amber-200 tracking-wider drop-shadow-md">
-                Bhagavad-gītā
-              </h1>
-              <p className="text-xs sm:text-sm font-bold text-amber-300 uppercase tracking-widest -mt-0.5">
-                Wisdom Challenge
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. GAMING HUD BAR (Deep Purple Pill with Golden Trim) */}
-        <div className="bg-gradient-to-r from-[#20103A] via-[#2D164E] to-[#20103A] border-2 border-amber-400/70 rounded-full px-4 sm:px-6 py-2.5 shadow-xl flex items-center justify-between gap-3 text-white">
+        {/* 1. COMPACT STREAMLINED ROYAL HUD BAR */}
+        <div className="shrink-0 bg-gradient-to-r from-[#20103A] via-[#2D164E] to-[#20103A] border-2 border-amber-400/80 rounded-2xl px-3 sm:px-5 py-1.5 sm:py-2 shadow-xl flex items-center justify-between gap-2 text-white">
           
-          {/* Left: Progress Badge & Vedic Arena Points */}
-          <div className="flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-amber-400/20 border border-amber-300 text-amber-200 text-xs font-black flex items-center justify-center shadow-inner">
+          {/* Left: Exit Link & Progress Pill */}
+          <div className="flex items-center gap-2">
+            <Link
+              href="/quiz"
+              onClick={() => {
+                if (bgAudioRef.current) {
+                  bgAudioRef.current.pause();
+                  bgAudioRef.current.currentTime = 0;
+                }
+              }}
+              className="text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-amber-200 transition-colors"
+            >
+              ← Exit
+            </Link>
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-300 text-amber-200 text-xs font-black">
               {currentIndex + 1}/{questions.length}
             </span>
-            <div className="flex items-center gap-1.5 text-xs">
-              <Trophy className="w-4 h-4 text-amber-300 fill-amber-300" />
-              <div className="hidden sm:block">
-                <span className="text-[10px] text-amber-200/80 uppercase font-bold tracking-wider block leading-none">Vedic Arena</span>
-                <span className="font-black text-amber-300 text-sm leading-tight">{score} Points</span>
-              </div>
-              <span className="sm:hidden font-black text-amber-300 text-xs">{score} Pts</span>
+          </div>
+
+          {/* Center: Open Gita Plaque & Live Timer */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden md:flex items-center gap-1.5 bg-amber-900/60 border border-amber-400/60 px-3 py-0.5 rounded-xl shadow-xs">
+              <span className="text-xs">📖</span>
+              <span className="text-xs font-serif font-black text-amber-200 tracking-wide">{quizTitle}</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 px-3 py-0.5 rounded-full border border-amber-300 shadow-inner">
+              <span className="text-amber-300 text-xs hidden sm:inline">🌿</span>
+              <Timer className={`w-3.5 h-3.5 ${isTimerUrgent ? "text-rose-400 animate-spin" : "text-amber-300"}`} />
+              <span className={`font-mono font-black text-xs sm:text-sm ${isTimerUrgent ? "text-rose-300 animate-pulse" : "text-amber-100"}`}>
+                {timeLeft}s
+              </span>
+              <span className="text-amber-300 text-xs hidden sm:inline">🌿</span>
             </div>
           </div>
 
-          {/* Center: Live Timer Badge with Laurel Wreath */}
-          <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 px-4 py-1 rounded-full border border-amber-300 shadow-inner">
-            <span className="text-amber-300 text-sm font-bold hidden sm:inline">🌿</span>
-            <Timer className={`w-4 h-4 ${isTimerUrgent ? "text-rose-400 animate-spin" : "text-amber-300"}`} />
-            <span className={`font-mono font-black text-base ${isTimerUrgent ? "text-rose-300 animate-pulse" : "text-amber-100"}`}>
-              {timeLeft}s
-            </span>
-            <span className="text-amber-300 text-sm font-bold hidden sm:inline">🌿</span>
-          </div>
-
-          {/* Right: Streak & Music Toggle */}
+          {/* Right: Score & Audio Toggle */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {streak > 1 && (
-              <div className="hidden sm:flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-orange-500/30 border border-orange-400 text-orange-200 text-xs font-black animate-bounce">
-                <Flame className="w-3.5 h-3.5 fill-orange-400 text-orange-300" />
-                <span>{streak}x Streak!</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1 bg-amber-400/20 border border-amber-300/60 px-2.5 py-0.5 rounded-xl">
+              <Trophy className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+              <span className="font-black text-amber-300 text-xs">{score} Pts</span>
+            </div>
 
             <button
               type="button"
               onClick={toggleBgMusic}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                 bgMusicPlaying 
                   ? "bg-amber-500/30 text-amber-200 border-amber-300 shadow-sm" 
                   : "bg-white/10 text-white/70 border-white/20 hover:bg-white/20"
               }`}
             >
-              <Music className="w-3.5 h-3.5" />
-              <span>{bgMusicPlaying ? "Music ON" : "Music OFF"}</span>
+              <Music className="w-3 h-3" />
+              <span className="hidden sm:inline">{bgMusicPlaying ? "Music ON" : "Music OFF"}</span>
             </button>
           </div>
         </div>
 
-        {/* 3. NEON GLOWING PROGRESS BAR */}
-        <div className="w-full h-2.5 bg-amber-950/60 border border-amber-400/40 rounded-full overflow-hidden shadow-inner p-0.5">
+        {/* 2. THIN NEON PROGRESS BAR */}
+        <div className="shrink-0 w-full h-1.5 bg-amber-950/70 border border-amber-400/40 rounded-full overflow-hidden shadow-inner">
           <div
-            className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400 shadow-lg shadow-pink-500/50"
+            className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400"
             style={{ width: `${timerFraction * 100}%` }}
           />
         </div>
 
-        {/* 4. MAIN 2-COLUMN QUESTION & OPTIONS PANEL (EXACT DESIGN MATCH) */}
-        <div className={`bg-[#FDFBF7] rounded-3xl p-5 sm:p-7 border-4 border-amber-400/80 shadow-2xl relative overflow-hidden ${
+        {/* 3. CENTER QUESTION & OPTIONS CARD (100% ZERO-SCROLL) */}
+        <div className={`grow flex flex-col justify-center bg-[#FDFBF7] text-gray-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 border-2 sm:border-4 border-amber-400/90 shadow-2xl relative overflow-hidden my-auto ${
           isAnswered && selectedOption !== currentQ.correctAnswer ? "animate-shake" : ""
         }`}>
           
-          {/* Subtle Golden Floral Filigree Crest in center top */}
-          <div className="flex justify-center -mt-3 mb-2">
-            <span className="text-amber-600 text-sm font-serif">⚜ ॐ ⚜</span>
-          </div>
-
-          {/* Floating Score Animation on Correct Answer */}
+          {/* Floating Score Alert */}
           {floatingScore !== null && (
-            <div className="absolute top-4 right-6 text-xl sm:text-2xl font-black text-emerald-600 animate-float-score pointer-events-none z-30">
+            <div className="absolute top-2 right-4 text-base sm:text-xl font-black text-emerald-600 animate-float-score pointer-events-none z-30">
               +{floatingScore} Points! 🌸
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          {/* DESKTOP LAYOUT (2 Columns) vs MOBILE LAYOUT (Compact Stack) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-6 items-center">
             
-            {/* LEFT COLUMN: Picture / Artwork in Arch Frame */}
+            {/* PICTURE COLUMN (Left on desktop, Top preview on mobile) */}
             <div className="lg:col-span-5 flex flex-col justify-center">
-              <div className="relative w-full h-52 sm:h-64 lg:h-full min-h-[220px] rounded-2xl overflow-hidden border-2 border-amber-400/90 shadow-md bg-stone-100">
+              <div className="relative w-full h-24 sm:h-32 lg:h-[270px] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-amber-400 shadow-md bg-stone-100">
                 <Image
                   src={currentQ.imageUrl || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"}
                   alt="Question illustration"
@@ -899,29 +933,29 @@ function QuizPlayInner() {
                   sizes="(max-width: 1024px) 100vw, 450px"
                   priority
                 />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-3 flex justify-center">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-amber-200 bg-black/60 px-3 py-0.5 rounded-full border border-amber-400/50 backdrop-blur-xs">
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-1.5 sm:p-2 flex justify-center">
+                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-200 bg-black/60 px-2.5 py-0.5 rounded-full border border-amber-400/50 backdrop-blur-xs">
                     QUESTION {currentIndex + 1} OF {questions.length}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Question & 4 Capsule Pills */}
-            <div className="lg:col-span-7 flex flex-col justify-between space-y-3.5">
+            {/* QUESTION & 4 OPTIONS COLUMN */}
+            <div className="lg:col-span-7 flex flex-col justify-between space-y-2 sm:space-y-3">
               
-              {/* Question Text in Dual Bilingual Format */}
-              <div className="space-y-1 text-center lg:text-left">
-                <h2 className="text-lg sm:text-xl font-black text-[#361505] leading-snug">
+              {/* Question Text */}
+              <div className="space-y-0.5 text-center lg:text-left">
+                <h2 className="text-sm sm:text-lg lg:text-xl font-black text-[#361505] leading-snug">
                   {currentQ.question.hi}
                 </h2>
-                <p className="text-xs sm:text-sm text-gray-600 font-medium italic">
+                <p className="text-[11px] sm:text-xs text-gray-500 font-medium italic line-clamp-1">
                   {currentQ.question.en}
                 </p>
               </div>
 
-              {/* 4 Capsule Pill Options Grid */}
-              <div className="space-y-2.5">
+              {/* 4 Capsule Pill Options Grid (2x2 on mobile, single stack on desktop) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5 sm:gap-2">
                 {(['A', 'B', 'C', 'D'] as const).map((optKey) => {
                   const isSelected = selectedOption === optKey;
                   const isCorrect = currentQ.correctAnswer === optKey;
@@ -930,7 +964,7 @@ function QuizPlayInner() {
                   let cardStateClass = style.bg;
                   if (isAnswered) {
                     if (isCorrect) {
-                      cardStateClass = "bg-emerald-100 border-2 border-emerald-600 text-emerald-950 shadow-md ring-2 ring-emerald-300 scale-[1.01]";
+                      cardStateClass = "bg-emerald-100 border-2 border-emerald-600 text-emerald-950 shadow-md ring-2 ring-emerald-300";
                     } else if (isSelected && !isCorrect) {
                       cardStateClass = "bg-rose-100 border-2 border-rose-500 text-rose-950 ring-2 ring-rose-300 animate-shake";
                     } else {
@@ -944,31 +978,31 @@ function QuizPlayInner() {
                       type="button"
                       disabled={isAnswered}
                       onClick={() => handleSelectOption(optKey)}
-                      className={`w-full p-3 sm:p-3.5 rounded-full border-2 text-left transition-all duration-150 flex items-center justify-between gap-3 shadow-xs transform active:scale-98 cursor-pointer ${cardStateClass}`}
+                      className={`w-full p-2 sm:p-2.5 lg:p-3 rounded-xl sm:rounded-full border-2 text-left transition-all duration-150 flex items-center justify-between gap-2 sm:gap-3 shadow-xs transform active:scale-98 cursor-pointer ${cardStateClass}`}
                     >
-                      <div className="flex items-center gap-3 grow">
+                      <div className="flex items-center gap-2 sm:gap-3 grow overflow-hidden">
                         {/* Option Circle */}
-                        <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                        <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-black shrink-0 ${
                           isAnswered && isCorrect ? "bg-emerald-600 text-white" :
                           isAnswered && isSelected && !isCorrect ? "bg-rose-600 text-white" :
                           style.circle
                         }`}>
-                          {isAnswered && isCorrect ? <Check className="w-4 h-4 stroke-[3]" /> : optKey}
+                          {isAnswered && isCorrect ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : optKey}
                         </span>
 
                         {/* Option Text */}
-                        <div className="leading-tight">
-                          <p className="text-xs sm:text-sm font-bold text-gray-900">
+                        <div className="leading-tight overflow-hidden">
+                          <p className="text-xs sm:text-sm font-bold text-gray-900 truncate">
                             {currentQ.options[optKey].hi}
                           </p>
-                          <p className="text-[11px] opacity-75 font-medium italic">
+                          <p className="text-[10px] sm:text-[11px] opacity-75 font-medium italic truncate">
                             {currentQ.options[optKey].en}
                           </p>
                         </div>
                       </div>
 
-                      {/* Right Thematic Icon */}
-                      <div className="shrink-0 pr-1">
+                      {/* Thematic Icon (Desktop only) */}
+                      <div className="hidden lg:block shrink-0 pr-1">
                         {style.icon}
                       </div>
                     </button>
@@ -978,40 +1012,35 @@ function QuizPlayInner() {
 
               {/* Instant In-Card Feedback & Next Action */}
               {isAnswered && (
-                <div className="pt-2 border-t border-gray-100 space-y-2 animate-fade-in">
+                <div className="pt-1 border-t border-gray-100 animate-fade-in">
                   {selectedOption === currentQ.correctAnswer ? (
-                    <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between gap-3 text-emerald-900">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">✓</span>
-                        <span className="font-bold text-xs">Correct! Advancing in 2 seconds...</span>
+                    <div className="p-2 sm:p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between gap-2 text-emerald-900">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">✓</span>
+                        <span className="font-bold text-xs">Correct! Advancing in 2s...</span>
                       </div>
                       <button
                         type="button"
                         onClick={handleNextQuestion}
-                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+                        className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                       >
-                        Next Now ➔
+                        Next ➔
                       </button>
                     </div>
                   ) : (
-                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-2xl space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-bold text-xs text-amber-950">
-                          {isTimeUp ? "⌛ Time is up!" : "✕ Incorrect. Correct answer is " + currentQ.correctAnswer}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={handleNextQuestion}
-                          className="px-4 py-1.5 rounded-xl font-black text-xs bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 text-white shadow-sm cursor-pointer"
-                        >
-                          Next Question ➔
-                        </button>
+                    <div className="p-2 sm:p-2.5 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between gap-2">
+                      <div className="text-xs text-amber-950 truncate">
+                        <span className="font-bold">
+                          {isTimeUp ? "⌛ Time up!" : "✕ Correct: " + currentQ.correctAnswer + " - " + currentQ.options[currentQ.correctAnswer].hi}
+                        </span>
                       </div>
-                      {currentQ.explanation.hi && (
-                        <p className="text-[11px] text-gray-700 leading-snug">
-                          <strong className="text-amber-900">Explanation:</strong> {currentQ.explanation.hi} ({currentQ.explanation.en})
-                        </p>
-                      )}
+                      <button
+                        type="button"
+                        onClick={handleNextQuestion}
+                        className="px-3 py-1 rounded-lg font-black text-xs bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 text-white shadow-xs shrink-0 cursor-pointer"
+                      >
+                        Next ➔
+                      </button>
                     </div>
                   )}
                 </div>

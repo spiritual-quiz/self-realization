@@ -40,23 +40,28 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
 -----------------------------------------------------------
       `.trim();
     } else if (type === "password_reset") {
-      subject = `[Admin Security] Password Retrieval for SelfRealization Portal`;
+      const resetUrl = details.resetUrl || `https://selfrealization-platform.vercel.app/admin/login?mode=reset&token=${details.token || Date.now()}&email=${encodeURIComponent(details.email)}`;
+      subject = `[Admin Security] Password Reset Link for SelfRealization Portal`;
       messageBody = `
 Hare Kṛṣṇa,
 
-A password retrieval was requested for the SelfRealization Admin Portal.
+A password reset request was initiated for your SelfRealization Admin account (${details.email}).
 
-Registered Admin Email: ${details.email}
-Portal Login URL:       https://selfrealization-platform.vercel.app/admin/login
-Temporary Admin Pass:   SelfRealization@2026
+👉 PASSWORD RESET LINK:
+${resetUrl}
 
-If you did not request this, please ensure your account credentials remain secure.
+Please click the link above to set your new admin password. This link is valid for 2 hours.
+
+If you did not make this request, you can safely ignore this email.
       `.trim();
     }
+
+    const isReset = type === "password_reset";
 
     // 1. Primary Dispatch: Direct EmailJS integration (configured with recipient madhavcarandas@gmail.com)
     let emailDispatched = false;
     try {
+      const resetUrl = details.resetUrl || `https://selfrealization-platform.vercel.app/admin/login?mode=reset&token=${details.token || Date.now()}&email=${encodeURIComponent(details.email)}`;
       const emailJsRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
         method: "POST",
         headers: {
@@ -68,16 +73,16 @@ If you did not request this, please ensure your account credentials remain secur
           template_id: "template_ypw8wpq",
           user_id: "8jCdn6vjWwsSe9CNK",
           template_params: {
-            name: details.fullName || details.name || "SelfRealization Admin",
-            mobile: details.phone || "9130542150",
+            name: isReset ? "ADMIN PASSWORD RESET" : (details.fullName || details.name || "SelfRealization Admin"),
+            mobile: isReset ? "Password Reset Action" : (details.phone || "9130542150"),
             email: ADMIN_EMAIL,
             language: "English",
-            track: subject,
+            track: isReset ? "🔒 URGENT: SelfRealization Admin Password Reset Link" : subject,
             notes: messageBody,
             age: "N/A",
-            status: type || "Notification",
-            native_address: "SelfRealization Portal",
-            current_address: "https://selfrealization-platform.vercel.app"
+            status: isReset ? "PASSWORD_RESET_LINK" : (type || "Notification"),
+            native_address: isReset ? "Password Reset Link" : "SelfRealization Portal",
+            current_address: resetUrl
           }
         })
       });
