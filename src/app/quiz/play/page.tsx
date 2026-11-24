@@ -353,6 +353,12 @@ function QuizPlayInner() {
   // Button 1: Download Certificate Only (Exact Landscape A4 PDF)
   const handleDownloadCertificateOnly = async () => {
     setGeneratingPdf(true);
+    const cleanName = (participantName || "Devotee Seeker")
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+
     try {
       const certElem = document.getElementById("official-devotional-certificate");
       if (certElem) {
@@ -381,7 +387,7 @@ function QuizPlayInner() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `SelfRealization_Certificate_${participantName.replace(/\s+/g, "_") || "Devotee"}.pdf`;
+        a.download = `SelfRealization_Certificate_${cleanName.replace(/\s+/g, "_")}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -398,7 +404,7 @@ function QuizPlayInner() {
 
       const pdfBytes = await generateQuizCertificatePdf({
         certificateId,
-        participantName: participantName.trim() || "Devotee Seeker",
+        participantName: cleanName,
         quizTitle,
         score,
         totalMarks,
@@ -411,7 +417,7 @@ function QuizPlayInner() {
       const a = document.createElement("a");
       a.href = url;
       // Differentiated filename for Certificate Only
-      a.download = `SelfRealization_Certificate_${participantName.replace(/\s+/g, "_")}.pdf`;
+      a.download = `SelfRealization_Certificate_${cleanName.replace(/\s+/g, "_")}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -531,6 +537,11 @@ function QuizPlayInner() {
     const totalMarks = questions.reduce((a, b) => a + b.points, 0);
     const percentage = totalMarks > 0 ? (score / totalMarks) * 100 : 0;
     const dateFormatted = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+    const formattedParticipantName = (participantName || "Devotee Seeker")
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
 
     return (
       <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in ${printMode === "cert-only" ? "cert-only-mode" : "full-report-mode"}`}>
@@ -612,7 +623,7 @@ function QuizPlayInner() {
 
           <div>
             <h2 className="text-2xl font-black text-gray-900">
-              Congratulations, {participantName}!
+              Congratulations, {formattedParticipantName}!
             </h2>
             <p className="text-xs text-gray-600 mt-0.5">
               You have completed {quizTitle} with devotion and sincerity.
@@ -658,25 +669,25 @@ function QuizPlayInner() {
           {/* Dynamic Content Layer Overlaid with Precise Center Alignment */}
           <div className="absolute inset-0 pointer-events-none select-none">
             
-            {/* Blank Zone 1: Participant Name (Curvy, Stylish Italic Calligraphy Font, Centered in Gap) */}
-            <div className="absolute inset-x-0 top-[44.5%] -translate-y-1/2 text-center px-16 sm:px-28">
+            {/* Blank Zone 1: Participant Name (Curvy, Stylish Italic Calligraphy, Middle of Gap, Size Calibrated) */}
+            <div className="absolute inset-x-0 top-[47%] -translate-y-1/2 text-center px-16 sm:px-28">
               <span 
-                className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold text-[#381105] tracking-normal drop-shadow-xs italic"
+                className="text-xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-medium text-[#381105] tracking-normal drop-shadow-xs italic inline-block leading-tight select-text"
                 style={{ fontFamily: "'Great Vibes', 'Alex Brush', cursive, serif" }}
               >
-                {participantName}
+                {formattedParticipantName}
               </span>
             </div>
 
             {/* Blank Zone 2: Course / Quiz Title */}
-            <div className="absolute inset-x-0 top-[63.5%] -translate-y-1/2 text-center px-16 sm:px-28">
+            <div className="absolute inset-x-0 top-[61.5%] -translate-y-1/2 text-center px-16 sm:px-28">
               <p className="text-xs sm:text-base md:text-lg lg:text-xl font-serif font-black text-[#8c1414] tracking-tight">
                 “{quizTitle}”
               </p>
             </div>
 
-            {/* Blank Zone 2b: Score Line */}
-            <div className="absolute inset-x-0 top-[70%] -translate-y-1/2 text-center px-16 sm:px-28">
+            {/* Blank Zone 2b: Score Line (Moved up so it does NOT touch the bottom logo) */}
+            <div className="absolute inset-x-0 top-[66%] -translate-y-1/2 text-center px-16 sm:px-28">
               <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-gray-800">
                 securing a score of <strong>{score} / {totalMarks} ({percentage.toFixed(1)}%)</strong>.
               </p>

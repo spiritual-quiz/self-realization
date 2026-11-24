@@ -63,13 +63,17 @@ export async function generateQuizCertificatePdf(data: CertificateData): Promise
     });
   }
 
-  // 2. Participant Name (Stylish Curvy Italic Font, Centered in Blank Zone 1)
-  const nameText = data.participantName.trim() || "Devotee Participant";
-  const nameSize = nameText.length > 22 ? 26 : 30;
+  // 2. Participant Name (Title Case, Stylish Curvy Italic Font, Centered in Blank Zone 1)
+  const rawName = data.participantName.trim() || "Devotee Participant";
+  const nameText = rawName
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+  const nameSize = nameText.length > 22 ? 22 : 26;
   const nameWidth = fontTimesBoldItalic.widthOfTextAtSize(nameText, nameSize);
   page.drawText(nameText, {
     x: (width - nameWidth) / 2,
-    y: 275,
+    y: 262,
     size: nameSize,
     font: fontTimesBoldItalic,
     color: nameColor,
@@ -81,18 +85,18 @@ export async function generateQuizCertificatePdf(data: CertificateData): Promise
   const quizWidth = fontTimesBold.widthOfTextAtSize(quizTitle, quizSize);
   page.drawText(quizTitle, {
     x: (width - quizWidth) / 2,
-    y: 185,
+    y: 192,
     size: quizSize,
     font: fontTimesBold,
     color: titleColor,
   });
 
-  // 4. Score & Percentage
+  // 4. Score & Percentage (Shifted up to safely clear logo)
   const scoreText = `securing a score of ${data.score} / ${data.totalMarks} (${data.percentage.toFixed(1)}%).`;
   const scoreWidth = fontTimes.widthOfTextAtSize(scoreText, 13);
   page.drawText(scoreText, {
     x: (width - scoreWidth) / 2,
-    y: 156,
+    y: 169,
     size: 13,
     font: fontTimes,
     color: darkSlate,
