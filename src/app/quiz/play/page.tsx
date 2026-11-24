@@ -77,6 +77,24 @@ function QuizPlayInner() {
   const [certificateId, setCertificateId] = useState("");
   const [printMode, setPrintMode] = useState<"cert-only" | "full-report">("cert-only");
 
+  // Free Classes Offer & Registration Modals
+  const [showClassOfferModal, setShowClassOfferModal] = useState<boolean>(false);
+  const [showClassRegisterModal, setShowClassRegisterModal] = useState<boolean>(false);
+  const [classFormSubmitting, setClassFormSubmitting] = useState<boolean>(false);
+  const [classFormSubmitted, setClassFormSubmitted] = useState<boolean>(false);
+  const [classFormData, setClassFormData] = useState({
+    name: "",
+    email: "",
+    whatsapp: "",
+    gender: "",
+    age: "",
+    language: "हिन्दी / Hindi",
+    classMode: "ऑनलाइन / Online",
+    occupation: "छात्र / Student",
+    currentLocation: "",
+    nativePlace: "",
+  });
+
   // Audio & Timer References
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -264,6 +282,12 @@ function QuizPlayInner() {
         isCorrect: false,
       },
     ]);
+
+    // Auto-advance within 1.5 seconds on timeup automatically (no waiting or manual click needed)
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    autoAdvanceRef.current = setTimeout(() => {
+      handleNextQuestion();
+    }, 1500);
   };
 
   // Handle Option Select
@@ -347,6 +371,72 @@ function QuizPlayInner() {
         spread: 100,
         origin: { y: 0.5 },
       });
+
+      // Show Free Class Offer Modal right after quiz completion
+      setShowClassOfferModal(true);
+    }
+  };
+
+  // Free Classes Offer: Click "Yes"
+  const handleAcceptFreeClassOffer = () => {
+    setShowClassOfferModal(false);
+    const cleanName = (participantName || "")
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+
+    setClassFormData((prev) => ({
+      ...prev,
+      name: cleanName,
+    }));
+    setShowClassRegisterModal(true);
+  };
+
+  // Free Classes Offer: Click "No"
+  const handleDeclineFreeClassOffer = () => {
+    setShowClassOfferModal(false);
+    // Directly reveals the results screen with marks & certificate download
+  };
+
+  // Submit Free Class Registration
+  const handleSubmitClassRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setClassFormSubmitting(true);
+
+    try {
+      const totalMarks = questions.reduce((a, b) => a + b.points, 0);
+      await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "free_class_registration",
+          details: {
+            name: classFormData.name,
+            email: classFormData.email,
+            whatsapp: classFormData.whatsapp,
+            gender: classFormData.gender,
+            age: classFormData.age,
+            language: classFormData.language,
+            classMode: classFormData.classMode,
+            occupation: classFormData.occupation,
+            currentLocation: classFormData.currentLocation,
+            nativePlace: classFormData.nativePlace,
+            quizTitle,
+            score: `${score} / ${totalMarks}`,
+          },
+        }),
+      });
+
+      setClassFormSubmitted(true);
+      setTimeout(() => {
+        setShowClassRegisterModal(false);
+      }, 1500);
+    } catch (err) {
+      console.error("Error submitting class registration:", err);
+      setShowClassRegisterModal(false);
+    } finally {
+      setClassFormSubmitting(false);
     }
   };
 
@@ -545,6 +635,286 @@ function QuizPlayInner() {
 
     return (
       <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in ${printMode === "cert-only" ? "cert-only-mode" : "full-report-mode"}`}>
+        
+        {/* =========================================================================
+            1. FREE CLASSES INVITATION POPUP MODAL (Post-Quiz Completion)
+            ========================================================================= */}
+        {showClassOfferModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+            <div className="w-full max-w-lg bg-gradient-to-b from-[#FFFDF8] via-[#FFF9EE] to-[#FFF1D6] border-2 sm:border-4 border-amber-500 rounded-3xl p-6 sm:p-8 shadow-2xl text-center relative overflow-hidden animate-scale-in">
+              
+              {/* Decorative Aura Accent */}
+              <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-amber-400 via-orange-400 to-amber-200 p-1 shadow-lg flex items-center justify-center mb-4">
+                <div className="w-full h-full rounded-full bg-amber-950 flex items-center justify-center text-3xl">
+                  🎓
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-6">
+                <span className="text-[11px] font-black tracking-widest uppercase px-3.5 py-1 rounded-full bg-amber-500/20 text-amber-900 border border-amber-400/50">
+                  निःशुल्क आध्यात्मिक कक्षाएँ • FREE SPIRITUAL SESSIONS
+                </span>
+
+                <h3 className="text-xl sm:text-2xl font-black text-[#2B0E03] leading-snug pt-3">
+                  क्या आप हमारी निःशुल्क कक्षाओं में भाग लेना चाहेंगे?
+                </h3>
+                <p className="text-sm sm:text-base font-bold text-amber-900/90 italic">
+                  Would you like to attend our free classes?
+                </p>
+                <p className="text-xs text-stone-600 pt-1.5 max-w-sm mx-auto">
+                  भगवद्गीता एवं वैदिक जीवनशैली का प्रामाणिक ज्ञान प्राप्त करें (Online & Offline options available).
+                </p>
+              </div>
+
+              {/* Two Buttons: Yes and No */}
+              <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto">
+                <button
+                  type="button"
+                  onClick={handleAcceptFreeClassOffer}
+                  className="w-full py-3.5 px-4 rounded-xl font-black text-sm sm:text-base bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-700/25 transform active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>हाँ / Yes</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDeclineFreeClassOffer}
+                  className="w-full py-3.5 px-4 rounded-xl font-bold text-sm sm:text-base bg-stone-200 hover:bg-stone-300 text-stone-800 border border-stone-300 transform active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>नहीं / No</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            2. FREE CLASSES DETAILED REGISTRATION MODAL (All Fields Mandatory)
+            ========================================================================= */}
+        {showClassRegisterModal && (
+          <div className="fixed inset-0 z-[105] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fade-in">
+            <div className="w-full max-w-xl bg-gradient-to-b from-[#FFFDF9] via-[#FFF9EE] to-[#FFF3DC] border-2 sm:border-4 border-amber-500 rounded-3xl p-5 sm:p-7 shadow-2xl text-gray-900 relative my-6">
+              
+              {/* Header */}
+              <div className="text-center pb-3 border-b border-amber-300/60 mb-4">
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/20 text-amber-950 font-bold text-xs mb-1">
+                  <span>🌿</span>
+                  <span>पंजीकरण फॉर्म • Registration Form</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-[#2B0E03]">
+                  निःशुल्क कक्षाओं हेतु पंजीकरण
+                </h3>
+                <p className="text-xs text-amber-900 font-semibold italic">
+                  Registration for Free Vedic Classes
+                </p>
+              </div>
+
+              {classFormSubmitted ? (
+                <div className="py-10 text-center space-y-3">
+                  <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-3xl shadow-md">
+                    ✓
+                  </div>
+                  <h4 className="text-xl font-black text-emerald-900">
+                    पंजीकरण सफल! / Registration Successful!
+                  </h4>
+                  <p className="text-xs sm:text-sm text-stone-600 max-w-sm mx-auto">
+                    आपका विवरण सफलतापूर्वक प्राप्त हो गया है। हमारी टीम शीघ्र ही आपसे संपर्क करेगी।
+                  </p>
+                  <p className="text-xs text-amber-800 font-bold">
+                    आपको आपके परिणाम और प्रमाणपत्र पृष्ठ पर ले जाया जा रहा है...
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitClassRegistration} className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    
+                    {/* 1. Name */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        नाम / Name <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={classFormData.name}
+                        onChange={(e) => setClassFormData({ ...classFormData, name: e.target.value })}
+                        placeholder="उदा. Gaur Chandra"
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      />
+                    </div>
+
+                    {/* 2. Email */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        ईमेल आईडी / Email ID <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={classFormData.email}
+                        onChange={(e) => setClassFormData({ ...classFormData, email: e.target.value })}
+                        placeholder="your.email@example.com"
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      />
+                    </div>
+
+                    {/* 3. WhatsApp Number */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        व्हाट्सएप नंबर / WhatsApp Number <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={classFormData.whatsapp}
+                        onChange={(e) => setClassFormData({ ...classFormData, whatsapp: e.target.value })}
+                        placeholder="उदा. 9876543210"
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      />
+                    </div>
+
+                    {/* 4. Gender */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        लिंग / Gender <span className="text-rose-600">*</span>
+                      </label>
+                      <select
+                        required
+                        value={classFormData.gender}
+                        onChange={(e) => setClassFormData({ ...classFormData, gender: e.target.value })}
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      >
+                        <option value="">चुनें / Select</option>
+                        <option value="पुरुष / Male">पुरुष / Male</option>
+                        <option value="महिला / Female">महिला / Female</option>
+                        <option value="अन्य / Other">अन्य / Other</option>
+                      </select>
+                    </div>
+
+                    {/* 5. Age */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        आयु / Age <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="5"
+                        max="120"
+                        value={classFormData.age}
+                        onChange={(e) => setClassFormData({ ...classFormData, age: e.target.value })}
+                        placeholder="उदा. 24"
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      />
+                    </div>
+
+                    {/* 6. Language */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        भाषा / Language <span className="text-rose-600">*</span>
+                      </label>
+                      <select
+                        required
+                        value={classFormData.language}
+                        onChange={(e) => setClassFormData({ ...classFormData, language: e.target.value })}
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      >
+                        <option value="">चुनें / Select</option>
+                        <option value="हिन्दी / Hindi">हिन्दी / Hindi</option>
+                        <option value="English / अंग्रेजी">English / अंग्रेजी</option>
+                      </select>
+                    </div>
+
+                    {/* 7. Class Mode */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        कक्षा का माध्यम / Class Mode <span className="text-rose-600">*</span>
+                      </label>
+                      <select
+                        required
+                        value={classFormData.classMode}
+                        onChange={(e) => setClassFormData({ ...classFormData, classMode: e.target.value })}
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      >
+                        <option value="">चुनें / Select</option>
+                        <option value="ऑनलाइन / Online">ऑनलाइन / Online</option>
+                        <option value="ऑफ़लाइन / Offline">ऑफ़लाइन / Offline</option>
+                      </select>
+                    </div>
+
+                    {/* 8. Occupation (Student, Professional, Businessman) */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        व्यवसाय / Occupation <span className="text-rose-600">*</span>
+                      </label>
+                      <select
+                        required
+                        value={classFormData.occupation}
+                        onChange={(e) => setClassFormData({ ...classFormData, occupation: e.target.value })}
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      >
+                        <option value="">चुनें / Select</option>
+                        <option value="छात्र / Student">छात्र / Student</option>
+                        <option value="कामकाजी पेशेवर / Professional">कामकाजी पेशेवर / Professional</option>
+                        <option value="व्यवसायी / Businessman">व्यवसायी / Businessman</option>
+                      </select>
+                    </div>
+
+                    {/* 9. Currently Staying */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        वर्तमान निवास / Currently Staying <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={classFormData.currentLocation}
+                        onChange={(e) => setClassFormData({ ...classFormData, currentLocation: e.target.value })}
+                        placeholder="उदा. Pune / Mumbai / Delhi"
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      />
+                    </div>
+
+                    {/* 10. Native Place */}
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
+                        मूल स्थान / Native Place <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={classFormData.nativePlace}
+                        onChange={(e) => setClassFormData({ ...classFormData, nativePlace: e.target.value })}
+                        placeholder="उदा. Varanasi / Jaipur / Kolkata"
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                      />
+                    </div>
+
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="pt-3 flex items-center justify-end gap-3 border-t border-amber-200">
+                    <button
+                      type="button"
+                      onClick={() => setShowClassRegisterModal(false)}
+                      className="px-4 py-2 text-xs sm:text-sm font-bold text-stone-600 hover:text-stone-900 cursor-pointer"
+                    >
+                      छोड़ें / Skip
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={classFormSubmitting}
+                      className="px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 text-white shadow-lg shadow-amber-700/20 flex items-center gap-2 cursor-pointer transition-all"
+                    >
+                      {classFormSubmitting ? "जमा हो रहा है... / Submitting..." : "पंजीकरण जमा करें / Submit Registration"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+            </div>
+          </div>
+        )}
         
         {/* Print Stylesheet for exact 1-page certificate & report */}
         <style jsx global>{`
@@ -912,10 +1282,14 @@ function QuizPlayInner() {
           />
         </div>
 
-        {/* 3. CENTER QUESTION & OPTIONS CARD (100% ZERO-SCROLL) */}
-        <div className={`grow flex flex-col justify-center bg-[#FDFBF7] text-gray-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 border-2 sm:border-4 border-amber-400/90 shadow-2xl relative overflow-hidden my-auto ${
+        {/* 3. CENTER QUESTION & OPTIONS CARD (RICH VEDIC GOLDEN-PARCHMENT THEME - 100% ZERO-SCROLL) */}
+        <div className={`grow flex flex-col justify-center bg-gradient-to-br from-[#FFFDF6] via-[#FFF8E7] to-[#FDF0D2] text-gray-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 border-2 sm:border-4 border-amber-500/85 shadow-[0_20px_50px_rgba(217,119,6,0.22)] ring-2 ring-amber-300/50 relative overflow-hidden my-auto ${
           isAnswered && selectedOption !== currentQ.correctAnswer ? "animate-shake" : ""
         }`}>
+          
+          {/* Subtle Devotional Background Motifs */}
+          <div className="absolute -top-12 -right-12 w-44 h-44 bg-[radial-gradient(circle,_rgba(245,158,11,0.18),_transparent_70%)] pointer-events-none rounded-full" />
+          <div className="absolute -bottom-12 -left-12 w-44 h-44 bg-[radial-gradient(circle,_rgba(217,119,6,0.14),_transparent_70%)] pointer-events-none rounded-full" />
           
           {/* Floating Score Alert */}
           {floatingScore !== null && (
@@ -929,7 +1303,7 @@ function QuizPlayInner() {
             
             {/* PICTURE COLUMN (Left on desktop, Top preview on mobile) */}
             <div className="lg:col-span-5 flex flex-col justify-center">
-              <div className="relative w-full h-24 sm:h-32 lg:h-[270px] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-amber-400 shadow-md bg-stone-100">
+              <div className="relative w-full h-24 sm:h-32 lg:h-[270px] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg bg-stone-100 ring-1 ring-amber-300/40">
                 <Image
                   src={currentQ.imageUrl || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"}
                   alt="Question illustration"
@@ -938,8 +1312,8 @@ function QuizPlayInner() {
                   sizes="(max-width: 1024px) 100vw, 450px"
                   priority
                 />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-1.5 sm:p-2 flex justify-center">
-                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-200 bg-black/60 px-2.5 py-0.5 rounded-full border border-amber-400/50 backdrop-blur-xs">
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-1.5 sm:p-2 flex justify-center">
+                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-200 bg-black/70 px-2.5 py-0.5 rounded-full border border-amber-400/60 backdrop-blur-xs">
                     QUESTION {currentIndex + 1} OF {questions.length}
                   </span>
                 </div>
@@ -950,11 +1324,11 @@ function QuizPlayInner() {
             <div className="lg:col-span-7 flex flex-col justify-between space-y-2 sm:space-y-3">
               
               {/* Question Text */}
-              <div className="space-y-0.5 text-center lg:text-left">
-                <h2 className="text-sm sm:text-lg lg:text-xl font-black text-[#361505] leading-snug">
+              <div className="space-y-0.5 text-center lg:text-left relative z-10">
+                <h2 className="text-sm sm:text-lg lg:text-xl font-black text-[#260B02] leading-snug tracking-tight drop-shadow-xs">
                   {currentQ.question.hi}
                 </h2>
-                <p className="text-[11px] sm:text-xs text-gray-500 font-medium italic line-clamp-1">
+                <p className="text-[11px] sm:text-xs text-[#6B3210] font-semibold italic line-clamp-1">
                   {currentQ.question.en}
                 </p>
               </div>
@@ -1036,7 +1410,7 @@ function QuizPlayInner() {
                     <div className="p-2 sm:p-2.5 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between gap-2">
                       <div className="text-xs text-amber-950 truncate">
                         <span className="font-bold">
-                          {isTimeUp ? "⌛ Time up!" : "✕ Correct: " + currentQ.correctAnswer + " - " + currentQ.options[currentQ.correctAnswer].hi}
+                          {isTimeUp ? "⌛ Time up! Moving to next question..." : "✕ Correct: " + currentQ.correctAnswer + " - " + currentQ.options[currentQ.correctAnswer].hi}
                         </span>
                       </div>
                       <button

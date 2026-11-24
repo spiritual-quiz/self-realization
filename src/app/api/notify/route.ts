@@ -55,7 +55,27 @@ export async function POST(req: NextRequest) {
     let subject = "New Notification from SelfRealization Platform";
     let messageBody = "";
 
-    if (type === "class_registration") {
+    if (type === "free_class_registration") {
+      subject = `🎓 [Free Class Registration] ${details.name} - ${details.occupation}`;
+      messageBody = `
+New Free Class Registration (Post-Quiz Vedic Outreach):
+-----------------------------------------------------------
+Name / नाम:               ${details.name}
+Email / ईमेल:             ${details.email}
+WhatsApp / व्हाट्सएप:       ${details.whatsapp}
+Gender / लिंग:            ${details.gender}
+Age / आयु:               ${details.age}
+Language / भाषा:          ${details.language}
+Class Mode / माध्यम:      ${details.classMode}
+Occupation / व्यवसाय:     ${details.occupation}
+Currently Staying / निवास: ${details.currentLocation}
+Native Place / मूल स्थान:  ${details.nativePlace}
+Quiz Challenge:           ${details.quizTitle || "Vedic Quiz"}
+Score Secured:            ${details.score ?? "N/A"}
+Timestamp:                ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST
+-----------------------------------------------------------
+      `.trim();
+    } else if (type === "class_registration") {
       subject = `[New Class Registration] ${details.classTitle || "Live Class"} - ${details.fullName}`;
       messageBody = `
 New Class Registration Received on SelfRealization Platform:
@@ -139,7 +159,7 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
           type: type || "general",
           name: details.fullName || details.name || "Administrator",
           email: details.email || ADMIN_EMAIL,
-          phone: details.phone || "N/A",
+          phone: details.phone || details.whatsapp || "N/A",
           details: messageBody
         })
       }).catch(() => {});
