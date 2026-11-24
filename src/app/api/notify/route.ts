@@ -108,7 +108,7 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
 
     let emailDispatched = false;
 
-    // Send via EmailJS for general registrations
+    // 1. Send via EmailJS
     try {
       const emailJsRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
         method: "POST",
@@ -121,16 +121,16 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
           template_id: "template_ypw8wpq",
           user_id: "8jCdn6vjWwsSe9CNK",
           template_params: {
-            name: details.fullName || details.name || "Participant",
-            mobile: details.phone || "Not provided",
-            email: ADMIN_EMAIL,
-            language: "English",
+            name: details.name || details.fullName || "Participant",
+            mobile: details.whatsapp || details.phone || "Not provided",
+            email: details.email || ADMIN_EMAIL,
+            language: details.language || "English",
             track: subject,
             notes: messageBody,
-            age: "N/A",
+            age: details.age || "N/A",
             status: type || "Notification",
-            native_address: "SelfRealization Portal",
-            current_address: "https://selfrealization-platform.vercel.app"
+            native_address: details.nativePlace || "SelfRealization Portal",
+            current_address: details.currentLocation || "https://selfrealization-platform.vercel.app"
           }
         })
       });
@@ -142,8 +142,38 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
       console.warn("EmailJS registration notice:", e);
     }
 
-    // Secondary backup via FormSubmit
+    // 2. Primary / Backup via FormSubmit (Full structured table of all 10 details)
     try {
+      const formSubmitBody: Record<string, any> = {
+        _subject: subject,
+        _replyto: details.email || ADMIN_EMAIL,
+        _captcha: "false",
+        _template: "box",
+      };
+
+      if (type === "free_class_registration") {
+        formSubmitBody["REGISTRATION TYPE"] = "Free Vedic Class (Post-Quiz Seeker Outreach)";
+        formSubmitBody["Name / नाम"] = details.name;
+        formSubmitBody["Email / ईमेल"] = details.email;
+        formSubmitBody["WhatsApp / व्हाट्सएप"] = details.whatsapp;
+        formSubmitBody["Gender / लिंग"] = details.gender;
+        formSubmitBody["Age / आयु"] = details.age;
+        formSubmitBody["Language / भाषा"] = details.language;
+        formSubmitBody["Class Mode / माध्यम"] = details.classMode;
+        formSubmitBody["Occupation / व्यवसाय"] = details.occupation;
+        formSubmitBody["Currently Staying / वर्तमान निवास"] = details.currentLocation;
+        formSubmitBody["Native Place / मूल स्थान"] = details.nativePlace;
+        formSubmitBody["Quiz Challenge"] = details.quizTitle || "Bhagavad-gītā Wisdom Challenge";
+        formSubmitBody["Score Secured"] = details.score || "N/A";
+        formSubmitBody["Submission Timestamp"] = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST";
+      } else {
+        formSubmitBody["Type"] = type || "general";
+        formSubmitBody["Name"] = details.fullName || details.name || "Administrator";
+        formSubmitBody["Email"] = details.email || ADMIN_EMAIL;
+        formSubmitBody["Phone"] = details.phone || details.whatsapp || "N/A";
+        formSubmitBody["Details"] = messageBody;
+      }
+
       await fetch(`https://formsubmit.co/ajax/${ADMIN_EMAIL}`, {
         method: "POST",
         headers: {
@@ -152,16 +182,7 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
           "Referer": "https://selfrealization-platform.vercel.app",
           "Origin": "https://selfrealization-platform.vercel.app"
         },
-        body: JSON.stringify({
-          _subject: subject,
-          _replyto: details.email || ADMIN_EMAIL,
-          _captcha: "false",
-          type: type || "general",
-          name: details.fullName || details.name || "Administrator",
-          email: details.email || ADMIN_EMAIL,
-          phone: details.phone || details.whatsapp || "N/A",
-          details: messageBody
-        })
+        body: JSON.stringify(formSubmitBody)
       }).catch(() => {});
     } catch (e) {}
 

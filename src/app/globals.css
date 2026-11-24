@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Great+Vibes&family=Playfair+Display:ital,wght@1,600;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Great+Vibes&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -91,4 +91,28 @@ body {
 }
 .equalizer-bar-3 {
   animation: equalizer 0.7s ease-in-out infinite 0.4s;
+}
+
+@keyframes tearDrop {
+  0% { opacity: 0; transform: translateY(0); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(16px); }
+}
+
+@keyframes headWobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+
+.animate-tear-1 {
+  animation: tearDrop 1.4s ease-in-out infinite;
+}
+
+.animate-tear-2 {
+  animation: tearDrop 1.4s ease-in-out 0.5s infinite;
+}
+
+.animate-wobble {
+  animation: headWobble 2.5s ease-in-out infinite;
 }

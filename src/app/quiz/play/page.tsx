@@ -315,17 +315,8 @@ function QuizPlayInner() {
     setStreak(0);
     playFx("wrong");
 
-    // Red particles animation for wrong / timeout
+    // Show Option A Sad Boy animation in front of screen (NO confetti/flowers)
     setWrongAnimation(true);
-    setTimeout(() => setWrongAnimation(false), 1500);
-    confetti({
-      particleCount: 45,
-      spread: 60,
-      origin: { y: 0.6 },
-      colors: ["#DC2626", "#B91C1C", "#991B1B", "#F87171"],
-      shapes: ["circle"],
-      scalar: 1.1,
-    });
 
     const currentQ = questions[currentIndex];
     setAnswersLog((prev) => [
@@ -338,11 +329,12 @@ function QuizPlayInner() {
       },
     ]);
 
-    // Auto-advance within 1.5 seconds on timeup automatically (no waiting or manual click needed)
+    // Auto-advance within 1.8 seconds on timeup automatically (no waiting or manual click needed)
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     autoAdvanceRef.current = setTimeout(() => {
+      setWrongAnimation(false);
       handleNextQuestion();
-    }, 1500);
+    }, 1800);
   };
 
   // Handle Option Select
@@ -397,18 +389,15 @@ function QuizPlayInner() {
     } else {
       setStreak(0);
       playFx("wrong");
+      // Show Option A Sad Boy animation in front of screen (NO confetti/flowers)
       setWrongAnimation(true);
-      setTimeout(() => setWrongAnimation(false), 1500);
 
-      // Red particles for wrong answer (matches flowers for correct answer)
-      confetti({
-        particleCount: 50,
-        spread: 65,
-        origin: { y: 0.6 },
-        colors: ["#DC2626", "#B91C1C", "#991B1B", "#F87171"],
-        shapes: ["circle"],
-        scalar: 1.1,
-      });
+      // Auto-advance within 1.8 seconds on wrong answer (allows seeing correct answer highlighted)
+      if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+      autoAdvanceRef.current = setTimeout(() => {
+        setWrongAnimation(false);
+        handleNextQuestion();
+      }, 1800);
     }
   };
 
@@ -1460,22 +1449,92 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* Floating Wrong Answer Animation Alert */}
+          {/* Wrong Answer Overlay (Option A: Sad Devotee Boy with animated teardrops in front of the screen) */}
           {wrongAnimation && (
-            <div className="absolute top-2 right-4 text-xs sm:text-sm font-black text-rose-700 bg-rose-100/95 border-2 border-rose-400 px-3.5 py-1 rounded-full shadow-xl animate-bounce pointer-events-none z-30 flex items-center gap-1.5">
-              <span>✕ अशुद्ध उत्तर! / Incorrect!</span>
+            <div className="absolute inset-0 z-50 bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-3 animate-fade-in pointer-events-none">
+              <div className="bg-gradient-to-b from-[#FFF5F5] via-[#FFEBEB] to-[#FED7D7] border-3 border-rose-500 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center text-center max-w-xs sm:max-w-sm w-full animate-scale-in">
+                {/* Animated Sad Boy with Teardrops */}
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 mb-2 bg-rose-100/80 rounded-2xl border-2 border-rose-300 flex items-center justify-center shadow-inner">
+                  <svg viewBox="0 0 100 100" className="w-14 h-14 sm:w-16 sm:h-16 animate-wobble">
+                    {/* Hair */}
+                    <ellipse cx="50" cy="42" rx="26" ry="24" fill="#3D2314" />
+                    <path d="M 24 45 Q 50 20 76 45 Q 65 30 50 30 Q 35 30 24 45 Z" fill="#29150B" />
+                    {/* Face */}
+                    <ellipse cx="50" cy="54" rx="22" ry="22" fill="#FDD6B5" />
+                    {/* Ears */}
+                    <ellipse cx="28" cy="54" rx="4" ry="6" fill="#F7C49D" />
+                    <ellipse cx="72" cy="54" rx="4" ry="6" fill="#F7C49D" />
+                    {/* Tilak */}
+                    <path d="M 48 37 L 52 37 L 50 46 Z" fill="#D97706" />
+                    <circle cx="50" cy="48" r="1.3" fill="#DC2626" />
+                    {/* Sad drooping eyes */}
+                    <path d="M 39 49 Q 43 46 47 50" stroke="#3D2314" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                    <path d="M 53 50 Q 57 46 61 49" stroke="#3D2314" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                    {/* Downward curved sad mouth */}
+                    <path d="M 43 65 Q 50 59 57 65" stroke="#991B1B" strokeWidth="3" fill="none" strokeLinecap="round" />
+                    {/* Animated Falling Teardrops */}
+                    <path d="M 41 53 Q 43 58 41 61 Q 39 58 41 53 Z" fill="#38BDF8" className="animate-tear-1" />
+                    <path d="M 59 53 Q 61 58 59 61 Q 57 58 59 53 Z" fill="#38BDF8" className="animate-tear-2" />
+                    {/* Red Kurta */}
+                    <path d="M 32 74 C 35 88, 65 88, 68 74 Z" fill="#EF4444" />
+                  </svg>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600 text-white font-black text-xs sm:text-sm shadow-md">
+                    <span>✕</span>
+                    <span>{isTimeUp ? "समय समाप्त! / Time's Up!" : "अशुद्ध उत्तर! / Incorrect Answer!"}</span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-rose-800 font-semibold mt-0.5">
+                    चिंता न करें, सही उत्तर देखें! / See correct answer!
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Thinking Animation (Contemplation for > 5 seconds) */}
+          {/* Thinking Animation (Small boy thinking illustration when player waits > 5 seconds) */}
           {isThinking && !isAnswered && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-500 via-orange-400 to-amber-500 text-amber-950 font-black text-xs shadow-xl border-2 border-amber-300 animate-pulse pointer-events-none">
-              <span className="text-sm animate-bounce">🤔</span>
-              <span className="tracking-wide">गहन चिंतन... / Deep Contemplation...</span>
-              <span className="flex gap-1 items-center">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-950 animate-ping"></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-950"></span>
-              </span>
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 via-orange-300 to-amber-400 text-amber-950 font-black text-xs sm:text-sm shadow-2xl border-2 border-amber-400 animate-pulse pointer-events-none backdrop-blur-xs">
+              <div className="relative w-7 h-7 sm:w-8 sm:h-8 shrink-0">
+                {/* Floating thought bubbles */}
+                <div className="absolute -top-1 -right-1 flex items-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-200 animate-ping mr-0.5" />
+                  <span className="text-[9px] font-black text-white bg-amber-700 px-1 rounded-full leading-tight">?</span>
+                </div>
+                <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xs animate-wobble">
+                  {/* Hair */}
+                  <ellipse cx="50" cy="42" rx="28" ry="26" fill="#3D2314" />
+                  <path d="M 24 45 Q 50 18 76 45 Q 65 30 50 30 Q 35 30 24 45 Z" fill="#29150B" />
+                  {/* Face */}
+                  <ellipse cx="50" cy="54" rx="22" ry="22" fill="#FDD6B5" />
+                  {/* Ears */}
+                  <ellipse cx="28" cy="54" rx="4" ry="6" fill="#F7C49D" />
+                  <ellipse cx="72" cy="54" rx="4" ry="6" fill="#F7C49D" />
+                  {/* Tilak */}
+                  <path d="M 48 37 L 52 37 L 50 47 Z" fill="#D97706" />
+                  <circle cx="50" cy="49" r="1.5" fill="#DC2626" />
+                  {/* Eyes looking up thoughtfully */}
+                  <ellipse cx="42" cy="50" rx="3" ry="4" fill="#3D2314" />
+                  <circle cx="43" cy="48" r="1.2" fill="#FFFFFF" />
+                  <ellipse cx="58" cy="50" rx="3" ry="4" fill="#3D2314" />
+                  <circle cx="59" cy="48" r="1.2" fill="#FFFFFF" />
+                  {/* Eyebrows */}
+                  <path d="M 38 44 Q 42 41 46 44" stroke="#3D2314" strokeWidth="2" fill="none" strokeLinecap="round" />
+                  <path d="M 54 44 Q 58 41 62 44" stroke="#3D2314" strokeWidth="2" fill="none" strokeLinecap="round" />
+                  {/* Mouth */}
+                  <ellipse cx="50" cy="63" rx="3" ry="2" fill="#C46E56" />
+                  {/* Hand on chin */}
+                  <path d="M 56 68 Q 62 64 64 58 Q 58 60 52 64 Z" fill="#F7C49D" stroke="#DCA27E" strokeWidth="1" />
+                  <rect x="52" y="65" width="10" height="4" rx="2" fill="#F7C49D" />
+                  {/* Yellow Kurta */}
+                  <path d="M 32 74 C 35 88, 65 88, 68 74 Z" fill="#F59E0B" />
+                </svg>
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="leading-tight tracking-wide font-black">गहन चिंतन... / Deep Contemplation...</span>
+                <span className="text-[9px] font-semibold text-amber-900/90">सोच रहे हैं... / Thinking...</span>
+              </div>
             </div>
           )}
 
