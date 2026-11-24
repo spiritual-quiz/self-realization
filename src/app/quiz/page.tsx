@@ -5,14 +5,31 @@ import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { HelpCircle, Award, Sparkles, Volume2, ShieldCheck, ArrowRight, Upload, BookOpen } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
+import { db } from "@/lib/firebase/client";
+import { collection, getDocs, query, limit } from "firebase/firestore";
 
 export default function QuizOverviewPage() {
   const { t, language } = useLanguage();
   const [customQuizzes, setCustomQuizzes] = useState<any[]>([]);
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("sr_custom_quizzes") || "[]");
-    setCustomQuizzes(saved);
+    const fetchQuizzes = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, "quizzes"), limit(50)));
+        const qList: any[] = [];
+        snap.forEach((d) => qList.push({ id: d.id, ...d.data() }));
+        if (qList.length > 0) {
+          setCustomQuizzes(qList);
+          localStorage.setItem("sr_custom_quizzes", JSON.stringify(qList));
+          return;
+        }
+      } catch (e) {
+        console.warn("Firestore quiz fetch failed, fallback to local", e);
+      }
+      const saved = JSON.parse(localStorage.getItem("sr_custom_quizzes") || "[]");
+      setCustomQuizzes(saved);
+    };
+    fetchQuizzes();
   }, []);
 
   const defaultQuizzes = [
@@ -98,10 +115,10 @@ export default function QuizOverviewPage() {
 
                 <Link
                   href={`/quiz/play?id=${q.id}`}
-                  className="w-full py-3 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-amber-200" />
-                  <span>Play Uploaded Quiz</span>
+                  <span>Start Quiz</span>
                 </Link>
               </div>
             ))}
@@ -134,10 +151,10 @@ export default function QuizOverviewPage() {
 
               <Link
                 href="/quiz/play"
-                className="w-full py-3.5 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md flex items-center justify-center gap-2 transform active:scale-95 transition-all"
+                className="w-full py-3.5 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md flex items-center justify-center gap-2 transform active:scale-95 transition-all cursor-pointer"
               >
                 <HelpCircle className="w-4 h-4 text-amber-200" />
-                <span>{language === "hi" ? "क्विज़ खेलें (No Login)" : "Start Quiz (No Login)"}</span>
+                <span>Start Quiz</span>
               </Link>
             </div>
           ))}

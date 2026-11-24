@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import { 
   Menu, 
@@ -30,8 +31,14 @@ export default function Header() {
           
           {/* Logo / Brand */}
           <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-amber-500 via-orange-500 to-amber-700 flex items-center justify-center shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform">
-              <span className="text-white font-serif font-black text-xl leading-none">ॐ</span>
+            <div className="relative w-11 h-11 sm:w-12 sm:h-12 shrink-0 group-hover:scale-105 transition-transform">
+              <Image
+                src="/images/logo.png"
+                alt="SelfRealization Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
             <div className="flex flex-col">
               <span className="text-lg sm:text-xl font-extrabold tracking-tight text-gray-900 group-hover:text-amber-700 transition-colors">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { 
@@ -19,83 +19,121 @@ import {
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
+import { db } from "@/lib/firebase/client";
+import { collection, getDocs, query, limit } from "firebase/firestore";
+
+const DEFAULT_COURSES = [
+  {
+    id: "discover-yourself",
+    title: {
+      en: "Discover Yourself: Fundamentals of Bhagavad-gītā",
+      hi: "स्वयं को जानें: भगवद्गीता के मूलभूत सिद्धांत"
+    },
+    desc: {
+      en: "A structured 6-session foundation journey exploring soul, mind, reincarnation, karma, and supreme identity.",
+      hi: "आत्मा, मन, पुनर्जन्म, कर्म और परम सत्य के रहस्यों को उद्घाटित करने वाली 6 सत्रों की व्यवस्थित यात्रा।"
+    },
+    level: "Beginner",
+    lessons: "6 Lessons",
+    duration: "3.5 Hours",
+    price: "Free Access",
+    isPaid: false,
+    modules: [
+      { title: { en: "Session 1: Can a Scientist Believe in God?", hi: "सत्र 1: क्या वैज्ञानिक ईश्वर में विश्वास कर सकता है?" }, length: "35 mins" },
+      { title: { en: "Session 2: Getting the Eyes of Knowledge (Veda)", hi: "सत्र 2: ज्ञान चक्षु की प्राप्ति (वेद क्या हैं?)" }, length: "30 mins" },
+      { title: { en: "Session 3: Science of Soul & Reincarnation", hi: "सत्र 3: आत्मा का विज्ञान एवं पुनर्जन्म का रहस्य" }, length: "40 mins" },
+      { title: { en: "Session 4: One God or Many Gods?", hi: "सत्र 4: एक ईश्वर अथवा अनेक देव?" }, length: "35 mins" },
+      { title: { en: "Session 5: Why Do Bad Things Happen to Good People? (Karma)", hi: "सत्र 5: अच्छे लोगों के साथ बुरा क्यों होता है? (कर्म का नियम)" }, length: "45 mins" },
+      { title: { en: "Session 6: Topmost Yoga System for Kali Yuga", hi: "सत्र 6: कलियुग हेतु सर्वश्रेष्ठ योग प्रणाली" }, length: "40 mins" },
+    ]
+  },
+  {
+    id: "science-of-self-realization",
+    title: {
+      en: "Science of Self-Realization & Practical Devotion",
+      hi: "आत्म-साक्षात्कार का विज्ञान एवं व्यावहारिक भक्ति"
+    },
+    desc: {
+      en: "Mastering practical devotion in day-to-day work, balancing modern career stress, and developing inner consciousness.",
+      hi: "दैनिक कार्यस्थल में भक्तिमय संतुलन साधने, कार्य-तनाव से मुक्ति पाने और कर्म को योग बनाने का प्रामाणिक मार्ग।"
+    },
+    level: "Intermediate",
+    lessons: "12 Lessons",
+    duration: "8 Hours",
+    price: "Free Access",
+    isPaid: false,
+    modules: [
+      { title: { en: "Module 1: Defining the Living Entity & Mind", hi: "मॉड्यूल 1: जीवात्मा एवं मन की संरचना" }, length: "45 mins" },
+      { title: { en: "Module 2: The Three Modes of Material Nature (Gunas)", hi: "मॉड्यूल 2: प्रकृति के तीन गुण (सत्व, रज, तम)" }, length: "50 mins" },
+      { title: { en: "Module 3: Overcoming Lust, Anger & Greed", hi: "मॉड्यूल 3: काम, क्रोध और लोभ पर विजय" }, length: "45 mins" },
+      { title: { en: "Module 4: Practical Art of Japa Meditation", hi: "मॉड्यूल 4: जप ध्यान की व्यावहारिक कला" }, length: "40 mins" },
+    ]
+  },
+  {
+    id: "comprehensive-gita",
+    title: {
+      en: "Comprehensive Bhagavad-gītā Study with Sanskrit Recitation",
+      hi: "श्रीमद्भगवद्गीता सम्पूर्ण संस्कृत श्लोक एवं भाष्य अध्ययन"
+    },
+    desc: {
+      en: "In-depth verse-by-verse commentary analysis, philosophical assessments, Sanskrit pronunciation, and certificate.",
+      hi: "श्लोक दर श्लोक प्रामाणिक भाष्य विश्लेषण, दार्शनिक प्रश्नों के उत्तर, संस्कृत उच्चारण एवं प्रमाणित प्रमाण-पत्र।"
+    },
+    level: "Advanced",
+    lessons: "18 Chapters",
+    duration: "24 Hours",
+    price: "₹999",
+    isPaid: true,
+    modules: [
+      { title: { en: "Part 1: Karma Yoga (Chapters 1 to 6)", hi: "भाग 1: कर्म योग (अध्याय 1 से 6)" }, length: "8 Hours" },
+      { title: { en: "Part 2: Bhakti Yoga (Chapters 7 to 12)", hi: "भाग 2: भक्ति योग (अध्याय 7 से 12)" }, length: "8 Hours" },
+      { title: { en: "Part 3: Jnana Yoga (Chapters 13 to 18)", hi: "भाग 3: ज्ञान योग (अध्याय 13 से 18)" }, length: "8 Hours" },
+    ]
+  }
+];
 
 export default function CoursesCataloguePage() {
   const { t, language } = useLanguage();
+  const [courses, setCourses] = useState<any[]>(DEFAULT_COURSES);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | "free" | "paid">("all");
   const [expandedCourse, setExpandedCourse] = useState<string | null>("discover-yourself");
   const [enrollingCourse, setEnrollingCourse] = useState<ClassItem | null>(null);
 
-  const courses = [
-    {
-      id: "discover-yourself",
-      title: {
-        en: "Discover Yourself: Fundamentals of Bhagavad-gītā",
-        hi: "स्वयं को जानें: भगवद्गीता के मूलभूत सिद्धांत"
-      },
-      desc: {
-        en: "A structured 6-session foundation journey exploring soul, mind, reincarnation, karma, and supreme identity.",
-        hi: "आत्मा, मन, पुनर्जन्म, कर्म और परम सत्य के रहस्यों को उद्घाटित करने वाली 6 सत्रों की व्यवस्थित यात्रा।"
-      },
-      level: language === "hi" ? "प्रारंभिक (Beginner)" : "Beginner",
-      lessons: "6 Lessons",
-      duration: "3.5 Hours",
-      price: language === "hi" ? "निःशुल्क (Free)" : "Free Access",
-      isPaid: false,
-      modules: [
-        { title: { en: "Session 1: Can a Scientist Believe in God?", hi: "सत्र 1: क्या वैज्ञानिक ईश्वर में विश्वास कर सकता है?" }, length: "35 mins" },
-        { title: { en: "Session 2: Getting the Eyes of Knowledge (Veda)", hi: "सत्र 2: ज्ञान चक्षु की प्राप्ति (वेद क्या हैं?)" }, length: "30 mins" },
-        { title: { en: "Session 3: Science of Soul & Reincarnation", hi: "सत्र 3: आत्मा का विज्ञान एवं पुनर्जन्म का रहस्य" }, length: "40 mins" },
-        { title: { en: "Session 4: One God or Many Gods?", hi: "सत्र 4: एक ईश्वर अथवा अनेक देव?" }, length: "35 mins" },
-        { title: { en: "Session 5: Why Do Bad Things Happen to Good People? (Karma)", hi: "सत्र 5: अच्छे लोगों के साथ बुरा क्यों होता है? (कर्म का नियम)" }, length: "45 mins" },
-        { title: { en: "Session 6: Topmost Yoga System for Kali Yuga", hi: "सत्र 6: कलियुग हेतु सर्वश्रेष्ठ योग प्रणाली" }, length: "40 mins" },
-      ]
-    },
-    {
-      id: "science-of-self-realization",
-      title: {
-        en: "Science of Self-Realization & Practical Devotion",
-        hi: "आत्म-साक्षात्कार का विज्ञान एवं व्यावहारिक भक्ति"
-      },
-      desc: {
-        en: "Mastering practical devotion in day-to-day work, balancing modern career stress, and developing inner consciousness.",
-        hi: "दैनिक कार्यस्थल में भक्तिमय संतुलन साधने, कार्य-तनाव से मुक्ति पाने और कर्म को योग बनाने का प्रामाणिक मार्ग।"
-      },
-      level: language === "hi" ? "मध्यम (Intermediate)" : "Intermediate",
-      lessons: "12 Lessons",
-      duration: "8 Hours",
-      price: language === "hi" ? "निःशुल्क (Free)" : "Free Access",
-      isPaid: false,
-      modules: [
-        { title: { en: "Module 1: Defining the Living Entity & Mind", hi: "मॉड्यूल 1: जीवात्मा एवं मन की संरचना" }, length: "45 mins" },
-        { title: { en: "Module 2: The Three Modes of Material Nature (Gunas)", hi: "मॉड्यूल 2: प्रकृति के तीन गुण (सत्व, रज, तम)" }, length: "50 mins" },
-        { title: { en: "Module 3: Overcoming Lust, Anger & Greed", hi: "मॉड्यूल 3: काम, क्रोध और लोभ पर विजय" }, length: "45 mins" },
-        { title: { en: "Module 4: Practical Art of Japa Meditation", hi: "मॉड्यूल 4: जप ध्यान की व्यावहारिक कला" }, length: "40 mins" },
-      ]
-    },
-    {
-      id: "comprehensive-gita",
-      title: {
-        en: "Comprehensive Bhagavad-gītā Study with Sanskrit Recitation",
-        hi: "श्रीमद्भगवद्गीता सम्पूर्ण संस्कृत श्लोक एवं भाष्य अध्ययन"
-      },
-      desc: {
-        en: "In-depth verse-by-verse commentary analysis, philosophical assessments, Sanskrit pronunciation, and certificate.",
-        hi: "श्लोक दर श्लोक प्रामाणिक भाष्य विश्लेषण, दार्शनिक प्रश्नों के उत्तर, संस्कृत उच्चारण एवं प्रमाणित प्रमाण-पत्र।"
-      },
-      level: language === "hi" ? "उन्नत (Advanced)" : "Advanced",
-      lessons: "18 Chapters",
-      duration: "24 Hours",
-      price: "₹999",
-      isPaid: true,
-      modules: [
-        { title: { en: "Part 1: Karma Yoga (Chapters 1 to 6)", hi: "भाग 1: कर्म योग (अध्याय 1 से 6)" }, length: "8 Hours" },
-        { title: { en: "Part 2: Bhakti Yoga (Chapters 7 to 12)", hi: "भाग 2: भक्ति योग (अध्याय 7 से 12)" }, length: "8 Hours" },
-        { title: { en: "Part 3: Jnana Yoga (Chapters 13 to 18)", hi: "भाग 3: ज्ञान योग (अध्याय 13 से 18)" }, length: "8 Hours" },
-      ]
-    }
-  ];
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, "courses"), limit(50)));
+        const list: any[] = [];
+        snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+        if (list.length > 0) {
+          setCourses(list);
+          localStorage.setItem("sr_custom_courses", JSON.stringify(list));
+          return;
+        }
+      } catch (err) {
+        console.warn("Firestore courses fetch error, checking localStorage", err);
+      }
+
+      const localC = localStorage.getItem("sr_custom_courses");
+      if (localC) {
+        try {
+          const parsed = JSON.parse(localC);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCourses(parsed);
+            return;
+          }
+        } catch (e) {}
+      }
+    };
+    fetchCourses();
+  }, []);
+
+  const getLocalized = (val: any) => {
+    if (!val) return "";
+    if (typeof val === "string") return val;
+    return val[language] || val.en || val.hi || "";
+  };
 
   const filteredCourses = courses.filter((c) => {
     const matchesCategory = 
@@ -103,9 +141,9 @@ export default function CoursesCataloguePage() {
       categoryFilter === "free" ? !c.isPaid :
       c.isPaid;
 
-    const matchesSearch = 
-      c.title[language].toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.desc[language].toLowerCase().includes(searchQuery.toLowerCase());
+    const titleStr = getLocalized(c.title).toLowerCase();
+    const descStr = getLocalized(c.desc).toLowerCase();
+    const matchesSearch = titleStr.includes(searchQuery.toLowerCase()) || descStr.includes(searchQuery.toLowerCase());
 
     return matchesCategory && matchesSearch;
   });
@@ -210,11 +248,11 @@ export default function CoursesCataloguePage() {
                 </div>
 
                 <h3 className="text-2xl font-bold text-gray-900 leading-snug">
-                  {c.title[language]}
+                  {getLocalized(c.title)}
                 </h3>
 
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  {c.desc[language]}
+                  {getLocalized(c.desc)}
                 </p>
 
                 {/* Actions Bar */}
@@ -255,7 +293,7 @@ export default function CoursesCataloguePage() {
                     <span>{language === "hi" ? "पाठ्यक्रम की रूपरेखा (Syllabus)" : "Course Curriculum & Lessons"}</span>
                   </h4>
                   <div className="space-y-2">
-                    {c.modules.map((m, idx) => (
+                    {(c.modules || []).map((m: any, idx: number) => (
                       <div
                         key={idx}
                         className="bg-white p-3.5 rounded-xl border border-amber-200/70 flex items-center justify-between text-xs sm:text-sm"
@@ -264,7 +302,7 @@ export default function CoursesCataloguePage() {
                           <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-bold shrink-0">
                             {idx + 1}
                           </span>
-                          <span className="font-medium text-gray-800">{m.title[language]}</span>
+                          <span className="font-medium text-gray-800">{getLocalized(m.title)}</span>
                         </div>
                         <span className="text-gray-400 font-mono text-xs shrink-0">{m.length}</span>
                       </div>

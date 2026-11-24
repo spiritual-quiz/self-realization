@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import { MapPin, Phone, Mail, Heart, ExternalLink } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
@@ -24,8 +25,13 @@ export default function Footer() {
           {/* Brand Info */}
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-serif font-black text-xl shadow-md">
-                ॐ
+              <div className="relative w-12 h-12 shrink-0">
+                <Image
+                  src="/images/logo.png"
+                  alt="SelfRealization Logo"
+                  fill
+                  className="object-contain"
+                />
               </div>
               <span className="text-2xl font-black tracking-tight text-white">
                 Self<span className="text-amber-500">Realization</span>
