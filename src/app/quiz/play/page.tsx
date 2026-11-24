@@ -30,7 +30,8 @@ import {
   Infinity as InfinityIcon,
   FlaskConical,
   RefreshCw,
-  Trophy
+  Trophy,
+  AlertCircle
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { parseCSVToQuestions, SAMPLE_CSV_CONTENT, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
@@ -82,18 +83,24 @@ function QuizPlayInner() {
   const [showClassRegisterModal, setShowClassRegisterModal] = useState<boolean>(false);
   const [classFormSubmitting, setClassFormSubmitting] = useState<boolean>(false);
   const [classFormSubmitted, setClassFormSubmitted] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string>("");
   const [classFormData, setClassFormData] = useState({
     name: "",
     email: "",
     whatsapp: "",
     gender: "",
     age: "",
-    language: "हिन्दी / Hindi",
-    classMode: "ऑनलाइन / Online",
-    occupation: "छात्र / Student",
+    language: "",
+    classMode: "",
+    occupation: "",
     currentLocation: "",
     nativePlace: "",
   });
+
+  // Thinking State (> 5s contemplation) & Wrong Answer Animation
+  const [isThinking, setIsThinking] = useState(false);
+  const [wrongAnimation, setWrongAnimation] = useState(false);
+  const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Audio & Timer References
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -278,13 +285,47 @@ function QuizPlayInner() {
     };
   }, [currentIndex, quizStarted, isAnswered, isComplete, timerDuration]);
 
+  // Contemplation & Thinking Animation (Triggers if player waits > 5s on question)
+  useEffect(() => {
+    if (!quizStarted || isAnswered || isComplete) {
+      setIsThinking(false);
+      if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+      return;
+    }
+
+    setIsThinking(false);
+    if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+
+    thinkingTimerRef.current = setTimeout(() => {
+      setIsThinking(true);
+    }, 5000);
+
+    return () => {
+      if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+    };
+  }, [currentIndex, quizStarted, isAnswered, isComplete]);
+
   // Handle Timeout
   const handleTimeOut = () => {
     if (isAnswered) return;
     setIsAnswered(true);
     setIsTimeUp(true);
+    setIsThinking(false);
+    if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
     setStreak(0);
     playFx("wrong");
+
+    // Red particles animation for wrong / timeout
+    setWrongAnimation(true);
+    setTimeout(() => setWrongAnimation(false), 1500);
+    confetti({
+      particleCount: 45,
+      spread: 60,
+      origin: { y: 0.6 },
+      colors: ["#DC2626", "#B91C1C", "#991B1B", "#F87171"],
+      shapes: ["circle"],
+      scalar: 1.1,
+    });
 
     const currentQ = questions[currentIndex];
     setAnswersLog((prev) => [
@@ -310,6 +351,8 @@ function QuizPlayInner() {
 
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+    setIsThinking(false);
 
     setSelectedOption(optKey);
     setIsAnswered(true);
@@ -354,6 +397,18 @@ function QuizPlayInner() {
     } else {
       setStreak(0);
       playFx("wrong");
+      setWrongAnimation(true);
+      setTimeout(() => setWrongAnimation(false), 1500);
+
+      // Red particles for wrong answer (matches flowers for correct answer)
+      confetti({
+        particleCount: 50,
+        spread: 65,
+        origin: { y: 0.6 },
+        colors: ["#DC2626", "#B91C1C", "#991B1B", "#F87171"],
+        shapes: ["circle"],
+        scalar: 1.1,
+      });
     }
   };
 
@@ -422,6 +477,25 @@ function QuizPlayInner() {
   // Submit Free Class Registration
   const handleSubmitClassRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
+
+    // Strict validation: all information is mandatory
+    if (
+      !classFormData.name.trim() ||
+      !classFormData.email.trim() ||
+      !classFormData.whatsapp.trim() ||
+      !classFormData.gender.trim() ||
+      !classFormData.age.trim() ||
+      !classFormData.language.trim() ||
+      !classFormData.classMode.trim() ||
+      !classFormData.occupation.trim() ||
+      !classFormData.currentLocation.trim() ||
+      !classFormData.nativePlace.trim()
+    ) {
+      setFormError("कृपया सभी आवश्यक विवरण भरें / Please fill all the details.");
+      return;
+    }
+
     setClassFormSubmitting(true);
 
     try {
@@ -662,11 +736,15 @@ function QuizPlayInner() {
           <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
             <div className="w-full max-w-lg bg-gradient-to-b from-[#FFFDF8] via-[#FFF9EE] to-[#FFF1D6] border-2 sm:border-4 border-amber-500 rounded-3xl p-6 sm:p-8 shadow-2xl text-center relative overflow-hidden animate-scale-in">
               
-              {/* Decorative Aura Accent */}
-              <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-amber-400 via-orange-400 to-amber-200 p-1 shadow-lg flex items-center justify-center mb-4">
-                <div className="w-full h-full rounded-full bg-amber-950 flex items-center justify-center text-3xl">
-                  🎓
-                </div>
+              {/* Website Official Logo Above the Pop-up */}
+              <div className="relative w-36 h-20 mx-auto mb-2">
+                <Image
+                  src="/images/logo.png"
+                  alt="SelfRealization Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
 
               <div className="space-y-2 mb-6">
@@ -714,6 +792,17 @@ function QuizPlayInner() {
           <div className="fixed inset-0 z-[99999] w-screen h-screen flex items-start sm:items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
             <div className="w-full max-w-xl bg-gradient-to-b from-[#FFFDF9] via-[#FFF9EE] to-[#FFF3DC] border-2 sm:border-4 border-amber-500 rounded-3xl p-5 sm:p-7 shadow-2xl text-gray-900 relative my-auto sm:my-6">
               
+              {/* Website Official Logo Above Registration Form */}
+              <div className="relative w-28 h-16 mx-auto mb-2">
+                <Image
+                  src="/images/logo.png"
+                  alt="SelfRealization Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+
               {/* Header */}
               <div className="text-center pb-3 border-b border-amber-300/60 mb-4">
                 <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/20 text-amber-950 font-bold text-xs mb-1">
@@ -727,6 +816,14 @@ function QuizPlayInner() {
                   Registration for Free Vedic Classes
                 </p>
               </div>
+
+              {/* Mandatory Fields Error Alert */}
+              {formError && (
+                <div className="p-3 mb-4 rounded-xl bg-rose-100 border-2 border-rose-400 text-rose-900 text-xs sm:text-sm font-bold flex items-center gap-2 animate-shake">
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
 
               {classFormSubmitted ? (
                 <div className="py-10 text-center space-y-3">
@@ -756,9 +853,14 @@ function QuizPlayInner() {
                         type="text"
                         required
                         value={classFormData.name}
-                        onChange={(e) => setClassFormData({ ...classFormData, name: e.target.value })}
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, name: e.target.value });
+                          if (formError) setFormError("");
+                        }}
                         placeholder="उदा. Gaur Chandra"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.name.trim() ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       />
                     </div>
 
@@ -771,9 +873,14 @@ function QuizPlayInner() {
                         type="email"
                         required
                         value={classFormData.email}
-                        onChange={(e) => setClassFormData({ ...classFormData, email: e.target.value })}
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, email: e.target.value });
+                          if (formError) setFormError("");
+                        }}
                         placeholder="your.email@example.com"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.email.trim() ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       />
                     </div>
 
@@ -786,13 +893,18 @@ function QuizPlayInner() {
                         type="tel"
                         required
                         value={classFormData.whatsapp}
-                        onChange={(e) => setClassFormData({ ...classFormData, whatsapp: e.target.value })}
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, whatsapp: e.target.value });
+                          if (formError) setFormError("");
+                        }}
                         placeholder="उदा. 9876543210"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.whatsapp.trim() ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       />
                     </div>
 
-                    {/* 4. Gender */}
+                    {/* 4. Gender (Male and Female only) */}
                     <div>
                       <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
                         लिंग / Gender <span className="text-rose-600">*</span>
@@ -800,13 +912,17 @@ function QuizPlayInner() {
                       <select
                         required
                         value={classFormData.gender}
-                        onChange={(e) => setClassFormData({ ...classFormData, gender: e.target.value })}
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, gender: e.target.value });
+                          if (formError) setFormError("");
+                        }}
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.gender ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       >
                         <option value="">चुनें / Select</option>
-                        <option value="पुरुष / Male">पुरुष / Male</option>
-                        <option value="महिला / Female">महिला / Female</option>
-                        <option value="अन्य / Other">अन्य / Other</option>
+                        <option value="Male / पुरुष">Male / पुरुष</option>
+                        <option value="Female / महिला">Female / महिला</option>
                       </select>
                     </div>
 
@@ -821,13 +937,18 @@ function QuizPlayInner() {
                         min="5"
                         max="120"
                         value={classFormData.age}
-                        onChange={(e) => setClassFormData({ ...classFormData, age: e.target.value })}
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, age: e.target.value });
+                          if (formError) setFormError("");
+                        }}
                         placeholder="उदा. 24"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.age.trim() ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       />
                     </div>
 
-                    {/* 6. Language */}
+                    {/* 6. Language (English in English, Hindi in Hindi) */}
                     <div>
                       <label className="block text-[11px] sm:text-xs font-bold text-amber-950 mb-1">
                         भाषा / Language <span className="text-rose-600">*</span>
@@ -835,12 +956,17 @@ function QuizPlayInner() {
                       <select
                         required
                         value={classFormData.language}
-                        onChange={(e) => setClassFormData({ ...classFormData, language: e.target.value })}
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, language: e.target.value });
+                          if (formError) setFormError("");
+                        }}
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.language ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       >
                         <option value="">चुनें / Select</option>
-                        <option value="हिन्दी / Hindi">हिन्दी / Hindi</option>
-                        <option value="English / अंग्रेजी">English / अंग्रेजी</option>
+                        <option value="English">English</option>
+                        <option value="हिन्दी">हिन्दी</option>
                       </select>
                     </div>
 
@@ -852,8 +978,13 @@ function QuizPlayInner() {
                       <select
                         required
                         value={classFormData.classMode}
-                        onChange={(e) => setClassFormData({ ...classFormData, classMode: e.target.value })}
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, classMode: e.target.value });
+                          if (formError) setFormError("");
+                        }}
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.classMode ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       >
                         <option value="">चुनें / Select</option>
                         <option value="ऑनलाइन / Online">ऑनलाइन / Online</option>
@@ -869,8 +1000,13 @@ function QuizPlayInner() {
                       <select
                         required
                         value={classFormData.occupation}
-                        onChange={(e) => setClassFormData({ ...classFormData, occupation: e.target.value })}
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, occupation: e.target.value });
+                          if (formError) setFormError("");
+                        }}
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.occupation ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       >
                         <option value="">चुनें / Select</option>
                         <option value="छात्र / Student">छात्र / Student</option>
@@ -888,9 +1024,14 @@ function QuizPlayInner() {
                         type="text"
                         required
                         value={classFormData.currentLocation}
-                        onChange={(e) => setClassFormData({ ...classFormData, currentLocation: e.target.value })}
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, currentLocation: e.target.value });
+                          if (formError) setFormError("");
+                        }}
                         placeholder="उदा. Pune / Mumbai / Delhi"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.currentLocation.trim() ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       />
                     </div>
 
@@ -903,15 +1044,20 @@ function QuizPlayInner() {
                         type="text"
                         required
                         value={classFormData.nativePlace}
-                        onChange={(e) => setClassFormData({ ...classFormData, nativePlace: e.target.value })}
+                        onChange={(e) => {
+                          setClassFormData({ ...classFormData, nativePlace: e.target.value });
+                          if (formError) setFormError("");
+                        }}
                         placeholder="उदा. Varanasi / Jaipur / Kolkata"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-amber-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none"
+                        className={`w-full px-3 py-2 text-xs sm:text-sm rounded-xl border focus:ring-1 focus:ring-amber-500 bg-white text-gray-900 outline-none ${
+                          formError && !classFormData.nativePlace.trim() ? "border-rose-500 ring-1 ring-rose-400" : "border-amber-300 focus:border-amber-600"
+                        }`}
                       />
                     </div>
 
                   </div>
 
-                  {/* Action Button - Only Submit Button (Skip button removed per user request) */}
+                  {/* Action Button - Only Submit Button (Strict Mandatory Fill Required) */}
                   <div className="pt-3 border-t border-amber-200">
                     <button
                       type="submit"
@@ -1307,10 +1453,29 @@ function QuizPlayInner() {
           <div className="absolute -top-12 -right-12 w-44 h-44 bg-[radial-gradient(circle,_rgba(245,158,11,0.18),_transparent_70%)] pointer-events-none rounded-full" />
           <div className="absolute -bottom-12 -left-12 w-44 h-44 bg-[radial-gradient(circle,_rgba(217,119,6,0.14),_transparent_70%)] pointer-events-none rounded-full" />
           
-          {/* Floating Score Alert */}
+          {/* Floating Score Alert (Correct Answer with Flowers) */}
           {floatingScore !== null && (
             <div className="absolute top-2 right-4 text-base sm:text-xl font-black text-emerald-600 animate-float-score pointer-events-none z-30">
               +{floatingScore} Points! 🌸
+            </div>
+          )}
+
+          {/* Floating Wrong Answer Animation Alert */}
+          {wrongAnimation && (
+            <div className="absolute top-2 right-4 text-xs sm:text-sm font-black text-rose-700 bg-rose-100/95 border-2 border-rose-400 px-3.5 py-1 rounded-full shadow-xl animate-bounce pointer-events-none z-30 flex items-center gap-1.5">
+              <span>✕ अशुद्ध उत्तर! / Incorrect!</span>
+            </div>
+          )}
+
+          {/* Thinking Animation (Contemplation for > 5 seconds) */}
+          {isThinking && !isAnswered && (
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-500 via-orange-400 to-amber-500 text-amber-950 font-black text-xs shadow-xl border-2 border-amber-300 animate-pulse pointer-events-none">
+              <span className="text-sm animate-bounce">🤔</span>
+              <span className="tracking-wide">गहन चिंतन... / Deep Contemplation...</span>
+              <span className="flex gap-1 items-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-950 animate-ping"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-950"></span>
+              </span>
             </div>
           )}
 
