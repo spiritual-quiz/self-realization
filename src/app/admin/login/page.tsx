@@ -2,39 +2,92 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, ShieldCheck, Sparkles, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { 
+  Lock, 
+  Mail, 
+  ShieldCheck, 
+  ArrowRight, 
+  AlertCircle, 
+  Loader2, 
+  KeyRound, 
+  CheckCircle2, 
+  X,
+  HelpCircle 
+} from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@selfrealization.org");
-  const [password, setPassword] = useState("SelfRealization@2026");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("madhavcarandas@gmail.com");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // Verify Admin Credentials
-    const validEmails = ["admin@selfrealization.org", "madhavcarandas@gmail.com"];
+    // Primary authorized admin: madhavcarandas@gmail.com
+    const validEmails = ["madhavcarandas@gmail.com", "admin@selfrealization.org"];
     const validPass = "SelfRealization@2026";
 
     setTimeout(() => {
       if (validEmails.includes(email.trim().toLowerCase()) && password.trim() === validPass) {
         localStorage.setItem("sr_admin_session", JSON.stringify({
-          email: email.trim(),
+          email: email.trim().toLowerCase(),
           role: "super_admin",
           loginAt: new Date().toISOString()
         }));
         document.cookie = "sr_admin_session=active; path=/; max-age=86400; SameSite=Lax";
         router.push("/admin");
       } else {
-        setError("Invalid admin credentials. Please verify your email and password.");
+        setError("Invalid admin credentials. Please enter your valid admin email and password.");
         setLoading(false);
       }
     }, 600);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) return;
+
+    setForgotLoading(true);
+    setForgotError(null);
+    setForgotSuccess(null);
+
+    try {
+      const res = await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "password_reset",
+          details: {
+            email: forgotEmail.trim().toLowerCase(),
+          }
+        })
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        setForgotSuccess(
+          `Password retrieval instructions have been dispatched to ${forgotEmail}. Please check your inbox or spam folder.`
+        );
+      } else {
+        setForgotError("Failed to dispatch password recovery email. Please try again.");
+      }
+    } catch (err: any) {
+      setForgotError("Network error sending recovery instructions. Please check connection.");
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   return (
@@ -72,22 +125,39 @@ export default function AdminLoginPage() {
               type="email"
               required
               value={email}
+              placeholder="e.g. madhavcarandas@gmail.com"
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+              autoComplete="username"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5 text-amber-600" />
-              <span>Admin Password</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-amber-600" />
+                <span>Admin Password</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotSuccess(null);
+                  setForgotError(null);
+                  setShowForgotModal(true);
+                }}
+                className="text-xs text-amber-700 hover:text-amber-800 hover:underline font-semibold"
+              >
+                Forgot Password?
+              </button>
+            </div>
             <input
               type="password"
               required
               value={password}
+              placeholder="Enter your admin password"
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+              autoComplete="current-password"
             />
           </div>
 
@@ -95,7 +165,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+              className="w-full py-3.5 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
             >
               {loading ? (
                 <>
@@ -113,12 +183,109 @@ export default function AdminLoginPage() {
           </div>
         </form>
 
-        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
-          <p className="font-bold">Pre-configured Admin Access:</p>
-          <p>Email: <code className="font-mono bg-white px-1.5 py-0.5 rounded">admin@selfrealization.org</code></p>
-          <p>Password: <code className="font-mono bg-white px-1.5 py-0.5 rounded">SelfRealization@2026</code></p>
+        <div className="text-center text-xs text-gray-400">
+          <span>Official administration portal for authorized coordinators only.</span>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-amber-200 p-6 sm:p-8 space-y-5">
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-2">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Retrieve Admin Password
+              </h2>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Enter your registered administrator email ID. We will send password retrieval instructions and access details directly to your inbox.
+              </p>
+            </div>
+
+            {forgotSuccess && (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{forgotSuccess}</span>
+              </div>
+            )}
+
+            {forgotError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            {!forgotSuccess ? (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Registered Admin Email</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                  />
+                  <p className="text-[11px] text-gray-500">
+                    Target: <code className="font-semibold text-amber-800">madhavcarandas@gmail.com</code>
+                  </p>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md flex items-center gap-2 disabled:opacity-60 cursor-pointer"
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Sending Link...</span>
+                      </>
+                    ) : (
+                      <>
+                        <KeyRound className="w-4 h-4" />
+                        <span>Send Retrieval Email</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700"
+                >
+                  Return to Sign In
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -31,6 +31,7 @@ import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, limit } f
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("madhavcarandas@gmail.com");
   const [activeTab, setActiveTab] = useState<"overview" | "quizzes" | "classes" | "inquiries">("overview");
 
   // Analytics & Collections State
@@ -56,6 +57,12 @@ export default function AdminDashboardPage() {
     if (!session) {
       router.push("/admin/login");
     } else {
+      try {
+        const parsed = JSON.parse(session);
+        if (parsed?.email) setAdminEmail(parsed.email);
+      } catch (e) {
+        // use default
+      }
       setIsAuthenticated(true);
       fetchDashboardData();
     }
@@ -184,7 +191,7 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <h1 className="text-base font-bold tracking-tight">SelfRealization Admin Console</h1>
-            <p className="text-[11px] text-amber-300/80">Logged in as Super Admin</p>
+            <p className="text-[11px] text-amber-300/80">Administrator: <span className="font-semibold text-white">{adminEmail}</span></p>
           </div>
         </div>
 

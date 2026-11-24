@@ -80,6 +80,27 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
         colors: ["#D97706", "#F59E0B", "#10B981", "#7C3AED"],
       });
 
+      // Send instant email notification to madhavcarandas@gmail.com
+      try {
+        await fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "class_registration",
+            details: {
+              classTitle: classItem.title,
+              fullName,
+              phone,
+              email,
+              preferredMode,
+              questions
+            }
+          })
+        });
+      } catch (notifyErr) {
+        console.warn("Notification dispatch notice:", notifyErr);
+      }
+
       setConfirmedId(docRef.id);
     } catch (err: any) {
       console.error("Registration error:", err);

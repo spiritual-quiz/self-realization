@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import { 
   Sparkles, 
@@ -18,14 +19,87 @@ import {
   Clock,
   Compass,
   PlayCircle,
-  ShieldCheck
+  ShieldCheck,
+  Phone,
+  Mail,
+  Send,
+  Loader2
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
+import { db } from "@/lib/firebase/client";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import confetti from "canvas-confetti";
 
 export default function HomePage() {
   const { t, language } = useLanguage();
   const [selectedClass, setSelectedClass] = React.useState<ClassItem | null>(null);
+
+  // Contact Form State
+  const [contactName, setContactName] = React.useState("");
+  const [contactPhone, setContactPhone] = React.useState("");
+  const [contactEmail, setContactEmail] = React.useState("");
+  const [contactSubject, setContactSubject] = React.useState(language === "hi" ? "आध्यात्मिक मार्गदर्शन" : "Spiritual Guidance");
+  const [contactMessage, setContactMessage] = React.useState("");
+  const [contactLoading, setContactLoading] = React.useState(false);
+  const [contactSubmitted, setContactSubmitted] = React.useState(false);
+  const [contactId, setContactId] = React.useState("");
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactName || !contactPhone || !contactMessage) return;
+
+    setContactLoading(true);
+
+    try {
+      const docRef = await addDoc(collection(db, "inquiries"), {
+        fullName: contactName,
+        phone: contactPhone,
+        email: contactEmail,
+        subject: contactSubject,
+        message: contactMessage,
+        status: "new",
+        language,
+        createdAt: serverTimestamp(),
+      });
+
+      confetti({
+        particleCount: 50,
+        spread: 50,
+        origin: { y: 0.6 },
+        colors: ["#D97706", "#F59E0B", "#10B981"],
+      });
+
+      // Dispatch notification to madhavcarandas@gmail.com
+      try {
+        await fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "inquiry",
+            details: {
+              fullName: contactName,
+              phone: contactPhone,
+              email: contactEmail,
+              subject: contactSubject,
+              message: contactMessage
+            }
+          })
+        });
+      } catch (notifyErr) {
+        console.warn("Notification dispatch notice:", notifyErr);
+      }
+
+      setContactId(docRef.id);
+      setContactSubmitted(true);
+    } catch (err: any) {
+      console.error("Firestore inquiry error:", err);
+      setContactId("INQ-" + Math.random().toString(36).substring(2, 8).toUpperCase());
+      setContactSubmitted(true);
+    } finally {
+      setContactLoading(false);
+    }
+  };
 
   // Mock featured data for Phase 1 presentation
   const upcomingClasses = [
@@ -563,86 +637,362 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 7. MISSION & 3 PILLARS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-10">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-widest text-amber-700 bg-amber-50 px-3 py-1 rounded-md border border-amber-200">
-            {t.mission.kicker}
+      {/* 7. ABOUT US (INSIDE HOMEPAGE) */}
+      <section id="about" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+        <div className="text-center max-w-3xl mx-auto space-y-4">
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-100/80 px-3 py-1 rounded-full border border-amber-300">
+            {language === "hi" ? "हमारा परिचय एवं ध्येय" : "About SelfRealization"}
           </span>
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-gray-900 mt-2">
-            {t.mission.title}
+          <h2 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
+            {language === "hi" ? "आत्म-साक्षात्कार: एक दिव्य यात्रा" : "Awakening the Soul to Eternal Truth"}
           </h2>
-          <LotusAccent className="my-3" />
+          <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+            {language === "hi"
+              ? "परम पूज्य ए.सी. भक्तिवेदांत स्वामी प्रभुपाद के दिव्य उपदेशों पर आधारित प्रामाणिक गौड़ीय वैष्णव परंपरा।"
+              : "Anchored in the timeless teachings of His Divine Grace A.C. Bhaktivedanta Swami Prabhupāda, Founder-Ācārya of the International Society for Krishna Consciousness (ISKCON)."}
+          </p>
+          <LotusAccent className="my-2" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-          <div className="bg-white p-7 rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-all space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
-              <Users className="w-6 h-6" />
+        {/* About Showcase Card with Sanctuary Image */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-white rounded-3xl p-6 sm:p-10 border border-amber-200/80 shadow-vedic overflow-hidden">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-3 py-1 rounded-md border border-amber-200">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>{language === "hi" ? "आध्यात्मिक ध्येय" : "Our Guiding Vision"}</span>
             </div>
-            <h3 className="text-lg font-bold text-gray-900">{t.mission.card1Title}</h3>
-            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{t.mission.card1Desc}</p>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-snug">
+              {language === "hi"
+                ? "आधुनिक कोलाहल में शाश्वत वैदिक शांति का प्रकाश"
+                : "Illuminating Modern Lives with Ancient Vedic Wisdom"}
+            </h3>
+            <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
+              {language === "hi"
+                ? "SelfRealization केवल एक वेबसाइट नहीं है, अपितु एक व्यापक डिजिटल प्रचार और आध्यात्मिक शिक्षण मंच है। इसका मुख्य उद्देश्य आधुनिक समाज के सभी वर्गों — विशेष रूप से युवाओं और कामकाजी पेशेवरों — को भगवद्गीता के वैज्ञानिक दृष्टिकोण से जोड़ना है।"
+                : "SelfRealization is an interactive spiritual outreach and learning ecosystem. Our primary mission is to introduce every sincere seeker to the profound, practical science of Kṛṣṇa consciousness, nurturing their journey from curiosity to devotion."}
+            </p>
+            <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
+              {language === "hi"
+                ? "हमारा विश्वास है कि वास्तविक आंतरिक शांति, मानसिक संतुलन और जीवन का सच्चा उद्देश्य केवल आत्मा के अपने मूल स्वरूप — भगवान श्रीकृष्ण के शाश्वत संबंध — को पुनः जागृत करने से ही प्राप्त हो सकता है।"
+                : "We share that true happiness and mental tranquility arise naturally when one re-establishes their eternal loving relationship with the Supreme Personality of Godhead, Śrī Kṛṣṇa."}
+            </p>
+
+            <div className="pt-2 flex flex-wrap gap-3">
+              <Link
+                href="/live-classes"
+                className="px-6 py-3 rounded-full text-xs sm:text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-md transition-all flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{t.nav.joinFreeClass}</span>
+              </Link>
+              <a
+                href="#contact"
+                className="px-6 py-3 rounded-full text-xs sm:text-sm font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-all"
+              >
+                <span>{t.nav.contact}</span>
+              </a>
+            </div>
           </div>
 
-          <div className="bg-white p-7 rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-all space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-800 flex items-center justify-center font-bold">
-              <BookOpen className="w-6 h-6" />
+          <div className="relative rounded-2xl overflow-hidden shadow-xl border border-amber-200 aspect-4/3 bg-stone-100 min-h-[300px]">
+            <Image
+              src="https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"
+              alt="ISKCON NVCC Pune Temple"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 text-white">
+              <span className="text-xs uppercase tracking-widest text-amber-300 font-bold">
+                {language === "hi" ? "पवित्र धाम" : "Spiritual Sanctuary"}
+              </span>
+              <p className="text-lg font-bold">ISKCON New Vedic Cultural Centre (NVCC)</p>
+              <p className="text-xs text-amber-100/90">Katraj-Kondhwa Bypass, Pune, Maharashtra</p>
             </div>
-            <h3 className="text-lg font-bold text-gray-900">{t.mission.card2Title}</h3>
-            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{t.mission.card2Desc}</p>
+          </div>
+        </div>
+
+        {/* 4 Pillars of Spiritual Education */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
+          <div className="bg-white p-6 rounded-2xl border border-amber-100 shadow-xs hover:shadow-md transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
+              01
+            </div>
+            <h4 className="text-base font-bold text-gray-900">
+              {language === "hi" ? "व्यवस्थित आध्यात्मिक शिक्षा" : "Systematic Education"}
+            </h4>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              {language === "hi" 
+                ? "भगवद्गीता और श्रीमद्भागवतम के शाश्वत ज्ञान को आधुनिक वैज्ञानिक व तार्किक दृष्टिकोण से प्रस्तुत करना।"
+                : "Presenting timeless Bhagavad-gītā philosophy through modern logic, science, and practical relevance."}
+            </p>
           </div>
 
-          <div className="bg-white p-7 rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-all space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-              <HeartHandshake className="w-6 h-6" />
+          <div className="bg-white p-6 rounded-2xl border border-amber-100 shadow-xs hover:shadow-md transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-800 flex items-center justify-center font-bold text-sm">
+              02
             </div>
-            <h3 className="text-lg font-bold text-gray-900">{t.mission.card3Title}</h3>
-            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{t.mission.card3Desc}</p>
+            <h4 className="text-base font-bold text-gray-900">
+              {language === "hi" ? "संकीर्तन एवं पवित्र नाम" : "Chanting Holy Names"}
+            </h4>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              {language === "hi"
+                ? "हरे कृष्ण महामंत्र के संकीर्तन द्वारा समाज में आंतरिक शांति, सद्भाव एवं आध्यात्मिक जागृति लाना।"
+                : "Spreading chanting of Hare Kṛṣṇa Mahā-Mantra to cleanse hearts and uplift society."}
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-amber-100 shadow-xs hover:shadow-md transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
+              03
+            </div>
+            <h4 className="text-base font-bold text-gray-900">
+              {language === "hi" ? "चरित्र निर्माण व गुरुकुल" : "Character Formation"}
+            </h4>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              {language === "hi"
+                ? "युवाओं और साधकों को ब्रह्मचर्य, नैतिक अनुशासन, निःस्वार्थ सेवा और शुद्ध जीवनशैली में प्रशिक्षित करना।"
+                : "Empowering youth and seekers with clean habits, digital discipline, and spiritual character."}
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-amber-100 shadow-xs hover:shadow-md transition-all space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-bold text-sm">
+              04
+            </div>
+            <h4 className="text-base font-bold text-gray-900">
+              {language === "hi" ? "अन्नदान व प्रसादम" : "Prasādam Distribution"}
+            </h4>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              {language === "hi"
+                ? "भगवान को समर्पित शुद्ध, अहिंसक सात्विक प्रसादम का व्यापक वितरण जिससे चेतना शुद्ध होती है।"
+                : "Distributing sanctified satvik food to nourish both the body and the soul."}
+            </p>
           </div>
         </div>
       </section>
 
-      {/* 8. TEMPLE LOCATION & MAP SECTION */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-3xl p-6 sm:p-10 border border-amber-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="space-y-4 max-w-lg">
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 uppercase tracking-wider">
-              <MapPin className="w-4 h-4 text-amber-600" />
-              <span>{t.footer.addressTitle}</span>
+      {/* 8. CONTACT & INQUIRIES AT BOTTOM */}
+      <section id="contact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+        <div className="text-center max-w-3xl mx-auto space-y-4">
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-100/80 px-3 py-1 rounded-full border border-amber-300">
+            {language === "hi" ? "संपर्क एवं संवाद" : "Get In Touch"}
+          </span>
+          <h2 className="text-3xl sm:text-5xl font-black text-gray-900 tracking-tight">
+            {language === "hi" ? "हमसे संपर्क करें" : "Contact & Spiritual Inquiries"}
+          </h2>
+          <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+            {language === "hi"
+              ? "आध्यात्मिक प्रश्नों, कक्षाओं में पंजीकरण अथवा मंदिर दर्शन से संबंधित किसी भी सहायता के लिए संपर्क करें।"
+              : "Reach out for class inquiries, temple visits, spiritual counseling, or course enrollment questions."}
+          </p>
+          <LotusAccent className="my-2" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          {/* Contact Details & Info Card */}
+          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-amber-200 shadow-sm space-y-6 flex flex-col justify-between">
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-gray-900">
+                {language === "hi" ? "मंदिर का पता एवं संपर्क विवरण" : "Temple Location & Contact Details"}
+              </h3>
+
+              <div className="space-y-4 text-sm text-gray-700">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-900">{t.footer.addressTitle}</p>
+                    <p className="text-gray-600 leading-relaxed">{t.footer.addressText}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Phone className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-900">{language === "hi" ? "दूरभाष / हेल्पलाइन" : "Phone & Helpline"}</p>
+                    <p className="text-gray-600">{t.footer.phone}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Mail className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-900">{language === "hi" ? "ईमेल संपर्क" : "Email Inquiries"}</p>
+                    <p className="text-amber-800 font-medium">madhavcarandas@gmail.com</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-900">{language === "hi" ? "दैनिक मंदिर दर्शन समय" : "Daily Darshan Hours"}</p>
+                    <p className="text-gray-600">
+                      {language === "hi" 
+                        ? "प्रातः 04:30 से दोपहर 01:00 एवं सायं 04:30 से रात्रि 08:45"
+                        : "04:30 AM – 01:00 PM & 04:30 PM – 08:45 PM"}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
-              {language === "hi" ? "इस्कॉन एनवीसीसी पुणे में पधारें" : "Visit ISKCON NVCC Pune"}
-            </h3>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {t.footer.addressText}
-            </p>
-            <p className="text-xs text-gray-500">
-              {language === "hi"
-                ? "दैनिक दर्शन: प्रातः 04:30 से दोपहर 01:00 एवं सायं 04:30 से रात्रि 08:45"
-                : "Daily Darshan: 04:30 AM – 01:00 PM & 04:30 PM – 08:45 PM"}
-            </p>
-            <div className="pt-2">
-              <Link
-                href="/contact"
-                className="inline-flex items-center gap-2 text-sm font-bold text-amber-700 hover:text-amber-800"
-              >
-                <span>{language === "hi" ? "मंदिर का पूरा मार्ग एवं संपर्क देखें" : "View directions & temple contacts"}</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+
+            {/* Embedded Google Map of ISKCON NVCC */}
+            <div className="h-56 rounded-2xl overflow-hidden shadow-inner border border-amber-200 mt-4">
+              <iframe
+                title="ISKCON NVCC Pune Location"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3784.582847953259!2d73.87677817596048!3d18.457223971115857!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2eb9c9bbf28cb%3A0x6b1cb16e885d519b!2sISKCON%20NVCC%20Pune!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen={false}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             </div>
           </div>
 
-          <div className="w-full md:w-5/12 h-52 sm:h-64 rounded-2xl overflow-hidden shadow-inner border border-amber-200">
-            <iframe
-              title="ISKCON NVCC Pune Location"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3784.582847953259!2d73.87677817596048!3d18.457223971115857!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2eb9c9bbf28cb%3A0x6b1cb16e885d519b!2sISKCON%20NVCC%20Pune!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              allowFullScreen={false}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
+          {/* Interactive Inquiry Form */}
+          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-amber-200 shadow-sm space-y-6">
+            <h3 className="text-2xl font-bold text-gray-900">
+              {language === "hi" ? "आध्यात्मिक संदेश भेजें" : "Send a Message / Inquiry"}
+            </h3>
+
+            {contactSubmitted ? (
+              <div className="p-8 text-center space-y-4 bg-emerald-50 rounded-2xl border border-emerald-200 animate-fade-in">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+                  <CheckCircle2 className="w-9 h-9" />
+                </div>
+                <h4 className="text-xl font-bold text-emerald-950">
+                  {language === "hi" ? "आपका संदेश सफलतापूर्वक प्राप्त हुआ!" : "Inquiry Dispatched Successfully!"}
+                </h4>
+                <p className="text-sm text-emerald-900 leading-relaxed max-w-sm mx-auto">
+                  {language === "hi"
+                    ? "हरे कृष्ण! हमारे प्रतिनिधि जल्द ही आपसे संपर्क करेंगे।"
+                    : "Hare Kṛṣṇa! Notification has been forwarded to our team. We will connect with you shortly."}
+                </p>
+                <div className="pt-2">
+                  <span className="text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-emerald-200 text-emerald-800">
+                    Ref ID: {contactId}
+                  </span>
+                </div>
+                <div className="pt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContactSubmitted(false);
+                      setContactName("");
+                      setContactPhone("");
+                      setContactEmail("");
+                      setContactMessage("");
+                    }}
+                    className="text-xs font-bold text-emerald-800 hover:underline"
+                  >
+                    {language === "hi" ? "एक और संदेश भेजें" : "Send Another Message"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleContactSubmit} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase">
+                    {language === "hi" ? "पूरा नाम" : "Full Name"} *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder={language === "hi" ? "उदा. राहुल शर्मा" : "e.g. Rahul Sharma"}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-700 uppercase">
+                      {language === "hi" ? "मोबाइल नंबर (WhatsApp)" : "WhatsApp Phone"} *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-700 uppercase">
+                      {language === "hi" ? "ईमेल (वैकल्पिक)" : "Email Address"}
+                    </label>
+                    <input
+                      type="email"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase">
+                    {language === "hi" ? "विषय" : "Subject of Inquiry"}
+                  </label>
+                  <select
+                    value={contactSubject}
+                    onChange={(e) => setContactSubject(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm bg-white"
+                  >
+                    <option value="Spiritual Guidance">{language === "hi" ? "आध्यात्मिक मार्गदर्शन" : "Spiritual Guidance & Counseling"}</option>
+                    <option value="Class Enrollment">{language === "hi" ? "कक्षा पंजीकरण सहायता" : "Class Enrollment Assistance"}</option>
+                    <option value="Live Like a Monk">{language === "hi" ? "आश्रम जीवन / Live Like a Monk" : "Live Like a Monk Program"}</option>
+                    <option value="Temple Visit & Darshan">{language === "hi" ? "मंदिर दर्शन एवं सेवा" : "Temple Visit & Volunteering"}</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase">
+                    {language === "hi" ? "आपका संदेश / प्रश्न" : "Your Message / Question"} *
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={contactMessage}
+                    onChange={(e) => setContactMessage(e.target.value)}
+                    placeholder={language === "hi" ? "कृपया अपना प्रश्न अथवा जिज्ञासा यहाँ लिखें..." : "Please describe your question or spiritual interest..."}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm resize-none"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={contactLoading}
+                    className="w-full py-3.5 px-6 rounded-xl font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
+                  >
+                    {contactLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>{language === "hi" ? "संदेश भेजा जा रहा है..." : "Dispatching Message..."}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>{language === "hi" ? "संदेश भेजें" : "Submit Inquiry"}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-gray-500 text-center">
+                  {language === "hi" 
+                    ? "आपकी जानकारी पूर्णतः सुरक्षित है एवं सीधे मंदिर समन्वयकों को प्रेषित होगी।"
+                    : "Your details will be forwarded directly to coordinator madhavcarandas@gmail.com."}
+                </p>
+              </form>
+            )}
           </div>
         </div>
       </section>

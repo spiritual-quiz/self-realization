@@ -44,6 +44,26 @@ export default function ContactPage() {
         colors: ["#D97706", "#F59E0B", "#10B981"],
       });
 
+      // Send instant email notification to madhavcarandas@gmail.com
+      try {
+        await fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "inquiry",
+            details: {
+              fullName,
+              phone,
+              email,
+              subject,
+              message
+            }
+          })
+        });
+      } catch (notifyErr) {
+        console.warn("Notification dispatch notice:", notifyErr);
+      }
+
       setInquiryId(docRef.id);
       setSubmitted(true);
     } catch (err: any) {

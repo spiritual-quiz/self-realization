@@ -18,12 +18,14 @@ import {
   ArrowRight
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
+import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
 
 export default function CoursesCataloguePage() {
   const { t, language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | "free" | "paid">("all");
   const [expandedCourse, setExpandedCourse] = useState<string | null>("discover-yourself");
+  const [enrollingCourse, setEnrollingCourse] = useState<ClassItem | null>(null);
 
   const courses = [
     {
@@ -228,8 +230,16 @@ export default function CoursesCataloguePage() {
 
                   <button
                     type="button"
-                    onClick={() => alert(language === "hi" ? "Phase 5 में सम्पूर्ण LMS एनरोलमेंट, YouTube प्लेयर और प्रोग्रेस ट्रैकर सक्रिय किया जाएगा।" : "Full LMS Classroom, protected video player & progress saving unlocks in Phase 5!")}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-amber-600 hover:bg-amber-700 transition-all shadow-sm flex items-center justify-center gap-2"
+                    onClick={() => setEnrollingCourse({
+                      id: c.id,
+                      title: c.title,
+                      isPaid: c.isPaid,
+                      date: "Self-Paced / Immediate Access",
+                      time: c.duration,
+                      mode: "Online Video Lessons (LMS)",
+                      instructor: "ISKCON NVCC Scholars"
+                    })}
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-amber-600 hover:bg-amber-700 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>{language === "hi" ? "पाठ्यक्रम में प्रवेश लें" : "Enroll & Start Course"}</span>
@@ -266,6 +276,12 @@ export default function CoursesCataloguePage() {
           );
         })}
       </div>
+
+      {/* Course Enrollment Modal */}
+      <ClassRegistrationModal
+        classItem={enrollingCourse}
+        onClose={() => setEnrollingCourse(null)}
+      />
     </div>
   );
 }

@@ -1,51 +1,22 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { 
   Menu, 
   X, 
   Globe, 
-  BookOpen, 
   HelpCircle, 
-  Video, 
   Sparkles, 
   Compass, 
   Calendar,
-  ChevronDown,
-  Info,
-  Phone,
-  Upload,
-  ArrowRight,
   GraduationCap
 } from "lucide-react";
 
 export default function Header() {
   const { language, setLanguage, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [classesDropdownOpen, setClassesDropdownOpen] = useState(false);
-  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
-
-  const [mobileClassesOpen, setMobileClassesOpen] = useState(false);
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
-
-  const classesRef = useRef<HTMLDivElement>(null);
-  const moreRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (classesRef.current && !classesRef.current.contains(event.target as Node)) {
-        setClassesDropdownOpen(false);
-      }
-      if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
-        setMoreDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-amber-200/60 shadow-xs transition-all">
@@ -83,68 +54,25 @@ export default function Header() {
               {t.nav.home}
             </Link>
 
-            {/* 2. Classes (Dropdown: Live Classes + Self-Paced Courses) */}
-            <div
-              ref={classesRef}
-              className="relative"
-              onMouseEnter={() => setClassesDropdownOpen(true)}
-              onMouseLeave={() => setClassesDropdownOpen(false)}
+            {/* 2. Classes */}
+            <Link
+              href="/live-classes"
+              className="px-3.5 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:text-amber-700 hover:bg-amber-50 transition-colors flex items-center gap-1.5"
             >
-              <button
-                type="button"
-                onClick={() => setClassesDropdownOpen(!classesDropdownOpen)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                  classesDropdownOpen ? "text-amber-700 bg-amber-50" : "text-gray-700 hover:text-amber-700 hover:bg-amber-50"
-                }`}
-              >
-                <span>{language === "hi" ? "कक्षाएं" : "Classes"}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${classesDropdownOpen ? "rotate-180 text-amber-700" : "text-gray-400"}`} />
-              </button>
+              <Calendar className="w-4 h-4 text-amber-600" />
+              <span>{language === "hi" ? "कक्षाएं (Classes)" : "Classes"}</span>
+            </Link>
 
-              {classesDropdownOpen && (
-                <div className="absolute top-full left-0 w-72 pt-2 animate-fade-in z-50">
-                  <div className="bg-white rounded-2xl shadow-xl border border-amber-200 p-2 space-y-1">
-                    <Link
-                      href="/live-classes"
-                      onClick={() => setClassesDropdownOpen(false)}
-                      className="flex items-start gap-3 p-3 rounded-xl hover:bg-amber-50 transition-colors group"
-                    >
-                      <div className="p-2 rounded-lg bg-amber-100 text-amber-700 group-hover:bg-amber-600 group-hover:text-white transition-colors shrink-0">
-                        <Calendar className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-900 group-hover:text-amber-700 transition-colors">
-                          {language === "hi" ? "लाइव कक्षाएं" : "Live Classes"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {language === "hi" ? "साप्ताहिक निःशुल्क एवं विशेष सेमिनार" : "Weekly free interactive & masterclasses"}
-                        </p>
-                      </div>
-                    </Link>
+            {/* 3. E-Learning */}
+            <Link
+              href="/courses"
+              className="px-3.5 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:text-amber-700 hover:bg-amber-50 transition-colors flex items-center gap-1.5"
+            >
+              <GraduationCap className="w-4 h-4 text-orange-600" />
+              <span>{language === "hi" ? "ई-लर्निंग (E-Learning)" : "E-Learning"}</span>
+            </Link>
 
-                    <Link
-                      href="/courses"
-                      onClick={() => setClassesDropdownOpen(false)}
-                      className="flex items-start gap-3 p-3 rounded-xl hover:bg-amber-50 transition-colors group"
-                    >
-                      <div className="p-2 rounded-lg bg-orange-100 text-orange-700 group-hover:bg-orange-600 group-hover:text-white transition-colors shrink-0">
-                        <GraduationCap className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-900 group-hover:text-amber-700 transition-colors">
-                          {language === "hi" ? "स्व-अध्ययन पाठ्यक्रम (LMS)" : "Self-Paced Courses"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {language === "hi" ? "ऑनलाइन वीडियो पाठ एवं प्रमाण-पत्र" : "Structured video learning & assessments"}
-                        </p>
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 3. Quiz */}
+            {/* 4. Quiz */}
             <Link
               href="/quiz"
               className="px-3.5 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:text-amber-700 hover:bg-amber-50 transition-colors flex items-center gap-1.5"
@@ -153,63 +81,14 @@ export default function Header() {
               <span>{language === "hi" ? "क्विज़" : "Quiz"}</span>
             </Link>
 
-            {/* 4. Live Like a Monk */}
+            {/* 5. Live Like a Monk */}
             <Link
               href="/live-like-a-monk"
               className="px-3.5 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:text-amber-700 hover:bg-amber-50 transition-colors flex items-center gap-1.5"
             >
               <Compass className="w-4 h-4 text-amber-600" />
-              <span>Live Like a Monk</span>
+              <span>Live like a monk</span>
             </Link>
-
-            {/* 5. More / Rest Dropdown */}
-            <div
-              ref={moreRef}
-              className="relative"
-              onMouseEnter={() => setMoreDropdownOpen(true)}
-              onMouseLeave={() => setMoreDropdownOpen(false)}
-            >
-              <button
-                type="button"
-                onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                  moreDropdownOpen ? "text-amber-700 bg-amber-50" : "text-gray-700 hover:text-amber-700 hover:bg-amber-50"
-                }`}
-              >
-                <span>{language === "hi" ? "अन्य" : "More"}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${moreDropdownOpen ? "rotate-180 text-amber-700" : "text-gray-400"}`} />
-              </button>
-
-              {moreDropdownOpen && (
-                <div className="absolute top-full left-0 w-64 pt-2 animate-fade-in z-50">
-                  <div className="bg-white rounded-2xl shadow-xl border border-amber-200 p-2 space-y-1">
-                    <Link
-                      href="/about"
-                      onClick={() => setMoreDropdownOpen(false)}
-                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-amber-50 transition-colors"
-                    >
-                      <Info className="w-4 h-4 text-amber-600 shrink-0" />
-                      <div>
-                        <p className="text-sm font-bold text-gray-900">{t.nav.about}</p>
-                        <p className="text-[11px] text-gray-500">{language === "hi" ? "दर्शन एवं परंपरा" : "Lineage & philosophy"}</p>
-                      </div>
-                    </Link>
-
-                    <Link
-                      href="/contact"
-                      onClick={() => setMoreDropdownOpen(false)}
-                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-amber-50 transition-colors"
-                    >
-                      <Phone className="w-4 h-4 text-amber-600 shrink-0" />
-                      <div>
-                        <p className="text-sm font-bold text-gray-900">{t.nav.contact}</p>
-                        <p className="text-[11px] text-gray-500">{language === "hi" ? "पता एवं संवाद" : "Location & helpline"}</p>
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
           </nav>
 
           {/* Right Controls: Language Switcher & Primary Call to Action */}
@@ -290,6 +169,7 @@ export default function Header() {
           </div>
 
           <div className="space-y-1">
+            {/* 1. Home */}
             <Link
               href="/"
               onClick={() => setMobileMenuOpen(false)}
@@ -298,93 +178,53 @@ export default function Header() {
               <span>{t.nav.home}</span>
             </Link>
 
-            {/* Mobile Classes Accordion */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setMobileClassesOpen(!mobileClassesOpen)}
-                className="w-full flex items-center justify-between p-3 rounded-xl text-base font-semibold text-gray-800 hover:bg-amber-50 hover:text-amber-800"
-              >
+            {/* 2. Classes */}
+            <Link
+              href="/live-classes"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between p-3 rounded-xl text-base font-semibold text-gray-800 hover:bg-amber-50 hover:text-amber-800"
+            >
+              <div className="flex items-center gap-2.5">
+                <Calendar className="w-5 h-5 text-amber-600" />
                 <span>{language === "hi" ? "कक्षाएं (Classes)" : "Classes"}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${mobileClassesOpen ? "rotate-180 text-amber-700" : "text-gray-400"}`} />
-              </button>
+              </div>
+            </Link>
 
-              {mobileClassesOpen && (
-                <div className="pl-4 pr-2 py-1 space-y-1 bg-amber-50/50 rounded-xl mb-1">
-                  <Link
-                    href="/live-classes"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-700"
-                  >
-                    <Calendar className="w-4 h-4 text-amber-600" />
-                    <span>{language === "hi" ? "लाइव कक्षाएं" : "Live Classes"}</span>
-                  </Link>
-                  <Link
-                    href="/courses"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-700"
-                  >
-                    <GraduationCap className="w-4 h-4 text-orange-600" />
-                    <span>{language === "hi" ? "स्व-अध्ययन पाठ्यक्रम (LMS)" : "Self-Paced Courses"}</span>
-                  </Link>
-                </div>
-              )}
-            </div>
+            {/* 3. E-Learning */}
+            <Link
+              href="/courses"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between p-3 rounded-xl text-base font-semibold text-gray-800 hover:bg-amber-50 hover:text-amber-800"
+            >
+              <div className="flex items-center gap-2.5">
+                <GraduationCap className="w-5 h-5 text-orange-600" />
+                <span>{language === "hi" ? "ई-लर्निंग (E-Learning)" : "E-Learning"}</span>
+              </div>
+            </Link>
 
+            {/* 4. Quiz */}
             <Link
               href="/quiz"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center justify-between p-3 rounded-xl text-base font-semibold text-gray-800 hover:bg-amber-50 hover:text-amber-800"
             >
-              <div className="flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-amber-600" />
-                <span>{language === "hi" ? "क्विज़" : "Quiz"}</span>
+              <div className="flex items-center gap-2.5">
+                <HelpCircle className="w-5 h-5 text-amber-600" />
+                <span>{language === "hi" ? "क्विज़ (Quiz)" : "Quiz"}</span>
               </div>
             </Link>
 
+            {/* 5. Live Like a Monk */}
             <Link
               href="/live-like-a-monk"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center justify-between p-3 rounded-xl text-base font-semibold text-gray-800 hover:bg-amber-50 hover:text-amber-800"
             >
-              <div className="flex items-center gap-2">
-                <Compass className="w-4 h-4 text-amber-600" />
-                <span>Live Like a Monk</span>
+              <div className="flex items-center gap-2.5">
+                <Compass className="w-5 h-5 text-amber-600" />
+                <span>Live like a monk</span>
               </div>
             </Link>
-
-            {/* Mobile More Accordion */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
-                className="w-full flex items-center justify-between p-3 rounded-xl text-base font-semibold text-gray-800 hover:bg-amber-50 hover:text-amber-800"
-              >
-                <span>{language === "hi" ? "अन्य (More)" : "More"}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${mobileMoreOpen ? "rotate-180 text-amber-700" : "text-gray-400"}`} />
-              </button>
-
-              {mobileMoreOpen && (
-                <div className="pl-4 pr-2 py-1 space-y-1 bg-amber-50/50 rounded-xl mb-1">
-                  <Link
-                    href="/about"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-700"
-                  >
-                    <Info className="w-4 h-4 text-amber-600" />
-                    <span>{t.nav.about}</span>
-                  </Link>
-                  <Link
-                    href="/contact"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-700"
-                  >
-                    <Phone className="w-4 h-4 text-amber-600" />
-                    <span>{t.nav.contact}</span>
-                  </Link>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       )}

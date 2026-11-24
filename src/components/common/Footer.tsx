@@ -57,27 +57,32 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="hover:text-amber-400 transition-colors">
-                  {t.nav.about}
-                </Link>
-              </li>
-              <li>
                 <Link href="/live-classes" className="hover:text-amber-400 transition-colors">
-                  {t.nav.classes}
+                  {language === "hi" ? "कक्षाएं (Classes)" : "Classes"}
                 </Link>
               </li>
               <li>
                 <Link href="/courses" className="hover:text-amber-400 transition-colors">
-                  {t.nav.courses}
+                  {language === "hi" ? "ई-लर्निंग (E-Learning)" : "E-Learning"}
                 </Link>
               </li>
               <li>
                 <Link href="/quiz" className="hover:text-amber-400 transition-colors">
-                  {t.nav.quizzes}
+                  {language === "hi" ? "क्विज़ (Quiz)" : "Quiz"}
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-amber-400 transition-colors">
+                <Link href="/live-like-a-monk" className="hover:text-amber-400 transition-colors">
+                  Live like a monk
+                </Link>
+              </li>
+              <li>
+                <Link href="/#about" className="hover:text-amber-400 transition-colors">
+                  {t.nav.about}
+                </Link>
+              </li>
+              <li>
+                <Link href="/#contact" className="hover:text-amber-400 transition-colors">
                   {t.nav.contact}
                 </Link>
               </li>
@@ -116,11 +121,6 @@ export default function Footer() {
                   <span>Live Like a Monk</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
-              </li>
-              <li>
-                <Link href="/admin" className="text-xs text-amber-400/60 hover:text-amber-300">
-                  {language === "hi" ? "प्रशासक पोर्टल (Admin)" : "Admin Portal"}
-                </Link>
               </li>
             </ul>
           </div>
