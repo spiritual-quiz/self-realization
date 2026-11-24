@@ -655,39 +655,45 @@ function QuizPlayInner() {
             priority
           />
 
-          {/* Dynamic Content Layer Overlaid Exactly on Blank Zones */}
-          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none select-none">
+          {/* Dynamic Content Layer Overlaid with Precise Center Alignment */}
+          <div className="absolute inset-0 pointer-events-none select-none">
             
-            {/* Top Spacer to align with 'This is proudly presented to' */}
-            <div className="h-[39%]" />
-
-            {/* Blank Zone 1: Participant Name (centered between 'presented to' and golden lotus divider) */}
-            <div className="text-center px-12 sm:px-28 -mt-6 sm:-mt-8">
-              <span className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-black text-[#3d140a] tracking-wide drop-shadow-xs">
+            {/* Blank Zone 1: Participant Name (Curvy, Stylish Italic Calligraphy Font, Centered in Gap) */}
+            <div className="absolute inset-x-0 top-[44.5%] -translate-y-1/2 text-center px-16 sm:px-28">
+              <span 
+                className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold text-[#381105] tracking-normal drop-shadow-xs italic"
+                style={{ fontFamily: "'Great Vibes', 'Alex Brush', cursive, serif" }}
+              >
                 {participantName}
               </span>
             </div>
 
-            {/* Spacer to jump past 'for successfully passing...' */}
-            <div className="h-[12%]" />
-
-            {/* Blank Zone 2: Course/Quiz Title and Score Line */}
-            <div className="text-center space-y-0.5 sm:space-y-1 px-12 sm:px-28 -mt-4 sm:-mt-6">
+            {/* Blank Zone 2: Course / Quiz Title */}
+            <div className="absolute inset-x-0 top-[63.5%] -translate-y-1/2 text-center px-16 sm:px-28">
               <p className="text-xs sm:text-base md:text-lg lg:text-xl font-serif font-black text-[#8c1414] tracking-tight">
                 “{quizTitle}”
               </p>
+            </div>
+
+            {/* Blank Zone 2b: Score Line */}
+            <div className="absolute inset-x-0 top-[70%] -translate-y-1/2 text-center px-16 sm:px-28">
               <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-gray-800">
                 securing a score of <strong>{score} / {totalMarks} ({percentage.toFixed(1)}%)</strong>.
               </p>
             </div>
 
-            {/* Bottom Metadata: Date & ID (Aligned next to 📅 : and 🪪 :) */}
-            <div className="h-[21%] flex items-center justify-between pb-2 pl-[15.5%] pr-8">
-              <div className="space-y-1.5 text-left text-[9px] sm:text-[11px] md:text-xs font-bold text-[#3d1d07] font-mono leading-none">
-                <p>{dateFormatted}</p>
-                <p>{certificateId}</p>
-              </div>
-              <div className="w-1" />
+            {/* Bottom-Left Metadata: Date (Aligned directly next to 📅 :) */}
+            <div className="absolute left-[16.2%] top-[78.8%] -translate-y-1/2 text-left">
+              <span className="text-[9px] sm:text-[11px] md:text-xs font-bold text-[#3d1d07] font-mono leading-none">
+                {dateFormatted}
+              </span>
+            </div>
+
+            {/* Bottom-Left Metadata: ID (Aligned directly next to 🪪 :) */}
+            <div className="absolute left-[16.2%] top-[83.6%] -translate-y-1/2 text-left">
+              <span className="text-[9px] sm:text-[11px] md:text-xs font-bold text-[#3d1d07] font-mono leading-none">
+                {certificateId}
+              </span>
             </div>
 
           </div>

@@ -21,10 +21,11 @@ export async function generateQuizCertificatePdf(data: CertificateData): Promise
   // Embed standard professional fonts
   const fontTimesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const fontTimes = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const fontTimesBoldItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanBoldItalic);
   const fontHelveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   // Colors matching official certificate
-  const nameColor = rgb(0.24, 0.08, 0.04);      // Deep rich maroon/brown #3d140a
+  const nameColor = rgb(0.22, 0.07, 0.03);      // Deep rich maroon/brown #381105
   const titleColor = rgb(0.55, 0.08, 0.08);     // Scriptural crimson #8c1414
   const darkSlate = rgb(0.18, 0.18, 0.20);      // #2e2e33
   const metaColor = rgb(0.25, 0.12, 0.05);      // Date & ID color
@@ -62,15 +63,15 @@ export async function generateQuizCertificatePdf(data: CertificateData): Promise
     });
   }
 
-  // 2. Participant Name (Centered in Blank Zone 1 above golden lotus divider)
+  // 2. Participant Name (Stylish Curvy Italic Font, Centered in Blank Zone 1)
   const nameText = data.participantName.trim() || "Devotee Participant";
-  const nameSize = nameText.length > 22 ? 24 : 28;
-  const nameWidth = fontTimesBold.widthOfTextAtSize(nameText, nameSize);
+  const nameSize = nameText.length > 22 ? 26 : 30;
+  const nameWidth = fontTimesBoldItalic.widthOfTextAtSize(nameText, nameSize);
   page.drawText(nameText, {
     x: (width - nameWidth) / 2,
     y: 275,
     size: nameSize,
-    font: fontTimesBold,
+    font: fontTimesBoldItalic,
     color: nameColor,
   });
 
