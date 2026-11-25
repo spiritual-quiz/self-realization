@@ -11,7 +11,7 @@ export default function Footer() {
   const { t, language } = useLanguage();
 
   return (
-    <footer className="bg-gradient-to-b from-amber-950 via-stone-950 to-black text-amber-100/90 pt-16 pb-12 border-t-4 border-amber-600">
+    <footer className="bg-gradient-to-b from-[#0B1528] via-[#070D1A] to-[#040810] text-slate-300 pt-16 pb-12 border-t-4 border-amber-500">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Top Sacred Decorative Divider */}
@@ -20,7 +20,7 @@ export default function Footer() {
           <LotusAccent className="opacity-70 my-2" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-amber-900/60">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-amber-500/20">
           
           {/* Brand Info */}
           <div className="space-y-4">
