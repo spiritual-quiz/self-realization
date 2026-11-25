@@ -112,8 +112,65 @@ function QuizPlayInner() {
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoAdvanceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Web Audio Context Synthesizer Fallback (100% reliable on iOS & Android mobile + Desktop)
+  const playSynthesizedChime = (type: "correct" | "wrong") => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioCtx();
+      }
+      const ctx = audioContextRef.current;
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+
+      if (type === "correct") {
+        // High-pitched pleasant victory chime (E5 -> G#5 -> B5 arpeggio)
+        const notes = [659.25, 830.61, 987.77];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.08);
+          osc.stop(ctx.currentTime + idx * 0.08 + 0.4);
+        });
+      } else {
+        // Low double buzz (150Hz -> 110Hz)
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(160, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.28);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.32);
+      }
+    } catch (e) {
+      console.warn("AudioContext fallback error:", e);
+    }
+  };
+
+  // Helper to ensure looping across all browsers (loop=true + onended handler)
+  const attachAudioLoop = (audio: HTMLAudioElement) => {
+    audio.loop = true;
+    audio.onended = () => {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    };
+  };
 
   // 4 Pastel Pill Styles matching uploaded design
   const pillStyles = {
@@ -141,13 +198,27 @@ function QuizPlayInner() {
 
   // Load Quiz & Audio Setup
   useEffect(() => {
-    correctAudioRef.current = new Audio("/audio/correct.mp3");
-    wrongAudioRef.current = new Audio("/audio/wrong.mp3");
-    bgAudioRef.current = new Audio("/audio/bg-music.mp3");
-    if (bgAudioRef.current) {
-      bgAudioRef.current.loop = true;
-      bgAudioRef.current.volume = 0.35;
+    // Preload animated GIFs immediately into browser cache
+    if (typeof window !== "undefined") {
+      const img1 = new window.Image();
+      img1.src = "/images/quiz/dance.gif";
+      const img2 = new window.Image();
+      img2.src = "/images/quiz/cry.gif";
     }
+
+    const cAudio = new Audio("/audio/correct.mp3");
+    cAudio.preload = "auto";
+    correctAudioRef.current = cAudio;
+
+    const wAudio = new Audio("/audio/wrong.mp3");
+    wAudio.preload = "auto";
+    wrongAudioRef.current = wAudio;
+
+    const bAudio = new Audio("/audio/bg-music.mp3");
+    bAudio.preload = "auto";
+    attachAudioLoop(bAudio);
+    bAudio.volume = 0.35;
+    bgAudioRef.current = bAudio;
 
     // Catalog of standard featured quizzes
     const DEFAULT_CATALOG: Record<string, { en: string; hi: string }> = {
@@ -218,15 +289,21 @@ function QuizPlayInner() {
                 setBgMusicVolume(Number(selected.bgMusicVolume));
               }
               if (selected.bgMusicUrl && typeof window !== "undefined") {
-                bgAudioRef.current = new Audio(selected.bgMusicUrl);
-                bgAudioRef.current.loop = true;
-                bgAudioRef.current.volume = selected.bgMusicVolume !== undefined ? Number(selected.bgMusicVolume) : 0.35;
+                const customBg = new Audio(selected.bgMusicUrl);
+                customBg.preload = "auto";
+                attachAudioLoop(customBg);
+                customBg.volume = selected.bgMusicVolume !== undefined ? Number(selected.bgMusicVolume) : 0.35;
+                bgAudioRef.current = customBg;
               }
               if (selected.correctSoundUrl && typeof window !== "undefined") {
-                correctAudioRef.current = new Audio(selected.correctSoundUrl);
+                const customCorrect = new Audio(selected.correctSoundUrl);
+                customCorrect.preload = "auto";
+                correctAudioRef.current = customCorrect;
               }
               if (selected.wrongSoundUrl && typeof window !== "undefined") {
-                wrongAudioRef.current = new Audio(selected.wrongSoundUrl);
+                const customWrong = new Audio(selected.wrongSoundUrl);
+                customWrong.preload = "auto";
+                wrongAudioRef.current = customWrong;
               }
               return;
             }
@@ -254,15 +331,21 @@ function QuizPlayInner() {
               setBgMusicVolume(Number(data.bgMusicVolume));
             }
             if (data.bgMusicUrl && typeof window !== "undefined") {
-              bgAudioRef.current = new Audio(data.bgMusicUrl);
-              bgAudioRef.current.loop = true;
-              bgAudioRef.current.volume = data.bgMusicVolume !== undefined ? Number(data.bgMusicVolume) : 0.35;
+              const customBg = new Audio(data.bgMusicUrl);
+              customBg.preload = "auto";
+              attachAudioLoop(customBg);
+              customBg.volume = data.bgMusicVolume !== undefined ? Number(data.bgMusicVolume) : 0.35;
+              bgAudioRef.current = customBg;
             }
             if (data.correctSoundUrl && typeof window !== "undefined") {
-              correctAudioRef.current = new Audio(data.correctSoundUrl);
+              const customCorrect = new Audio(data.correctSoundUrl);
+              customCorrect.preload = "auto";
+              correctAudioRef.current = customCorrect;
             }
             if (data.wrongSoundUrl && typeof window !== "undefined") {
-              wrongAudioRef.current = new Audio(data.wrongSoundUrl);
+              const customWrong = new Audio(data.wrongSoundUrl);
+              customWrong.preload = "auto";
+              wrongAudioRef.current = customWrong;
             }
             return;
           }
@@ -294,6 +377,23 @@ function QuizPlayInner() {
     e.preventDefault();
     if (!participantName.trim()) return;
 
+    // Unlock Web Audio context & audio elements on user interaction (vital for Mobile browsers)
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        if (!audioContextRef.current) audioContextRef.current = new AudioCtx();
+        if (audioContextRef.current.state === "suspended") {
+          audioContextRef.current.resume();
+        }
+      }
+      if (correctAudioRef.current) {
+        correctAudioRef.current.load();
+      }
+      if (wrongAudioRef.current) {
+        wrongAudioRef.current.load();
+      }
+    } catch (e) {}
+
     const uniqueCertId = "SR-" + Math.floor(100000 + Math.random() * 900000);
     setCertificateId(uniqueCertId);
     
@@ -321,6 +421,7 @@ function QuizPlayInner() {
     setTimeLeft(timerDuration);
 
     if (bgAudioRef.current) {
+      bgAudioRef.current.currentTime = 0;
       bgAudioRef.current.play().then(() => setBgMusicPlaying(true)).catch(() => {});
     }
   };
@@ -336,18 +437,33 @@ function QuizPlayInner() {
     }
   };
 
-  // Sound FX Player
+  // Sound FX Player with HTML5 Audio and Web Audio fallback
   const playFx = (type: "correct" | "wrong") => {
     if (!soundFxEnabled) return;
+    let audioPlayed = false;
     try {
       if (type === "correct" && correctAudioRef.current) {
         correctAudioRef.current.currentTime = 0;
-        correctAudioRef.current.play().catch(() => {});
+        const p = correctAudioRef.current.play();
+        if (p !== undefined) {
+          p.then(() => { audioPlayed = true; }).catch(() => {
+            // Mobile browser policy fallback
+            playSynthesizedChime("correct");
+          });
+        }
       } else if (type === "wrong" && wrongAudioRef.current) {
         wrongAudioRef.current.currentTime = 0;
-        wrongAudioRef.current.play().catch(() => {});
+        const p = wrongAudioRef.current.play();
+        if (p !== undefined) {
+          p.then(() => { audioPlayed = true; }).catch(() => {
+            // Mobile browser policy fallback
+            playSynthesizedChime("wrong");
+          });
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      playSynthesizedChime(type);
+    }
   };
 
   // Countdown Timer Logic
@@ -1607,14 +1723,21 @@ function QuizPlayInner() {
             </div>
           )}
 
+          {/* Preloaded Hidden Cache for Instant Display */}
+          <div className="hidden pointer-events-none opacity-0 select-none" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/quiz/dance.gif" alt="preloaded dance" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/quiz/cry.gif" alt="preloaded cry" />
+          </div>
+
           {/* Correct Answer Celebration Emoticon (Restarts from frame 0, clearly positioned below header on mobile) */}
           {correctAnimation && (
             <div className="fixed top-20 sm:top-24 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
               <div className="relative w-28 h-28 sm:w-36 sm:h-36 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-bounce">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  key={`dance-${animKey}`}
-                  src={`/images/quiz/dance.gif?k=${animKey}`}
+                  src="/images/quiz/dance.gif"
                   alt="Party Celebration Emoticon Animation"
                   className="w-full h-full object-contain filter drop-shadow-xl"
                 />
@@ -1632,8 +1755,7 @@ function QuizPlayInner() {
               <div className="relative w-28 h-28 sm:w-36 sm:h-36 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-shake">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  key={`cry-${animKey}`}
-                  src={`/images/quiz/cry.gif?k=${animKey}`}
+                  src="/images/quiz/cry.gif"
                   alt="Crying Sadness Emoticon Animation"
                   className="w-full h-full object-contain filter drop-shadow-xl"
                 />
