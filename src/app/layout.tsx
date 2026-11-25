@@ -29,7 +29,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Great+Vibes&display=swap" rel="stylesheet" />
       </head>
-      <body className="min-h-screen flex flex-col bg-[#0B1528] text-[#F8FAFC] selection:bg-amber-500 selection:text-slate-950">
+      <body className="min-h-screen flex flex-col bg-[#EDF6F0] text-[#0F172A] selection:bg-amber-400 selection:text-amber-950">
         <LanguageProvider>
           <LanguageModal />
           <Header />

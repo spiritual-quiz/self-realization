@@ -11,7 +11,7 @@ export default function Footer() {
   const { t, language } = useLanguage();
 
   return (
-    <footer className="bg-gradient-to-b from-[#0B1528] via-[#070D1A] to-[#040810] text-slate-300 pt-16 pb-12 border-t-4 border-amber-500">
+    <footer className="bg-gradient-to-b from-[#060E1D] via-[#040914] to-[#02050B] text-slate-300 pt-16 pb-12 border-t-4 border-amber-500">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Top Sacred Decorative Divider */}

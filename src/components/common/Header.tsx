@@ -67,9 +67,9 @@ export default function Header() {
       {/* =========================================================================
           1. TOP STICKY HEADER (Desktop & Mobile Brand / Ribbon)
           ========================================================================= */}
-      <header className="sticky top-0 z-40 w-full bg-[#0B1528]/95 backdrop-blur-md border-b border-amber-500/30 shadow-md transition-all">
+      <header className="sticky top-0 z-40 w-full bg-[#060E1D] border-b-4 border-amber-500 shadow-xl transition-all">
         {/* Sacred Mahamantra Ribbon */}
-        <div className="bg-gradient-to-r from-[#070D1A] via-[#102042] to-[#070D1A] text-amber-300 text-[11px] sm:text-xs py-1 px-4 text-center tracking-wider font-semibold flex items-center justify-center gap-2 border-b border-amber-500/20">
+        <div className="bg-gradient-to-r from-[#030811] via-[#0A162D] to-[#030811] text-amber-300 text-[11px] sm:text-xs py-1 px-4 text-center tracking-wider font-semibold flex items-center justify-center gap-2 border-b border-amber-500/20">
           <span>Hare Kṛṣṇa Hare Kṛṣṇa Kṛṣṇa Kṛṣṇa Hare Hare • Hare Rāma Hare Rāma Rāma Rāma Hare Hare</span>
         </div>
 
@@ -193,7 +193,7 @@ export default function Header() {
           ========================================================================= */}
       <nav 
         aria-label="Mobile Bottom Horizontal Menu"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#070D1A]/98 backdrop-blur-xl border-t border-amber-500/30 shadow-[0_-4px_25px_rgba(0,0,0,0.8)] py-1.5 px-1.5 flex items-center justify-around"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#060E1D] border-t-2 border-amber-500 shadow-[0_-4px_25px_rgba(0,0,0,0.8)] py-1.5 px-1.5 flex items-center justify-around"
       >
         {/* 1. 🏠 Home */}
         <Link
