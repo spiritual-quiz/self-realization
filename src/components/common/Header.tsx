@@ -1,74 +1,64 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { 
-  Menu, 
-  X, 
-  Globe, 
-  Sparkles, 
+  Home, 
+  Calendar, 
+  GraduationCap, 
+  Award, 
   Compass, 
-  Calendar,
-  GraduationCap,
-  Home,
-  ChevronRight,
-  Award
+  Sparkles 
 } from "lucide-react";
 
 export default function Header() {
   const { language, setLanguage, t } = useLanguage();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   // Exactly the 5 items requested by the user
-  const verticalMenuItems = [
+  const navigationItems = [
     {
       href: "/",
-      label: "🏠 Home (मुख्य पृष्ठ)",
-      desktopLabel: language === "hi" ? "होम" : "Home",
+      label: language === "hi" ? "होम" : "Home",
+      fullLabel: "🏠 Home",
       icon: Home,
       exact: true,
       color: "text-amber-700",
-      bgHover: "hover:bg-amber-50"
     },
     {
       href: "/live-classes",
-      label: "📅 Classes (निःशुल्क कक्षाएं)",
-      desktopLabel: language === "hi" ? "कक्षाएं" : "Classes",
+      label: language === "hi" ? "कक्षाएं" : "Classes",
+      fullLabel: "📅 Classes",
       icon: Calendar,
       exact: false,
       color: "text-amber-600",
-      bgHover: "hover:bg-amber-50"
     },
     {
       href: "/courses",
-      label: "🎓 E-Learning Courses (पाठ्यक्रम)",
-      desktopLabel: language === "hi" ? "पाठ्यक्रम" : "Courses",
+      label: language === "hi" ? "ई-लर्निंग" : "E-Learning",
+      fullLabel: "🎓 E-Learning",
       icon: GraduationCap,
       exact: false,
       color: "text-orange-600",
-      bgHover: "hover:bg-amber-50"
     },
     {
       href: "/quiz",
-      label: "🏆 Vedic Quiz Challenge (वैदिक क्विज़)",
-      desktopLabel: language === "hi" ? "वैदिक क्विज़" : "Vedic Quiz",
+      label: language === "hi" ? "क्विज़" : "Quiz",
+      fullLabel: "🏆 Quiz",
       icon: Award,
       exact: false,
       color: "text-amber-500",
-      bgHover: "hover:bg-amber-50"
     },
     {
       href: "/live-like-a-monk",
-      label: "🧘 Live Like a Monk (साधु जीवन)",
-      desktopLabel: language === "hi" ? "साधु जीवन" : "Monk Life",
+      label: language === "hi" ? "साधु जीवन" : "Monk Life",
+      fullLabel: "🧘 Live Like a Monk",
       icon: Compass,
       exact: false,
       color: "text-amber-800",
-      bgHover: "hover:bg-amber-50"
     },
   ];
 
@@ -109,7 +99,7 @@ export default function Header() {
 
             {/* Desktop Navigation - Professional & Streamlined */}
             <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-              {verticalMenuItems.map((link) => {
+              {navigationItems.map((link) => {
                 const Icon = link.icon;
                 const isActive = link.exact 
                   ? pathname === link.href 
@@ -126,7 +116,7 @@ export default function Header() {
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${isActive ? "text-amber-700" : link.color || "text-gray-500"}`} />
-                    <span>{link.desktopLabel}</span>
+                    <span>{link.label}</span>
                   </Link>
                 );
               })}
@@ -170,9 +160,8 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* Mobile Header Right: Prominent Language Switcher & Vertical Menu Button */}
-            <div className="flex items-center gap-2 lg:hidden">
-              {/* Language Switcher (comes before page open as requested) */}
+            {/* Mobile Header Right: Language Switcher */}
+            <div className="flex items-center gap-1.5 lg:hidden">
               <div className="flex items-center bg-amber-50 border border-amber-300 rounded-lg p-0.5 shadow-xs">
                 <button
                   type="button"
@@ -193,143 +182,94 @@ export default function Header() {
                   Eng
                 </button>
               </div>
-
-              {/* Vertical Menu Button */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-amber-600 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-xs shadow-md shadow-amber-900/20 active:scale-95 transition-all cursor-pointer"
-                aria-label="Toggle vertical navigation menu"
-              >
-                {mobileMenuOpen ? <X className="w-4 h-4 stroke-[2.5]" /> : <Menu className="w-4 h-4 stroke-[2.5]" />}
-                <span>{mobileMenuOpen ? (language === "hi" ? "बंद करें" : "Close") : (language === "hi" ? "मेन्यू" : "Menu")}</span>
-              </button>
             </div>
+
           </div>
         </div>
       </header>
 
       {/* =========================================================================
-          2. STRICT 5-ITEM VERTICAL MENU (Bottom Sheet / Drawer for Mobile)
+          2. MOBILE HORIZONTAL NAVIGATION MENU AT THE BOTTOM (Native App Bar)
           ========================================================================= */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
-          {/* Backdrop Dimmer */}
-          <div 
-            className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity animate-fade-in"
-            onClick={() => setMobileMenuOpen(false)}
-          />
+      <nav 
+        aria-label="Mobile Bottom Horizontal Menu"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-amber-200/90 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] py-1.5 px-1.5 flex items-center justify-around"
+      >
+        {/* 1. 🏠 Home */}
+        <Link
+          href="/"
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
+            pathname === "/" 
+              ? "text-amber-700 font-black scale-105" 
+              : "text-gray-500 hover:text-gray-900 font-medium"
+          }`}
+        >
+          <Home className={`w-5 h-5 ${pathname === "/" ? "text-amber-600 stroke-[2.5]" : "text-gray-500"}`} />
+          <span className="text-[10px] mt-0.5 leading-tight truncate">
+            {language === "hi" ? "होम" : "Home"}
+          </span>
+        </Link>
 
-          {/* Vertical Menu Container (Clean vertical list, only 5 items as specified) */}
-          <div className="relative w-full bg-gradient-to-b from-[#FFFDF8] via-[#FFF9EE] to-[#FFF1D6] border-t-4 border-amber-500 rounded-t-3xl shadow-2xl p-5 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up space-y-4">
-            
-            {/* Top Drag Notch */}
-            <div className="w-12 h-1.5 bg-amber-300 rounded-full mx-auto" />
+        {/* 2. 📅 Classes */}
+        <Link
+          href="/live-classes"
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
+            pathname.startsWith("/live-classes") 
+              ? "text-amber-700 font-black scale-105" 
+              : "text-gray-500 hover:text-gray-900 font-medium"
+          }`}
+        >
+          <Calendar className={`w-5 h-5 ${pathname.startsWith("/live-classes") ? "text-amber-600 stroke-[2.5]" : "text-gray-500"}`} />
+          <span className="text-[10px] mt-0.5 leading-tight truncate">
+            {language === "hi" ? "कक्षाएं" : "Classes"}
+          </span>
+        </Link>
 
-            {/* Menu Header with Logo */}
-            <div className="flex items-center justify-between border-b border-amber-200/80 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="relative w-9 h-9">
-                  <Image
-                    src="/images/logo.png"
-                    alt="SelfRealization"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-gray-900 leading-tight">
-                    Self<span className="text-amber-600">Realization</span>
-                  </h3>
-                  <p className="text-[10px] text-amber-800 font-bold">
-                    {language === "hi" ? "आत्म-साक्षात्कार मंच" : "Spiritual Outreach Portal"}
-                  </p>
-                </div>
-              </div>
+        {/* 3. 🎓 E-Learning */}
+        <Link
+          href="/courses"
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
+            pathname.startsWith("/courses") 
+              ? "text-orange-700 font-black scale-105" 
+              : "text-gray-500 hover:text-gray-900 font-medium"
+          }`}
+        >
+          <GraduationCap className={`w-5 h-5 ${pathname.startsWith("/courses") ? "text-orange-600 stroke-[2.5]" : "text-gray-500"}`} />
+          <span className="text-[10px] mt-0.5 leading-tight truncate">
+            {language === "hi" ? "ई-लर्निंग" : "E-Learning"}
+          </span>
+        </Link>
 
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center justify-center font-bold text-sm cursor-pointer shadow-xs"
-                aria-label="Close Menu"
-              >
-                ✕
-              </button>
-            </div>
+        {/* 4. 🏆 Quiz (Highlighted Center-Style Pill) */}
+        <Link
+          href="/quiz"
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
+            pathname.startsWith("/quiz") 
+              ? "text-amber-700 font-black scale-105" 
+              : "text-gray-500 hover:text-gray-900 font-medium"
+          }`}
+        >
+          <Award className={`w-5 h-5 ${pathname.startsWith("/quiz") ? "text-amber-600 stroke-[2.5]" : "text-gray-500"}`} />
+          <span className="text-[10px] mt-0.5 leading-tight truncate">
+            {language === "hi" ? "क्विज़" : "Quiz"}
+          </span>
+        </Link>
 
-            {/* Language Switcher Bar inside menu */}
-            <div className="flex items-center justify-between bg-amber-100/70 p-2 rounded-2xl border border-amber-300/60">
-              <span className="text-xs font-bold text-amber-950 px-2 flex items-center gap-1.5">
-                <Globe className="w-4 h-4 text-amber-700" />
-                <span>भाषा / Language:</span>
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setLanguage("hi")}
-                  className={`px-3.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    language === "hi"
-                      ? "bg-amber-600 text-white shadow-xs"
-                      : "text-amber-900 hover:bg-amber-200/50"
-                  }`}
-                >
-                  हिन्दी
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLanguage("en")}
-                  className={`px-3.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    language === "en"
-                      ? "bg-amber-600 text-white shadow-xs"
-                      : "text-amber-900 hover:bg-amber-200/50"
-                  }`}
-                >
-                  English
-                </button>
-              </div>
-            </div>
-
-            {/* PURE VERTICAL MENU LINKS - STRICTLY THE 5 USER-SPECIFIED ITEMS */}
-            <div className="space-y-2 pt-1">
-              {verticalMenuItems.map((link) => {
-                const isActive = link.exact 
-                  ? pathname === link.href 
-                  : pathname.startsWith(link.href);
-
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center justify-between p-3.5 rounded-2xl text-sm font-bold transition-all shadow-xs border ${
-                      isActive
-                        ? "bg-amber-500/20 text-amber-950 border-amber-400/80 ring-1 ring-amber-400/40"
-                        : "bg-white/80 hover:bg-amber-50 text-gray-900 border-amber-200/60"
-                    }`}
-                  >
-                    <span className="text-sm font-black tracking-tight">{link.label}</span>
-                    <ChevronRight className="w-4 h-4 text-amber-700 shrink-0" />
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Quick Join Free Class CTA */}
-            <div className="pt-2">
-              <Link
-                href="/live-classes"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-black text-white bg-gradient-to-r from-amber-600 via-amber-700 to-orange-600 shadow-md shadow-amber-900/20 active:scale-98 transition-transform"
-              >
-                <Sparkles className="w-4 h-4 text-amber-200" />
-                <span>{t.nav.joinFreeClass}</span>
-              </Link>
-            </div>
-
-          </div>
-        </div>
-      )}
+        {/* 5. 🧘 Live Like a Monk */}
+        <Link
+          href="/live-like-a-monk"
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
+            pathname.startsWith("/live-like-a-monk") 
+              ? "text-amber-800 font-black scale-105" 
+              : "text-gray-500 hover:text-gray-900 font-medium"
+          }`}
+        >
+          <Compass className={`w-5 h-5 ${pathname.startsWith("/live-like-a-monk") ? "text-amber-700 stroke-[2.5]" : "text-gray-500"}`} />
+          <span className="text-[10px] mt-0.5 leading-tight truncate">
+            {language === "hi" ? "साधु जीवन" : "Monk Life"}
+          </span>
+        </Link>
+      </nav>
     </>
   );
 }
