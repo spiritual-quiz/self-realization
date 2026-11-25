@@ -35,7 +35,6 @@ import {
   Volume2,
   VolumeX
 } from "lucide-react";
-import emailjs from "@emailjs/browser";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { parseCSVToQuestions, SAMPLE_CSV_CONTENT, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
 import { generateQuizCertificatePdf } from "@/lib/pdf/certificateGenerator";
@@ -71,18 +70,10 @@ function QuizPlayInner() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [answersLog, setAnswersLog] = useState<{ questionId: number; selected: string; correct: string; isCorrect: boolean }[]>([]);
   
-  // Audio Controls
+  // Audio Controls (Configured centrally by Admin)
   const [soundFxEnabled, setSoundFxEnabled] = useState(true);
   const [bgMusicPlaying, setBgMusicPlaying] = useState(false);
   const [bgMusicVolume, setBgMusicVolume] = useState<number>(0.35);
-
-  const handleAdjustVolume = (delta: number) => {
-    setBgMusicVolume((prev) => {
-      const next = Math.max(0, Math.min(1, Math.round((prev + delta) * 10) / 10));
-      if (bgAudioRef.current) bgAudioRef.current.volume = next;
-      return next;
-    });
-  };
   
   // Completion & Certificate State
   const [isComplete, setIsComplete] = useState(false);
@@ -531,33 +522,7 @@ function QuizPlayInner() {
     try {
       const totalMarks = questions.reduce((a, b) => a + b.points, 0);
 
-      // 1. Direct browser client EmailJS dispatch (Client-side authentic browser environment)
-      try {
-        const emailParams = {
-          name: classFormData.name,
-          mobile: classFormData.whatsapp,
-          email: classFormData.email,
-          language: classFormData.language,
-          age: classFormData.age,
-          track: `🏆 [VEDIC QUIZ REGISTRATION - FREE CLASSES] ${classFormData.name} (${classFormData.occupation})`,
-          status: `Vedic Quiz Winner • ${classFormData.classMode} Classes`,
-          native_address: classFormData.nativePlace,
-          current_address: classFormData.currentLocation,
-          notes: `\n---------------------------------------------\n🏆 VEDIC QUIZ WISDOM CHALLENGE - FREE CLASS REGISTRATION\n---------------------------------------------\nName / नाम: ${classFormData.name}\nEmail / ईमेल: ${classFormData.email}\nWhatsApp / व्हाट्सएप: ${classFormData.whatsapp}\nGender / लिंग: ${classFormData.gender}\nAge / आयु: ${classFormData.age}\nLanguage / भाषा: ${classFormData.language}\nClass Mode / माध्यम: ${classFormData.classMode}\nOccupation / व्यवसाय: ${classFormData.occupation}\nCurrently Staying / निवास: ${classFormData.currentLocation}\nNative Place / मूल स्थान: ${classFormData.nativePlace}\nQuiz Title: ${quizTitle}\nScore: ${score} / ${totalMarks}\nDate & Time: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST\n---------------------------------------------`,
-        };
-
-        try {
-          // Attempt dedicated quiz registration template if created
-          await emailjs.send("service_1ve1iom", "template_quiz_registration", emailParams, "8jCdn6vjWwsSe9CNK");
-        } catch (tErr) {
-          // Immediate fallback to verified active template with distinct Quiz subject & details
-          await emailjs.send("service_1ve1iom", "template_ypw8wpq", emailParams, "8jCdn6vjWwsSe9CNK");
-        }
-      } catch (emailJsErr) {
-        console.warn("Client EmailJS dispatch notice:", emailJsErr);
-      }
-
-      // 2. Direct browser client dispatch to FormSubmit (Guaranteed immediate delivery, authentic browser Origin)
+      // 1. Direct browser client dispatch to FormSubmit (Single, verified delivery to madhavcarandas@gmail.com)
       try {
         await fetch("https://formsubmit.co/ajax/madhavcarandas@gmail.com", {
           method: "POST",
@@ -568,30 +533,32 @@ function QuizPlayInner() {
             "Origin": "https://selfrealization-platform.vercel.app"
           },
           body: JSON.stringify({
-            _subject: `🏆 [VEDIC QUIZ REGISTRATION - FREE CLASSES] ${classFormData.name} (${classFormData.occupation})`,
-            _template: "table",
+            _subject: `🏆 [VEDIC QUIZ REGISTRATION] ${classFormData.name} • ${classFormData.occupation} (${classFormData.classMode})`,
+            _template: "box",
             _captcha: "false",
-            "REGISTRATION SOURCE": "SelfRealization • Vedic Quiz Outreach (Bhagavad-gītā Wisdom Challenge)",
-            "Participant Name / नाम": classFormData.name,
-            "WhatsApp Number / व्हाट्सएप": classFormData.whatsapp,
-            "Email Address / ईमेल": classFormData.email,
-            "Gender / लिंग": classFormData.gender,
-            "Age / आयु": classFormData.age,
-            "Preferred Language / भाषा": classFormData.language,
-            "Class Mode / माध्यम": classFormData.classMode,
-            "Occupation / व्यवसाय": classFormData.occupation,
-            "Currently Staying / वर्तमान निवास": classFormData.currentLocation,
-            "Native Place / मूल स्थान": classFormData.nativePlace,
-            "Quiz Challenge": quizTitle,
-            "Secured Score": `${score} / ${totalMarks}`,
-            "Timestamp": new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST",
+            _replyto: classFormData.email,
+            "SPIRITUAL OUTREACH": "SelfRealization Portal • Bhagavad-gītā Wisdom Challenge",
+            "REGISTRATION TYPE": "Free Devotional Classes (Post-Quiz Outreach)",
+            "CANDIDATE NAME": classFormData.name,
+            "WHATSAPP NUMBER": classFormData.whatsapp,
+            "EMAIL ADDRESS": classFormData.email,
+            "GENDER & AGE": `${classFormData.gender} • ${classFormData.age} Years`,
+            "PREFERRED LANGUAGE": classFormData.language,
+            "CLASS ATTENDANCE MODE": classFormData.classMode,
+            "OCCUPATION": classFormData.occupation,
+            "CURRENT RESIDENCE": classFormData.currentLocation,
+            "NATIVE HOMETOWN": classFormData.nativePlace,
+            "QUIZ CHALLENGE": quizTitle,
+            "SECURED SCORE": `${score} / ${totalMarks} (${Math.round((score / totalMarks) * 100)}%)`,
+            "SUBMISSION TIME": new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST",
+            "STATUS": "Enrolled Seeker (Ready for Free Vedic Sessions)"
           })
         });
       } catch (clientErr) {
         console.warn("Client FormSubmit direct dispatch notice:", clientErr);
       }
 
-      // 3. Also notify platform backend endpoint as backup
+      // 2. Also notify platform backend endpoint as backup (also uses FormSubmit exclusively for quiz registrations)
       await fetch("/api/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1532,46 +1499,20 @@ function QuizPlayInner() {
                 <span className="font-black text-amber-300 text-xs">{score} Pts</span>
               </div>
 
-              {/* Music ON/OFF & Volume Quick Adjust */}
-              <div className="flex items-center gap-1 bg-white/10 p-0.5 rounded-xl border border-white/20">
-                <button
-                  type="button"
-                  onClick={toggleBgMusic}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
-                    bgMusicPlaying 
-                      ? "bg-amber-500/40 text-amber-200 shadow-sm" 
-                      : "text-white/60 hover:text-white"
-                  }`}
-                  title={bgMusicPlaying ? "Pause Background Music" : "Play Background Music"}
-                >
-                  <Music className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{bgMusicPlaying ? "Music ON" : "Music OFF"}</span>
-                </button>
-
-                {bgMusicPlaying && (
-                  <div className="hidden sm:flex items-center gap-1 px-1.5 border-l border-white/20">
-                    <button
-                      type="button"
-                      onClick={() => handleAdjustVolume(-0.1)}
-                      className="w-5 h-5 rounded hover:bg-white/20 text-amber-200 text-xs font-bold flex items-center justify-center cursor-pointer"
-                      title="Volume Down"
-                    >
-                      -
-                    </button>
-                    <span className="text-[10px] font-mono text-amber-200 font-bold min-w-7 text-center">
-                      {Math.round(bgMusicVolume * 100)}%
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleAdjustVolume(0.1)}
-                      className="w-5 h-5 rounded hover:bg-white/20 text-amber-200 text-xs font-bold flex items-center justify-center cursor-pointer"
-                      title="Volume Up"
-                    >
-                      +
-                    </button>
-                  </div>
-                )}
-              </div>
+              {/* Music Toggle (Pre-configured volume set by Admin) */}
+              <button
+                type="button"
+                onClick={toggleBgMusic}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer border ${
+                  bgMusicPlaying 
+                    ? "bg-amber-500/30 text-amber-200 border-amber-400/50 shadow-sm" 
+                    : "bg-white/10 text-white/70 hover:text-white border-white/20"
+                }`}
+                title={bgMusicPlaying ? "Pause Background Music" : "Play Background Music"}
+              >
+                <Music className="w-3.5 h-3.5" />
+                <span>{bgMusicPlaying ? "Music ON" : "Music OFF"}</span>
+              </button>
             </div>
         </div>
 
@@ -1710,11 +1651,11 @@ function QuizPlayInner() {
                         </span>
 
                         {/* Option Text */}
-                        <div className="leading-tight overflow-hidden">
-                          <p className="text-xs sm:text-sm font-bold text-gray-900 truncate">
+                        <div className="leading-snug">
+                          <p className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-2">
                             {currentQ.options[optKey].hi}
                           </p>
-                          <p className="text-[10px] sm:text-[11px] opacity-75 font-medium italic truncate">
+                          <p className="text-[10px] sm:text-[11px] opacity-75 font-medium italic line-clamp-2">
                             {currentQ.options[optKey].en}
                           </p>
                         </div>
