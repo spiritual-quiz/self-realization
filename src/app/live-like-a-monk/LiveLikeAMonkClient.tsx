@@ -1625,55 +1625,7 @@ export default function LiveLikeAMonkClient() {
   return (
     <div className="monk-wrapper">
       <main>
-        {/* ================= HEADER / NAVIGATION ================= */}
-        <header className="nav">
-          <a className="brand" href="#top" aria-label="Live Like a Monk — ISKCON NVCC Pune">
-            <span className="brand-mark">
-              <img src={lotusImage} alt="ISKCON Lotus Emblem" />
-            </span>
-            <div className="brand-text">
-              <span className="brand-title">LIVE LIKE A MONK</span>
-              <span className="brand-subtitle">ISKCON NVCC PUNE</span>
-            </div>
-          </a>
-
-          <nav className="nav-links" aria-label="Main Navigation">
-            <a href="#about">{c.nav.about}</a>
-            <a href="#tracks">{c.nav.tracks}</a>
-            <a href="#progression">{c.nav.progression}</a>
-            <a href="#schedule">{c.nav.schedule}</a>
-            <a href="#norms">{c.nav.norms}</a>
-            <a href="#faq">{c.nav.faq}</a>
-            <a href="#contact">{c.nav.contact}</a>
-          </nav>
-
-          <div className="nav-actions">
-            {/* Segmented Bilingual Switch */}
-            <div className="language-toggle" role="group" aria-label="Language Selector">
-              <button
-                className={`lang-btn ${lang === 'hi' ? 'active' : ''}`}
-                onClick={() => setLanguage('hi')}
-                aria-pressed={lang === 'hi'}
-              >
-                हिन्दी
-              </button>
-              <button
-                className={`lang-btn ${lang === 'en' ? 'active' : ''}`}
-                onClick={() => setLanguage('en')}
-                aria-pressed={lang === 'en'}
-              >
-                English
-              </button>
-            </div>
-
-          <button className="nav-apply-btn" onClick={() => openFormWithTrack()}>
-            <span>{c.nav.apply}</span>
-            <span aria-hidden="true">↗</span>
-          </button>
-        </div>
-      </header>
-
-      {/* ================= HERO SECTION ================= */}
+        {/* ================= HERO SECTION ================= */}
       <section className="hero" id="top">
         <img className="hero-bg-media" src={templeImage} alt="ISKCON NVCC Pune Temple Complex" />
         <div className="hero-overlay" />
@@ -2139,20 +2091,6 @@ export default function LiveLikeAMonkClient() {
         >
           ↑
         </button>
-      )}
-
-      {/* Mobile Floating Action Dock (Bottom Bar) */}
-      {!openModal && (
-        <div className="mobile-action-bar" role="toolbar" aria-label="Quick Actions">
-          <a className="mobile-action-call" href={`tel:${c.contact.phone}`}>
-            <span className="mobile-action-icon">📞</span>
-            <span className="mobile-action-text">{lang === 'hi' ? 'हेल्पलाइन' : 'Call Help'}</span>
-          </a>
-          <button className="mobile-action-apply" onClick={() => openFormWithTrack()}>
-            <span>{lang === 'hi' ? 'रुचि पंजीकरण' : 'Apply Now'}</span>
-            <span aria-hidden="true">↗</span>
-          </button>
-        </div>
       )}
     </main>
   </div>
