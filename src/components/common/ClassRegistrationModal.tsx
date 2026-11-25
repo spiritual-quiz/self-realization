@@ -57,7 +57,7 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
     setError(null);
 
     try {
-      const docRef = await addDoc(collection(db, "classRegistrations"), {
+      const regRecord = {
         classId: classItem.id,
         classTitle: classItem.title,
         isPaid: classItem.isPaid,
@@ -69,8 +69,16 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
         questions,
         paymentStatus: classItem.isPaid ? "demo_confirmed" : "free",
         attended: false,
-        createdAt: serverTimestamp(),
-      });
+        createdAt: new Date().toISOString(),
+      };
+
+      const docRef = await addDoc(collection(db, "classRegistrations"), regRecord);
+
+      // Mirror to local cache for instant Admin visibility
+      try {
+        const cached = JSON.parse(localStorage.getItem("sr_class_registrations") || "[]");
+        localStorage.setItem("sr_class_registrations", JSON.stringify([{ id: docRef.id, ...regRecord }, ...cached]));
+      } catch (lsErr) {}
 
       // Trigger celebratory confetti
       confetti({

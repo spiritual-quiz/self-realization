@@ -108,87 +108,40 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
 
     let emailDispatched = false;
 
-    // 1. Send via EmailJS (Exclusively for Live Like a Monk & General Inquiries — NEVER for Vedic Quiz)
-    const isQuizReg = type === "free_class_registration";
-
-    if (isQuizReg) {
-      // Vedic Quiz registration is dispatched strictly ONCE directly by the client to FormSubmit
-      return NextResponse.json({
-        success: true,
-        message: "Quiz registration handled exclusively by direct FormSubmit client dispatch to prevent duplicate emails.",
-        recipient: ADMIN_EMAIL,
-        timestamp: new Date().toISOString()
-      });
-    }
-      const emailJsServiceId = "service_1ve1iom";
-      const emailJsTemplateId = "template_ypw8wpq";
-
-      try {
-        const emailJsRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Origin": "https://selfrealization-platform.vercel.app"
-          },
-          body: JSON.stringify({
-            service_id: emailJsServiceId,
-            template_id: emailJsTemplateId,
-            user_id: "8jCdn6vjWwsSe9CNK",
-            template_params: {
-              name: details.name || details.fullName || "Participant",
-              mobile: details.whatsapp || details.phone || "Not provided",
-              email: details.email || ADMIN_EMAIL,
-              language: details.language || "English",
-              track: subject,
-              notes: messageBody,
-              age: details.age || "N/A",
-              status: type || "Notification",
-              native_address: details.nativePlace || "SelfRealization Portal",
-              current_address: details.currentLocation || "https://selfrealization-platform.vercel.app",
-            }
-          })
-        });
-
-        if (emailJsRes.ok) {
-          emailDispatched = true;
-        }
-      } catch (e) {
-        console.warn("EmailJS registration notice:", e);
-      }
-
-    // 2. Primary / Exclusive Dispatch via FormSubmit (Ultra-Clean Executive Box Layout)
+    // Send via FormSubmit (Ultra-Clean Executive Table Format to madhavcarandas@gmail.com)
     try {
+      const isQuizReg = type === "free_class_registration";
       const formSubmitBody: Record<string, any> = {
         _subject: isQuizReg 
-          ? `🏆 [VEDIC QUIZ REGISTRATION] ${details.name} • ${details.occupation} (${details.classMode})` 
+          ? `🏆 [VEDIC QUIZ REGISTRATION] ${details.name || details.fullName} • ${details.occupation || "Seeker"} (${details.classMode || "Online"})` 
           : subject,
         _replyto: details.email || ADMIN_EMAIL,
         _captcha: "false",
-        _template: "box",
+        _template: "table",
       };
 
-      if (type === "free_class_registration") {
-        formSubmitBody["SPIRITUAL OUTREACH"] = "SelfRealization Portal • Bhagavad-gītā Wisdom Challenge";
-        formSubmitBody["REGISTRATION TYPE"] = "Free Devotional Classes (Post-Quiz Outreach)";
-        formSubmitBody["CANDIDATE NAME"] = details.name;
-        formSubmitBody["WHATSAPP NUMBER"] = details.whatsapp;
+      if (isQuizReg) {
+        formSubmitBody["PORTAL"] = "SelfRealization Platform • Bhagavad-gītā Wisdom Challenge";
+        formSubmitBody["REGISTRATION TYPE"] = `Free Vedic Classes (${details.classMode || "Online / Offline"})`;
+        formSubmitBody["PARTICIPANT NAME"] = details.name || details.fullName;
+        formSubmitBody["WHATSAPP NUMBER"] = details.whatsapp || details.phone;
         formSubmitBody["EMAIL ADDRESS"] = details.email;
-        formSubmitBody["GENDER & AGE"] = `${details.gender} • ${details.age} Years`;
-        formSubmitBody["PREFERRED LANGUAGE"] = details.language;
-        formSubmitBody["CLASS ATTENDANCE MODE"] = details.classMode;
-        formSubmitBody["OCCUPATION"] = details.occupation;
-        formSubmitBody["CURRENT RESIDENCE"] = details.currentLocation;
-        formSubmitBody["NATIVE HOMETOWN"] = details.nativePlace;
-        formSubmitBody["QUIZ CHALLENGE"] = details.quizTitle || "Bhagavad-gītā Wisdom Challenge";
+        formSubmitBody["AGE & GENDER"] = `${details.age || "N/A"} Years • ${details.gender || "Devotee"}`;
+        formSubmitBody["OCCUPATION"] = details.occupation || "N/A";
+        formSubmitBody["PREFERRED LANGUAGE"] = details.language || "Hindi / English";
+        formSubmitBody["CLASS ATTENDANCE MODE"] = details.classMode || details.preferredMode || "Online Zoom";
+        formSubmitBody["CURRENT RESIDENCE"] = details.currentLocation || "N/A";
+        formSubmitBody["NATIVE HOMETOWN"] = details.nativePlace || "N/A";
+        formSubmitBody["QUIZ CHALLENGE"] = details.quizTitle || "Vedic Quiz Challenge";
         formSubmitBody["SECURED SCORE"] = details.score || "N/A";
         formSubmitBody["SUBMISSION TIME"] = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST";
-        formSubmitBody["STATUS"] = "Enrolled Seeker (Ready for Free Vedic Sessions)";
+        formSubmitBody["FOLLOW-UP ACTION"] = "Candidate requested enrollment in free spiritual classes. Please add to WhatsApp batch.";
       } else {
-        formSubmitBody["Type"] = type || "general";
-        formSubmitBody["Name"] = details.fullName || details.name || "Administrator";
-        formSubmitBody["Email"] = details.email || ADMIN_EMAIL;
-        formSubmitBody["Phone"] = details.phone || details.whatsapp || "N/A";
-        formSubmitBody["Details"] = messageBody;
+        formSubmitBody["TYPE"] = type || "general";
+        formSubmitBody["NAME"] = details.fullName || details.name || "Administrator";
+        formSubmitBody["EMAIL"] = details.email || ADMIN_EMAIL;
+        formSubmitBody["PHONE"] = details.phone || details.whatsapp || "N/A";
+        formSubmitBody["DETAILS"] = messageBody;
       }
 
       await fetch(`https://formsubmit.co/ajax/${ADMIN_EMAIL}`, {
@@ -196,12 +149,15 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
-          "Referer": "https://selfrealization-platform.vercel.app",
+          "Referer": "https://selfrealization-platform.vercel.app/quiz",
           "Origin": "https://selfrealization-platform.vercel.app"
         },
         body: JSON.stringify(formSubmitBody)
-      }).catch(() => {});
-    } catch (e) {}
+      });
+      emailDispatched = true;
+    } catch (e) {
+      console.warn("FormSubmit dispatch warning:", e);
+    }
 
     return NextResponse.json({
       success: true,

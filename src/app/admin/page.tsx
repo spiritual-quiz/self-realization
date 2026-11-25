@@ -323,11 +323,32 @@ export default function AdminDashboardPage() {
   const fetchDashboardData = async () => {
     setLoadingData(true);
     try {
-      // 1. Fetch Registrations
-      const regSnap = await getDocs(query(collection(db, "classRegistrations"), limit(100)));
-      const regList: any[] = [];
-      regSnap.forEach((doc) => regList.push({ id: doc.id, ...doc.data() }));
-      setRegistrations(regList);
+      // 1. Fetch Registrations (Merge Firestore & Local Cache)
+      const cachedReg = localStorage.getItem("sr_class_registrations");
+      let localRegs: any[] = [];
+      if (cachedReg) {
+        try { localRegs = JSON.parse(cachedReg); } catch (e) {}
+      }
+
+      try {
+        const regSnap = await getDocs(query(collection(db, "classRegistrations"), limit(100)));
+        const regList: any[] = [];
+        regSnap.forEach((doc) => regList.push({ id: doc.id, ...doc.data() }));
+
+        // Merge without duplicates
+        const combined = [...regList];
+        localRegs.forEach((lr) => {
+          if (!combined.some((c) => c.id === lr.id || (c.email === lr.email && c.createdAt === lr.createdAt))) {
+            combined.push(lr);
+          }
+        });
+        setRegistrations(combined);
+        localStorage.setItem("sr_class_registrations", JSON.stringify(combined));
+      } catch (e) {
+        if (localRegs.length > 0) {
+          setRegistrations(localRegs);
+        }
+      }
 
       // 2. Fetch Inquiries
       const inqSnap = await getDocs(query(collection(db, "inquiries"), limit(100)));
@@ -650,6 +671,18 @@ export default function AdminDashboardPage() {
     } catch (e) {}
 
     setEditingQuizAudio(null);
+  };
+
+  const handleDeleteRegistration = async (regId: string) => {
+    if (!confirm("Are you sure you want to delete this registration?")) return;
+    try {
+      await deleteDoc(doc(db, "classRegistrations", regId));
+    } catch (e) {
+      console.warn("Could not delete registration from Firestore:", e);
+    }
+    const updated = registrations.filter((r) => r.id !== regId);
+    setRegistrations(updated);
+    localStorage.setItem("sr_class_registrations", JSON.stringify(updated));
   };
 
   const handleDeleteInquiry = async (inqId: string) => {
@@ -1325,23 +1358,80 @@ export default function AdminDashboardPage() {
               {registrations.length === 0 ? (
                 <p className="text-xs text-gray-500 italic p-4 bg-amber-50/50 rounded-xl">No registrations recorded yet.</p>
               ) : (
-                <div className="space-y-3">
-                  {registrations.map((reg) => (
-                    <div key={reg.id} className="p-4 rounded-2xl border border-gray-200 space-y-1.5 bg-stone-50/50">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-gray-900 text-sm">{reg.fullName || reg.name}</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                          {reg.preferredMode || reg.classMode || "Online"}
-                        </span>
+                <div className="space-y-4">
+                  {registrations.map((reg) => {
+                    const cleanPhone = (reg.phone || reg.whatsapp || "").replace(/\D/g, "");
+                    const isQuiz = Boolean(reg.quizTitle || reg.source === "Vedic Quiz Challenge");
+                    return (
+                      <div key={reg.id} className="p-5 rounded-2xl border border-amber-200/80 space-y-2.5 bg-gradient-to-br from-white to-amber-50/40 shadow-xs hover:border-amber-300 transition-all">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-gray-900 text-base">{reg.fullName || reg.name}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              isQuiz ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-purple-100 text-purple-900 border border-purple-200"
+                            }`}>
+                              {isQuiz ? "🏆 Vedic Quiz" : "📅 Live Class"}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              {reg.preferredMode || reg.classMode || "Online Zoom"}
+                            </span>
+                          </div>
+
+                          {/* Delete Button (User Requirement 2) */}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRegistration(reg.id)}
+                            className="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            <span>Delete</span>
+                          </button>
+                        </div>
+
+                        {/* Contact details */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-700">
+                          {reg.whatsapp || reg.phone ? (
+                            <a 
+                              href={`https://wa.me/91${cleanPhone.slice(-10)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 underline underline-offset-2"
+                            >
+                              <span>📱 WhatsApp: {reg.phone || reg.whatsapp}</span>
+                            </a>
+                          ) : null}
+                          {reg.email && <span>✉️ {reg.email}</span>}
+                          {reg.age && <span>🎂 Age: {reg.age} yrs</span>}
+                          {reg.gender && <span>👤 Gender: {reg.gender}</span>}
+                          {reg.occupation && <span>💼 {reg.occupation}</span>}
+                        </div>
+
+                        {/* Residence and Native Place */}
+                        {(reg.currentLocation || reg.nativePlace) && (
+                          <div className="text-xs text-stone-600 flex flex-wrap gap-x-3 bg-white p-2 rounded-xl border border-gray-100">
+                            {reg.currentLocation && <span>📍 Current: {reg.currentLocation}</span>}
+                            {reg.nativePlace && <span>🏡 Native: {reg.nativePlace}</span>}
+                          </div>
+                        )}
+
+                        {/* Target Course / Quiz Details */}
+                        <div className="flex flex-wrap items-center justify-between text-xs pt-1 border-t border-gray-100">
+                          <p className="text-amber-950 font-bold">
+                            Target: {typeof reg.classTitle === "object" ? (reg.classTitle.en || reg.classTitle.hi) : (reg.classTitle || reg.quizTitle || "Free Devotional Sessions")}
+                          </p>
+                          {reg.score && (
+                            <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                              Score: {reg.score}
+                            </span>
+                          )}
+                          {reg.createdAt && (
+                            <span className="text-[10px] text-gray-400">
+                              {new Date(reg.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-600">
-                        📱 {reg.phone || reg.whatsapp} • ✉️ {reg.email}
-                      </p>
-                      <p className="text-xs text-amber-900 font-medium">
-                        Target Class: {typeof reg.classTitle === "object" ? reg.classTitle.en : (reg.classTitle || reg.quizTitle || "Free Devotional Sessions")}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

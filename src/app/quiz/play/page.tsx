@@ -39,7 +39,7 @@ import LotusAccent from "@/components/devotional/LotusAccent";
 import { parseCSVToQuestions, SAMPLE_CSV_CONTENT, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
 import { generateQuizCertificatePdf } from "@/lib/pdf/certificateGenerator";
 import { db } from "@/lib/firebase/client";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc } from "firebase/firestore";
 
 function QuizPlayInner() {
   const { language } = useLanguage();
@@ -105,6 +105,7 @@ function QuizPlayInner() {
   const [isThinking, setIsThinking] = useState(false);
   const [wrongAnimation, setWrongAnimation] = useState(false);
   const [correctAnimation, setCorrectAnimation] = useState(false);
+  const [animKey, setAnimKey] = useState<number>(Date.now());
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Audio & Timer References
@@ -458,7 +459,8 @@ function QuizPlayInner() {
       setScore((s) => s + pointsEarned);
       setFloatingScore(pointsEarned);
       playFx("correct");
-      // Trigger Cute Dancing Celebration Animation (Option C) alongside flowers for 2.0s
+      // Trigger Lively Dancing Celebration Animation (restarts from frame 0)
+      setAnimKey(Date.now());
       setCorrectAnimation(true);
 
       confetti({
@@ -480,7 +482,8 @@ function QuizPlayInner() {
     } else {
       setStreak(0);
       playFx("wrong");
-      // Show Big Crying Animation 'cry.jpg' in front of screen for strictly 1.5 seconds
+      // Trigger Lively Crying Sadness Animation (restarts from frame 0)
+      setAnimKey(Date.now());
       setWrongAnimation(true);
 
       // Auto-advance within strictly 1.5 seconds on wrong answer
@@ -584,41 +587,60 @@ function QuizPlayInner() {
     try {
       const totalMarks = questions.reduce((a, b) => a + b.points, 0);
 
-      // 1. Direct browser client dispatch to FormSubmit (Matching Live Like a Monk model layout)
+      const regRecord = {
+        classId: "vedic-quiz-free-classes",
+        classTitle: {
+          en: `Vedic Quiz Challenge Free Classes (${classFormData.classMode})`,
+          hi: `वैदिक क्विज़ निःशुल्क कक्षाएं (${classFormData.classMode})`
+        },
+        name: classFormData.name.trim(),
+        fullName: classFormData.name.trim(),
+        email: classFormData.email.trim(),
+        whatsapp: classFormData.whatsapp.trim(),
+        phone: classFormData.whatsapp.trim(),
+        gender: classFormData.gender,
+        age: classFormData.age,
+        language: classFormData.language,
+        classMode: classFormData.classMode,
+        preferredMode: classFormData.classMode,
+        occupation: classFormData.occupation,
+        currentLocation: classFormData.currentLocation.trim(),
+        nativePlace: classFormData.nativePlace.trim(),
+        quizTitle: quizTitle,
+        score: `${score} / ${totalMarks} (${Math.round((score / totalMarks) * 100)}%)`,
+        source: "Vedic Quiz Challenge",
+        createdAt: new Date().toISOString(),
+      };
+
+      // 1. Direct save to Firestore 'classRegistrations'
+      let savedId = `reg-${Date.now()}`;
       try {
-        await fetch("https://formsubmit.co/ajax/madhavcarandas@gmail.com", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Referer": "https://selfrealization-platform.vercel.app/quiz",
-            "Origin": "https://selfrealization-platform.vercel.app"
-          },
-          body: JSON.stringify({
-            _subject: `🏆 [VEDIC QUIZ REGISTRATION - FREE CLASSES] ${classFormData.name} (${classFormData.occupation})`,
-            _template: "table",
-            _captcha: "false",
-            _replyto: classFormData.email,
-            "Name": classFormData.name,
-            "Mobile": classFormData.whatsapp,
-            "Email": classFormData.email,
-            "Age": classFormData.age,
-            "Gender": classFormData.gender,
-            "Language": classFormData.language,
-            "Track": `🏆 Vedic Quiz Challenge • Free Classes (${classFormData.classMode})`,
-            "Status": classFormData.occupation,
-            "Class Mode": classFormData.classMode,
-            "Current Address": classFormData.currentLocation,
-            "Native Address": classFormData.nativePlace,
-            "Quiz Title": quizTitle,
-            "Score": `${score} / ${totalMarks} (${Math.round((score / totalMarks) * 100)}%)`,
-            "Registered At": new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST"
-          })
-        });
-      } catch (clientErr) {
-        console.warn("Client FormSubmit direct dispatch notice:", clientErr);
+        const docRef = await addDoc(collection(db, "classRegistrations"), regRecord);
+        savedId = docRef.id;
+      } catch (dbErr) {
+        console.warn("Firestore save fallback notice:", dbErr);
       }
 
+      // 2. Direct save to LocalStorage so Admin Dashboard instantly displays it
+      try {
+        const cached = JSON.parse(localStorage.getItem("sr_class_registrations") || "[]");
+        localStorage.setItem("sr_class_registrations", JSON.stringify([{ id: savedId, ...regRecord }, ...cached]));
+      } catch (lsErr) {}
+
+      // 3. Fast non-blocking server notification to madhavcarandas@gmail.com via /api/notify
+      fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "free_class_registration",
+          details: {
+            ...regRecord,
+            id: savedId
+          }
+        })
+      }).catch((notifyErr) => console.warn("Notify dispatch:", notifyErr));
+
+      // Instant UI confirmation — zero waiting latency!
       setClassFormSubmitted(true);
       setTimeout(() => {
         setShowClassRegisterModal(false);
@@ -1578,34 +1600,40 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* Correct Answer Celebration Dance (Visible ABOVE questions and answers, zero backdrop blockage) */}
+          {/* Correct Answer Celebration Dance (Always restarts from frame 0, visible ABOVE questions and answers) */}
           {correctAnimation && (
-            <div className="fixed top-12 sm:top-14 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
-              <div className="relative w-28 h-28 sm:w-36 sm:h-36 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)]">
+            <div className="fixed top-8 sm:top-12 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-bounce">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/images/quiz/dance.gif"
+                  key={`dance-${animKey}`}
+                  src={`/images/quiz/dance.gif?k=${animKey}`}
                   alt="Dancing Celebration Animation"
                   className="w-full h-full object-contain filter drop-shadow-xl"
                 />
               </div>
-              <div className="mt-1 px-3.5 py-1 rounded-full bg-emerald-600 text-white font-black text-xs sm:text-sm border-2 border-emerald-300 shadow-xl flex items-center gap-1 animate-bounce">
+              <div className="mt-1 px-4 py-1.5 rounded-full bg-emerald-600 text-white font-black text-xs sm:text-sm border-2 border-emerald-300 shadow-xl flex items-center gap-1.5 animate-pulse">
                 <span>+{floatingScore || 10} Points!</span>
-                <span>🌸</span>
+                <span>🌸 ✨</span>
               </div>
             </div>
           )}
 
-          {/* Wrong Answer Overlay (Visible ABOVE questions and answers, zero backdrop blockage) */}
+          {/* Wrong Answer Crying Animation (Always restarts from frame 0, visible ABOVE questions and answers) */}
           {wrongAnimation && (
-            <div className="fixed top-12 sm:top-14 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
-              <div className="relative w-28 h-28 sm:w-36 sm:h-36 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)]">
+            <div className="fixed top-8 sm:top-12 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-shake">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/images/quiz/cry.gif"
-                  alt="Sadness Crying Animation"
+                  key={`cry-${animKey}`}
+                  src={`/images/quiz/cry.gif?k=${animKey}`}
+                  alt="Crying Sadness Animation"
                   className="w-full h-full object-contain filter drop-shadow-xl"
                 />
+              </div>
+              <div className="mt-1 px-3.5 py-1 rounded-full bg-rose-600 text-white font-black text-xs sm:text-sm border-2 border-rose-300 shadow-xl flex items-center gap-1.5">
+                <span>गलत उत्तर / Incorrect • Keep Going!</span>
+                <span>😢</span>
               </div>
             </div>
           )}
