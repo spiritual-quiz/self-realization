@@ -160,14 +160,14 @@ export default function LiveClassesPage() {
 
       {/* Filter Tabs */}
       <div className="flex items-center justify-center">
-        <div className="inline-flex p-1.5 rounded-2xl bg-amber-50 border border-amber-200/80 shadow-xs">
+        <div className="inline-flex p-1.5 rounded-2xl bg-white border border-emerald-500/30 shadow-xs">
           <button
             type="button"
             onClick={() => setFilter("all")}
-            className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               filter === "all"
-                ? "bg-amber-600 text-white shadow-sm"
-                : "text-amber-900 hover:text-amber-700"
+                ? "bg-emerald-600 text-white shadow-sm"
+                : "text-slate-700 hover:text-emerald-700"
             }`}
           >
             {language === "hi" ? "सभी कक्षाएं" : "All Classes"} ({classList.length})
@@ -175,10 +175,10 @@ export default function LiveClassesPage() {
           <button
             type="button"
             onClick={() => setFilter("free")}
-            className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               filter === "free"
-                ? "bg-amber-600 text-white shadow-sm"
-                : "text-amber-900 hover:text-amber-700"
+                ? "bg-emerald-600 text-white shadow-sm"
+                : "text-slate-700 hover:text-emerald-700"
             }`}
           >
             {language === "hi" ? "निःशुल्क साप्ताहिक" : "Weekly Free"}
@@ -186,10 +186,10 @@ export default function LiveClassesPage() {
           <button
             type="button"
             onClick={() => setFilter("paid")}
-            className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               filter === "paid"
-                ? "bg-amber-600 text-white shadow-sm"
-                : "text-amber-900 hover:text-amber-700"
+                ? "bg-emerald-600 text-white shadow-sm"
+                : "text-slate-700 hover:text-emerald-700"
             }`}
           >
             {language === "hi" ? "विशेष सेमिनार" : "Special Seminars"}
@@ -202,7 +202,7 @@ export default function LiveClassesPage() {
         {filteredClasses.map((item) => (
           <div
             key={item.id}
-            className="bg-white rounded-3xl p-6 sm:p-7 border border-amber-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between group hover:border-amber-300"
+            className="bg-white rounded-3xl p-6 sm:p-7 border border-emerald-500/20 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between group hover:border-emerald-400"
           >
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -221,25 +221,25 @@ export default function LiveClassesPage() {
                 </span>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 leading-snug group-hover:text-amber-700 transition-colors">
+              <h3 className="text-xl font-bold text-gray-900 leading-snug group-hover:text-emerald-700 transition-colors">
                 {item.title[language]}
               </h3>
 
               <div className="space-y-2 text-xs text-gray-600 pt-3 border-t border-gray-100">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+                  <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span className="font-medium text-gray-800">{item.date}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <Clock className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>{item.time}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-amber-600 shrink-0" />
+                  <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>{item.mode}</span>
                 </div>
-                <div className="flex items-center gap-2 pt-1 text-amber-800 font-medium">
-                  <User className="w-4 h-4 text-amber-600 shrink-0" />
+                <div className="flex items-center gap-2 pt-1 text-emerald-800 font-medium">
+                  <User className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>{language === "hi" ? "प्रवक्ता:" : "Speaker:"} {item.instructor}</span>
                 </div>
               </div>
@@ -249,13 +249,13 @@ export default function LiveClassesPage() {
               <button
                 type="button"
                 onClick={() => setSelectedClass(item)}
-                className={`w-full py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all transform active:scale-95 ${
+                className={`w-full py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all transform active:scale-95 cursor-pointer ${
                   !item.isPaid
-                    ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-amber-500/20"
-                    : "bg-gray-900 hover:bg-black text-white"
+                    ? "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-emerald-500/20"
+                    : "bg-slate-900 hover:bg-black text-white"
                 }`}
               >
-                <Sparkles className="w-4 h-4 text-amber-200" />
+                <Sparkles className="w-4 h-4 text-emerald-200" />
                 <span>
                   {item.isPaid 
                     ? (language === "hi" ? `सीट बुक करें (${item.price})` : `Book Seat (${item.price})`)

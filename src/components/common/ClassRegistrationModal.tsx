@@ -121,64 +121,68 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-amber-200 overflow-hidden my-8">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-fade-in overflow-y-auto"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-emerald-500/30 overflow-hidden my-4">
         
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 p-6 text-white relative">
+        <div className="bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#0F172A] p-4 sm:p-5 text-white relative border-b-2 border-emerald-400/80">
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-5 right-5 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
+            className="absolute top-3.5 right-3.5 p-1.5 rounded-full bg-white/10 hover:bg-white/25 text-slate-200 hover:text-white transition-colors cursor-pointer"
+            title="Close (बंद करें)"
           >
             <X className="w-5 h-5" />
           </button>
           
-          <div className="flex items-center gap-2 mb-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-bold uppercase tracking-wider text-amber-100">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
               {classItem.isPaid ? (language === "hi" ? "विशेष सेमिनार" : "Masterclass") : (language === "hi" ? "100% निःशुल्क कक्षा" : "100% Free Class")}
             </span>
           </div>
 
-          <h3 className="text-xl sm:text-2xl font-bold leading-snug">
+          <h3 className="text-base sm:text-lg font-bold leading-snug pr-8 text-white">
             {classItem.title[language]}
           </h3>
 
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-amber-100">
+          <div className="mt-2.5 flex flex-wrap items-center gap-3 text-[11px] text-slate-300">
             <span className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4" />
+              <Calendar className="w-3.5 h-3.5 text-emerald-400" />
               {classItem.date}
             </span>
             <span className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4" />
+              <Clock className="w-3.5 h-3.5 text-emerald-400" />
               {classItem.time}
             </span>
           </div>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 sm:p-8">
+        <div className="p-4 sm:p-5">
           {confirmedId ? (
-            <div className="text-center space-y-5 animate-fade-in py-4">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                <CheckCircle2 className="w-10 h-10" />
+            <div className="text-center space-y-4 animate-fade-in py-2">
+              <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <CheckCircle2 className="w-8 h-8" />
               </div>
 
               <div>
-                <h4 className="text-2xl font-bold text-gray-900">
+                <h4 className="text-xl font-bold text-gray-900">
                   {language === "hi" ? "पंजीकरण सफल! हरे कृष्ण" : "Registration Confirmed! Hare Kṛṣṇa"}
                 </h4>
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-xs text-gray-600 mt-1">
                   {language === "hi"
-                    ? "आपका स्थान सुरक्षित कर लिया गया है। कक्षा का लिंक आपके मोबाइल पर भेज दिया गया है।"
+                    ? "आपका स्थान सुरक्षित कर लिया गया है। विवरण दर्ज कर लिया गया है।"
                     : "Your seat is confirmed. Meeting link and access details have been recorded."}
                 </p>
               </div>
 
-              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-left text-xs space-y-1.5 text-gray-700">
+              <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200 text-left text-xs space-y-1.5 text-gray-700">
                 <div className="flex justify-between">
                   <span className="font-semibold">{language === "hi" ? "पंजीकरण संख्या:" : "Registration Ref:"}</span>
-                  <span className="font-mono font-bold text-amber-800">{confirmedId}</span>
+                  <span className="font-mono font-bold text-emerald-800">{confirmedId}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold">{language === "hi" ? "प्रतिभागी:" : "Participant:"}</span>
@@ -199,16 +203,16 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-3 px-4 rounded-xl font-bold text-white bg-amber-600 hover:bg-amber-700 transition-all shadow-md"
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all shadow-md text-xs sm:text-sm cursor-pointer"
               >
-                {language === "hi" ? "पूर्ण (Close)" : "Done"}
+                {language === "hi" ? "पूर्ण (Close Window)" : "Done (Close Window)"}
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-amber-600" />
+                <label className="text-[11px] font-bold text-gray-700 uppercase flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-emerald-600" />
                   <span>{language === "hi" ? "पूरा नाम *" : "Full Name *"}</span>
                 </label>
                 <input
@@ -217,13 +221,13 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Radheshyam Sharma"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-hidden text-xs sm:text-sm"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-amber-600" />
+                <label className="text-[11px] font-bold text-gray-700 uppercase flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-emerald-600" />
                   <span>{language === "hi" ? "मोबाइल नंबर (WhatsApp) *" : "WhatsApp Mobile Number *"}</span>
                 </label>
                 <input
@@ -232,13 +236,13 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+91 98765 43210"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-hidden text-xs sm:text-sm"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-amber-600" />
+                <label className="text-[11px] font-bold text-gray-700 uppercase flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-emerald-600" />
                   <span>{language === "hi" ? "ईमेल *" : "Email Address *"}</span>
                 </label>
                 <input
@@ -247,22 +251,22 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="yourname@gmail.com"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-hidden text-xs sm:text-sm"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 uppercase">
+                <label className="text-[11px] font-bold text-gray-700 uppercase">
                   {language === "hi" ? "उपस्थिति का माध्यम" : "Preferred Attendance Mode"}
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
                     onClick={() => setPreferredMode("online")}
-                    className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                    className={`py-1.5 px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       preferredMode === "online"
-                        ? "border-amber-600 bg-amber-50 text-amber-900 shadow-xs"
-                        : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs ring-1 ring-emerald-500"
+                        : "border-gray-300 text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     <span>💻 Online Zoom</span>
@@ -270,10 +274,10 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
                   <button
                     type="button"
                     onClick={() => setPreferredMode("in_person")}
-                    className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                    className={`py-1.5 px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       preferredMode === "in_person"
-                        ? "border-amber-600 bg-amber-50 text-amber-900 shadow-xs"
-                        : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs ring-1 ring-emerald-500"
+                        : "border-gray-300 text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     <span>🛕 Temple In-Person</span>
@@ -282,8 +286,8 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
+                <label className="text-[11px] font-bold text-gray-700 uppercase flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
                   <span>{language === "hi" ? "प्रवक्ता हेतु आपका कोई प्रश्न (वैकल्पिक)" : "Question for Teacher (Optional)"}</span>
                 </label>
                 <textarea
@@ -291,35 +295,43 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
                   value={questions}
                   onChange={(e) => setQuestions(e.target.value)}
                   placeholder={language === "hi" ? "कोई जिज्ञासा या प्रश्न..." : "Any topic or doubt you'd like discussed?"}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-xs"
+                  className="w-full px-3 py-1.5 rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-hidden text-xs resize-none"
                 />
               </div>
 
-              <div className="pt-3">
+              {/* Action Buttons: Cancel and Submit */}
+              <div className="pt-2 flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-1/3 py-2.5 px-3 rounded-xl font-bold text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors cursor-pointer text-center"
+                >
+                  {language === "hi" ? "रद्द करें" : "Cancel"}
+                </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                  className="w-2/3 py-2.5 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-md shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-70 text-xs sm:text-sm cursor-pointer"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{language === "hi" ? "पंजीकरण हो रहा है..." : "Confirming Registration..."}</span>
+                      <span>{language === "hi" ? "पंजीकरण..." : "Confirming..."}</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-4 h-4 text-amber-200" />
+                      <Sparkles className="w-4 h-4 text-emerald-200" />
                       <span>
                         {classItem.isPaid 
-                          ? (language === "hi" ? `पंजीकरण करें (${classItem.price})` : `Confirm Registration (${classItem.price})`)
-                          : (language === "hi" ? "मुफ्त पंजीकरण सुरक्षित करें" : "Confirm Free Registration")}
+                          ? (language === "hi" ? `सीट बुक करें (${classItem.price})` : `Book (${classItem.price})`)
+                          : (language === "hi" ? "मुफ्त पंजीकरण करें" : "Confirm Free Seat")}
                       </span>
                     </>
                   )}
                 </button>
               </div>
 
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 pt-1">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500 pt-0.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 <span>{language === "hi" ? "100% सुरक्षित • कोई अनचाहा स्पैम नहीं" : "100% Privacy • No spam policy"}</span>
               </div>

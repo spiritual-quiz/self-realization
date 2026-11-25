@@ -180,12 +180,12 @@ export default function CoursesCataloguePage() {
           />
         </div>
 
-        <div className="inline-flex p-1.5 rounded-2xl bg-amber-50 border border-amber-200/80 w-full sm:w-auto justify-center">
+        <div className="inline-flex p-1.5 rounded-2xl bg-white border border-emerald-500/30 w-full sm:w-auto justify-center shadow-xs">
           <button
             type="button"
             onClick={() => setCategoryFilter("all")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              categoryFilter === "all" ? "bg-amber-600 text-white shadow-sm" : "text-amber-900 hover:text-amber-700"
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              categoryFilter === "all" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-700 hover:text-emerald-700"
             }`}
           >
             {language === "hi" ? "सभी" : "All"} ({courses.length})
@@ -193,8 +193,8 @@ export default function CoursesCataloguePage() {
           <button
             type="button"
             onClick={() => setCategoryFilter("free")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              categoryFilter === "free" ? "bg-amber-600 text-white shadow-sm" : "text-amber-900 hover:text-amber-700"
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              categoryFilter === "free" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-700 hover:text-emerald-700"
             }`}
           >
             {language === "hi" ? "निःशुल्क पाठ्यक्रम" : "Free Courses"}
@@ -202,8 +202,8 @@ export default function CoursesCataloguePage() {
           <button
             type="button"
             onClick={() => setCategoryFilter("paid")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              categoryFilter === "paid" ? "bg-amber-600 text-white shadow-sm" : "text-amber-900 hover:text-amber-700"
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              categoryFilter === "paid" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-700 hover:text-emerald-700"
             }`}
           >
             {language === "hi" ? "सर्टिफाइड सेमिनार" : "Certified"}
@@ -269,9 +269,9 @@ export default function CoursesCataloguePage() {
                   <div className="flex items-center gap-2.5 w-full sm:w-auto">
                     <Link
                       href={`/courses/${c.id}`}
-                      className="grow sm:grow-0 px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 transition-all shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                      className="grow sm:grow-0 px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <PlayCircle className="w-4 h-4 text-amber-200" />
+                      <PlayCircle className="w-4 h-4 text-emerald-200" />
                       <span>{language === "hi" ? "अध्ययन प्रारंभ करें ▶" : "Start Learning Now ▶"}</span>
                     </Link>
 
@@ -286,10 +286,10 @@ export default function CoursesCataloguePage() {
                         mode: "Online Video Lessons (LMS)",
                         instructor: "ISKCON NVCC Scholars"
                       })}
-                      className="px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-amber-900 bg-amber-100/70 hover:bg-amber-100 transition-all border border-amber-300 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-emerald-900 bg-emerald-100/70 hover:bg-emerald-100 transition-all border border-emerald-300 flex items-center justify-center gap-1.5 cursor-pointer"
                       title={language === "hi" ? "पंजीकरण करें" : "Register"}
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                       <span>{language === "hi" ? "पंजीकरण" : "Enroll"}</span>
                     </button>
                   </div>
