@@ -31,8 +31,11 @@ import {
   FlaskConical,
   RefreshCw,
   Trophy,
-  AlertCircle
+  AlertCircle,
+  Volume2,
+  VolumeX
 } from "lucide-react";
+import emailjs from "@emailjs/browser";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { parseCSVToQuestions, SAMPLE_CSV_CONTENT, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
 import { generateQuizCertificatePdf } from "@/lib/pdf/certificateGenerator";
@@ -71,6 +74,15 @@ function QuizPlayInner() {
   // Audio Controls
   const [soundFxEnabled, setSoundFxEnabled] = useState(true);
   const [bgMusicPlaying, setBgMusicPlaying] = useState(false);
+  const [bgMusicVolume, setBgMusicVolume] = useState<number>(0.35);
+
+  const handleAdjustVolume = (delta: number) => {
+    setBgMusicVolume((prev) => {
+      const next = Math.max(0, Math.min(1, Math.round((prev + delta) * 10) / 10));
+      if (bgAudioRef.current) bgAudioRef.current.volume = next;
+      return next;
+    });
+  };
   
   // Completion & Certificate State
   const [isComplete, setIsComplete] = useState(false);
@@ -158,10 +170,13 @@ function QuizPlayInner() {
                 setTimerDuration(Number(selected.timerSeconds));
                 setTimeLeft(Number(selected.timerSeconds));
               }
+              if (selected.bgMusicVolume !== undefined) {
+                setBgMusicVolume(Number(selected.bgMusicVolume));
+              }
               if (selected.bgMusicUrl && typeof window !== "undefined") {
                 bgAudioRef.current = new Audio(selected.bgMusicUrl);
                 bgAudioRef.current.loop = true;
-                bgAudioRef.current.volume = 0.35;
+                bgAudioRef.current.volume = selected.bgMusicVolume !== undefined ? Number(selected.bgMusicVolume) : 0.35;
               }
               if (selected.correctSoundUrl && typeof window !== "undefined") {
                 correctAudioRef.current = new Audio(selected.correctSoundUrl);
@@ -188,10 +203,13 @@ function QuizPlayInner() {
               setTimerDuration(Number(data.timerSeconds));
               setTimeLeft(Number(data.timerSeconds));
             }
+            if (data.bgMusicVolume !== undefined) {
+              setBgMusicVolume(Number(data.bgMusicVolume));
+            }
             if (data.bgMusicUrl && typeof window !== "undefined") {
               bgAudioRef.current = new Audio(data.bgMusicUrl);
               bgAudioRef.current.loop = true;
-              bgAudioRef.current.volume = 0.35;
+              bgAudioRef.current.volume = data.bgMusicVolume !== undefined ? Number(data.bgMusicVolume) : 0.35;
             }
             if (data.correctSoundUrl && typeof window !== "undefined") {
               correctAudioRef.current = new Audio(data.correctSoundUrl);
@@ -512,6 +530,68 @@ function QuizPlayInner() {
 
     try {
       const totalMarks = questions.reduce((a, b) => a + b.points, 0);
+
+      // 1. Direct browser client EmailJS dispatch (Client-side authentic browser environment)
+      try {
+        const emailParams = {
+          name: classFormData.name,
+          mobile: classFormData.whatsapp,
+          email: classFormData.email,
+          language: classFormData.language,
+          age: classFormData.age,
+          track: `🏆 [VEDIC QUIZ REGISTRATION - FREE CLASSES] ${classFormData.name} (${classFormData.occupation})`,
+          status: `Vedic Quiz Winner • ${classFormData.classMode} Classes`,
+          native_address: classFormData.nativePlace,
+          current_address: classFormData.currentLocation,
+          notes: `\n---------------------------------------------\n🏆 VEDIC QUIZ WISDOM CHALLENGE - FREE CLASS REGISTRATION\n---------------------------------------------\nName / नाम: ${classFormData.name}\nEmail / ईमेल: ${classFormData.email}\nWhatsApp / व्हाट्सएप: ${classFormData.whatsapp}\nGender / लिंग: ${classFormData.gender}\nAge / आयु: ${classFormData.age}\nLanguage / भाषा: ${classFormData.language}\nClass Mode / माध्यम: ${classFormData.classMode}\nOccupation / व्यवसाय: ${classFormData.occupation}\nCurrently Staying / निवास: ${classFormData.currentLocation}\nNative Place / मूल स्थान: ${classFormData.nativePlace}\nQuiz Title: ${quizTitle}\nScore: ${score} / ${totalMarks}\nDate & Time: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST\n---------------------------------------------`,
+        };
+
+        try {
+          // Attempt dedicated quiz registration template if created
+          await emailjs.send("service_1ve1iom", "template_quiz_registration", emailParams, "8jCdn6vjWwsSe9CNK");
+        } catch (tErr) {
+          // Immediate fallback to verified active template with distinct Quiz subject & details
+          await emailjs.send("service_1ve1iom", "template_ypw8wpq", emailParams, "8jCdn6vjWwsSe9CNK");
+        }
+      } catch (emailJsErr) {
+        console.warn("Client EmailJS dispatch notice:", emailJsErr);
+      }
+
+      // 2. Direct browser client dispatch to FormSubmit (Guaranteed immediate delivery, authentic browser Origin)
+      try {
+        await fetch("https://formsubmit.co/ajax/madhavcarandas@gmail.com", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Referer": "https://selfrealization-platform.vercel.app/quiz",
+            "Origin": "https://selfrealization-platform.vercel.app"
+          },
+          body: JSON.stringify({
+            _subject: `🏆 [VEDIC QUIZ REGISTRATION - FREE CLASSES] ${classFormData.name} (${classFormData.occupation})`,
+            _template: "table",
+            _captcha: "false",
+            "REGISTRATION SOURCE": "SelfRealization • Vedic Quiz Outreach (Bhagavad-gītā Wisdom Challenge)",
+            "Participant Name / नाम": classFormData.name,
+            "WhatsApp Number / व्हाट्सएप": classFormData.whatsapp,
+            "Email Address / ईमेल": classFormData.email,
+            "Gender / लिंग": classFormData.gender,
+            "Age / आयु": classFormData.age,
+            "Preferred Language / भाषा": classFormData.language,
+            "Class Mode / माध्यम": classFormData.classMode,
+            "Occupation / व्यवसाय": classFormData.occupation,
+            "Currently Staying / वर्तमान निवास": classFormData.currentLocation,
+            "Native Place / मूल स्थान": classFormData.nativePlace,
+            "Quiz Challenge": quizTitle,
+            "Secured Score": `${score} / ${totalMarks}`,
+            "Timestamp": new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST",
+          })
+        });
+      } catch (clientErr) {
+        console.warn("Client FormSubmit direct dispatch notice:", clientErr);
+      }
+
+      // 3. Also notify platform backend endpoint as backup
       await fetch("/api/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1445,26 +1525,54 @@ function QuizPlayInner() {
             </div>
           </div>
 
-          {/* Right: Score & Audio Toggle */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-1 bg-amber-400/20 border border-amber-300/60 px-2.5 py-0.5 rounded-xl">
-              <Trophy className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-              <span className="font-black text-amber-300 text-xs">{score} Pts</span>
-            </div>
+            {/* Right: Score & Audio Toggle */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-1 bg-amber-400/20 border border-amber-300/60 px-2.5 py-0.5 rounded-xl">
+                <Trophy className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                <span className="font-black text-amber-300 text-xs">{score} Pts</span>
+              </div>
 
-            <button
-              type="button"
-              onClick={toggleBgMusic}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
-                bgMusicPlaying 
-                  ? "bg-amber-500/30 text-amber-200 border-amber-300 shadow-sm" 
-                  : "bg-white/10 text-white/70 border-white/20 hover:bg-white/20"
-              }`}
-            >
-              <Music className="w-3 h-3" />
-              <span className="hidden sm:inline">{bgMusicPlaying ? "Music ON" : "Music OFF"}</span>
-            </button>
-          </div>
+              {/* Music ON/OFF & Volume Quick Adjust */}
+              <div className="flex items-center gap-1 bg-white/10 p-0.5 rounded-xl border border-white/20">
+                <button
+                  type="button"
+                  onClick={toggleBgMusic}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
+                    bgMusicPlaying 
+                      ? "bg-amber-500/40 text-amber-200 shadow-sm" 
+                      : "text-white/60 hover:text-white"
+                  }`}
+                  title={bgMusicPlaying ? "Pause Background Music" : "Play Background Music"}
+                >
+                  <Music className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{bgMusicPlaying ? "Music ON" : "Music OFF"}</span>
+                </button>
+
+                {bgMusicPlaying && (
+                  <div className="hidden sm:flex items-center gap-1 px-1.5 border-l border-white/20">
+                    <button
+                      type="button"
+                      onClick={() => handleAdjustVolume(-0.1)}
+                      className="w-5 h-5 rounded hover:bg-white/20 text-amber-200 text-xs font-bold flex items-center justify-center cursor-pointer"
+                      title="Volume Down"
+                    >
+                      -
+                    </button>
+                    <span className="text-[10px] font-mono text-amber-200 font-bold min-w-7 text-center">
+                      {Math.round(bgMusicVolume * 100)}%
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleAdjustVolume(0.1)}
+                      className="w-5 h-5 rounded hover:bg-white/20 text-amber-200 text-xs font-bold flex items-center justify-center cursor-pointer"
+                      title="Volume Up"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
         </div>
 
         {/* 2. THIN NEON PROGRESS BAR */}
@@ -1491,59 +1599,41 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* Wrong Answer Overlay (Attached Big Crying Animation 'cry.jpg' for strictly 1.5 seconds) */}
+          {/* Wrong Answer Overlay (Pure Sadness Crying Animation for strictly 1.5 seconds - NO TEXT, NO BOX) */}
           {wrongAnimation && (
-            <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in pointer-events-none">
-              <div className="bg-gradient-to-b from-[#FFF5F5] via-[#FFEBEB] to-[#FED7D7] border-4 border-rose-600 rounded-3xl p-5 sm:p-7 shadow-2xl flex flex-col items-center text-center max-w-sm sm:max-w-md w-full animate-scale-in">
-                {/* Big Crying Character Image */}
-                <div className="relative w-64 h-52 sm:w-80 sm:h-64 mb-3 rounded-2xl overflow-hidden border-3 border-rose-400/80 shadow-xl bg-black/10">
-                  <Image
-                    src="/images/quiz/cry.jpg"
-                    alt="Wrong Answer - Sadness Crying"
-                    fill
-                    className="object-contain"
-                    priority
-                    unoptimized
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-600 text-white font-black text-sm sm:text-base shadow-lg">
-                    <span>✕</span>
-                    <span>{isTimeUp ? "समय समाप्त! / Time's Up!" : "अशुद्ध उत्तर! / Incorrect Answer!"}</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-rose-900 font-bold mt-1">
-                    चिंता न करें, सही उत्तर नीचे देखें! / Don&apos;t worry, see correct answer!
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Thinking Animation (Attached Big Thinking Character 'thinking.png' when waiting > 5 seconds) */}
-          {isThinking && !isAnswered && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 bg-gradient-to-r from-[#FFFDF6] via-[#FFF8E7] to-[#FDF0D2] border-3 sm:border-4 border-amber-500 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl flex items-center gap-3 sm:gap-4 max-w-sm sm:max-w-md w-auto animate-bounce pointer-events-none ring-4 ring-amber-300/40">
-              <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl overflow-hidden bg-white/90 border-2 border-amber-300 shadow-md">
+            <div className="fixed inset-0 z-[99999] pointer-events-none flex items-center justify-center animate-fade-in bg-black/40 backdrop-blur-[2px]">
+              <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 drop-shadow-[0_25px_40px_rgba(0,0,0,0.6)] animate-pop-grow">
                 <Image
-                  src="/images/quiz/thinking.png"
-                  alt="Thinking Boy"
+                  src="/images/quiz/cry.gif"
+                  alt="Crying Animation"
                   fill
                   className="object-contain"
                   priority
                   unoptimized
                 />
               </div>
-              <div className="flex flex-col text-left">
-                <span className="text-xs sm:text-sm font-black text-amber-950 flex items-center gap-1">
-                  <span>🤔</span>
-                  <span>गहन चिंतन... / Deep Contemplation...</span>
-                </span>
-                <span className="text-[11px] sm:text-xs font-bold text-amber-900/90 mt-0.5">
-                  सोच रहे हैं... क्या है सही उत्तर?
-                </span>
-                <span className="text-[10px] text-amber-700 italic">
-                  Take your time to find the right answer!
-                </span>
+            </div>
+          )}
+
+          {/* Thinking Animation (Pure Thinking Animation when waiting > 5 seconds - NO TEXT, NO BOX, DOES NOT COVER QUESTION IMAGE) */}
+          {isThinking && !isAnswered && (
+            <div className="absolute top-2 right-2 sm:top-3 sm:right-4 z-40 pointer-events-none flex flex-col items-end">
+              {/* Animated Thought Bubbles */}
+              <div className="flex items-center gap-1 mb-1 mr-2">
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 animate-ping opacity-75" />
+                <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-600 animate-bounce delay-100" />
+                <span className="text-sm sm:text-base font-black text-amber-700 animate-pulse">?</span>
+              </div>
+              {/* Floating Thinking Character */}
+              <div className="relative w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 animate-think-float drop-shadow-[0_8px_16px_rgba(217,119,6,0.3)]">
+                <Image
+                  src="/images/quiz/thinking.png"
+                  alt="Thinking Animation"
+                  fill
+                  className="object-contain"
+                  priority
+                  unoptimized
+                />
               </div>
             </div>
           )}

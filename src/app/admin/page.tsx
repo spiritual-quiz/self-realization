@@ -119,6 +119,7 @@ export default function AdminDashboardPage() {
   const [category, setCategory] = useState("Bhagavad-gītā");
   const [timerSeconds, setTimerSeconds] = useState<number>(10);
   const [bgMusicUrl, setBgMusicUrl] = useState<string>("/audio/bg-music.mp3");
+  const [bgMusicVolume, setBgMusicVolume] = useState<number>(0.35);
   const [correctSoundUrl, setCorrectSoundUrl] = useState<string>("/audio/correct.mp3");
   const [wrongSoundUrl, setWrongSoundUrl] = useState<string>("/audio/wrong.mp3");
   const [parsedQuestions, setParsedQuestions] = useState<ParsedQuizQuestion[]>([]);
@@ -355,6 +356,7 @@ export default function AdminDashboardPage() {
       category,
       timerSeconds,
       bgMusicUrl,
+      bgMusicVolume,
       correctSoundUrl,
       wrongSoundUrl,
       questionCount: parsedQuestions.length,
@@ -865,6 +867,49 @@ export default function AdminDashboardPage() {
                       onChange={(e) => setWrongSoundUrl(e.target.value)}
                       className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white text-gray-700"
                     />
+                  </div>
+                </div>
+
+                {/* Volume Slider for Quiz Background Music */}
+                <div className="p-3 bg-white rounded-xl border border-amber-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="w-4 h-4 text-amber-700 shrink-0" />
+                    <div>
+                      <span className="text-xs font-bold text-amber-950 block">Background Music Volume Control</span>
+                      <span className="text-[11px] text-gray-500">Adjust the default background music loudness for participants</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full sm:w-72">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={Math.round(bgMusicVolume * 100)}
+                      onChange={(e) => setBgMusicVolume(Number(e.target.value) / 100)}
+                      className="w-full accent-amber-600 cursor-pointer"
+                    />
+                    <span className="font-mono font-bold text-xs text-amber-900 bg-amber-100 px-2.5 py-1 rounded-md shrink-0 w-12 text-center">
+                      {Math.round(bgMusicVolume * 100)}%
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {[20, 35, 50, 75, 100].map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setBgMusicVolume(v / 100)}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-md border cursor-pointer ${
+                          Math.round(bgMusicVolume * 100) === v
+                            ? "bg-amber-600 text-white border-amber-600"
+                            : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-amber-50"
+                        }`}
+                      >
+                        {v}%
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

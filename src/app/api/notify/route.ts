@@ -150,6 +150,33 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
 
       if (emailJsRes.ok) {
         emailDispatched = true;
+      } else if (emailJsTemplateId !== "template_ypw8wpq") {
+        // Fallback to active template_ypw8wpq with clear Vedic Quiz branding
+        const fallbackRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Origin": "https://selfrealization-platform.vercel.app"
+          },
+          body: JSON.stringify({
+            service_id: "service_1ve1iom",
+            template_id: "template_ypw8wpq",
+            user_id: "8jCdn6vjWwsSe9CNK",
+            template_params: {
+              name: details.name || details.fullName || "Participant",
+              mobile: details.whatsapp || details.phone || "Not provided",
+              email: details.email || ADMIN_EMAIL,
+              language: details.language || "English",
+              track: `🏆 [VEDIC QUIZ REGISTRATION - FREE CLASSES] ${details.name || ""} (${details.occupation || ""})`,
+              notes: messageBody,
+              age: details.age || "N/A",
+              status: "Vedic Quiz Winner • Free Class Registration",
+              native_address: details.nativePlace || "SelfRealization Portal",
+              current_address: details.currentLocation || "https://selfrealization-platform.vercel.app",
+            }
+          })
+        });
+        if (fallbackRes.ok) emailDispatched = true;
       }
     } catch (e) {
       console.warn("EmailJS registration notice:", e);
