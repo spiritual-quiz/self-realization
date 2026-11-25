@@ -11,16 +11,16 @@ export default function Footer() {
   const { t, language } = useLanguage();
 
   return (
-    <footer className="bg-gradient-to-b from-[#060E1D] via-[#040914] to-[#02050B] text-slate-300 pt-16 pb-12 border-t-4 border-amber-500">
+    <footer className="bg-gradient-to-b from-[#064E3B] via-[#022c22] to-[#011a14] text-emerald-100 pt-14 pb-12 border-t-2 border-emerald-400">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Top Sacred Decorative Divider */}
         <div className="text-center mb-10">
-          <span className="text-2xl font-serif text-amber-400">ॐ नमो भगवते वासुदेवाय</span>
+          <span className="text-2xl font-serif text-amber-300">ॐ नमो भगवते वासुदेवाय</span>
           <LotusAccent className="opacity-70 my-2" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-amber-500/20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-emerald-500/20">
           
           {/* Brand Info */}
           <div className="space-y-4">
@@ -34,10 +34,10 @@ export default function Footer() {
                 />
               </div>
               <span className="text-2xl font-black tracking-tight text-white">
-                Self<span className="text-amber-500">Realization</span>
+                Self<span className="text-amber-300">Realization</span>
               </span>
             </div>
-            <p className="text-sm text-amber-200/80 leading-relaxed">
+            <p className="text-sm text-emerald-200/90 leading-relaxed">
               {t.footer.description}
             </p>
             <div className="pt-2">
