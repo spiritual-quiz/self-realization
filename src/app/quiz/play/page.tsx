@@ -101,9 +101,10 @@ function QuizPlayInner() {
     nativePlace: "",
   });
 
-  // Thinking State (> 5s contemplation) & Wrong Answer Animation
+  // Thinking State (> 5s contemplation) & Animations
   const [isThinking, setIsThinking] = useState(false);
   const [wrongAnimation, setWrongAnimation] = useState(false);
+  const [correctAnimation, setCorrectAnimation] = useState(false);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Audio & Timer References
@@ -147,7 +148,55 @@ function QuizPlayInner() {
       bgAudioRef.current.volume = 0.35;
     }
 
+    // Catalog of standard featured quizzes
+    const DEFAULT_CATALOG: Record<string, { en: string; hi: string }> = {
+      "bg-overview": {
+        en: "Bhagavad-gītā Wisdom Challenge",
+        hi: "श्रीमद्भगवद्गीता ज्ञान प्रश्नोत्तरी"
+      },
+      "krishna-philosophy": {
+        en: "Krishna Katha & Vaishnava Philosophy",
+        hi: "कृष्ण कथा एवं वैष्णव दर्शन प्रश्नोत्तरी"
+      },
+      "temple-rituals": {
+        en: "Vedic Culture & Temple Traditions",
+        hi: "वैदिक संस्कृति एवं मंदिर परंपराएं"
+      },
+      "ramayan-quiz": {
+        en: "Ramayana Wisdom & Values Challenge",
+        hi: "रामायण ज्ञान एवं आदर्श प्रश्नोत्तरी"
+      },
+      "ramayan": {
+        en: "Ramayana Wisdom & Values Challenge",
+        hi: "रामायण ज्ञान एवं आदर्श प्रश्नोत्तरी"
+      },
+      "gita": {
+        en: "Bhagavad-gītā Wisdom Challenge",
+        hi: "श्रीमद्भगवद्गीता ज्ञान प्रश्नोत्तरी"
+      }
+    };
+
+    const extractTitle = (item: any): string => {
+      if (!item) return "";
+      if (typeof item === "string") return item;
+      if (typeof item.title === "string") return item.title;
+      if (typeof item.title === "object" && item.title) {
+        return item.title[language] || item.title.en || item.title.hi || "";
+      }
+      if (typeof item.name === "string") return item.name;
+      if (typeof item.quizTitle === "string") return item.quizTitle;
+      return "";
+    };
+
     const loadData = async () => {
+      // 1. Direct title/name override from URL query (e.g. ?title=Ramayan+Quiz)
+      const titleFromParam = searchParams.get("title") || searchParams.get("name");
+      if (titleFromParam) {
+        setQuizTitle(titleFromParam);
+      } else if (quizIdParam && DEFAULT_CATALOG[quizIdParam]) {
+        setQuizTitle(DEFAULT_CATALOG[quizIdParam][language] || DEFAULT_CATALOG[quizIdParam].en);
+      }
+
       try {
         const stored = localStorage.getItem("sr_custom_quizzes");
         if (stored) {
@@ -155,7 +204,10 @@ function QuizPlayInner() {
           if (list.length > 0) {
             const selected = quizIdParam ? list.find((q: any) => q.id === quizIdParam) : list[0];
             if (selected) {
-              setQuizTitle(selected.title?.[language] || selected.title?.en || "Bhagavad-gītā Wisdom Challenge");
+              const dynamicTitle = extractTitle(selected);
+              if (dynamicTitle && !titleFromParam) {
+                setQuizTitle(dynamicTitle);
+              }
               setQuestions(selected.questions || []);
               if (selected.timerSeconds !== undefined) {
                 setTimerDuration(Number(selected.timerSeconds));
@@ -188,7 +240,10 @@ function QuizPlayInner() {
           const snap = await getDoc(doc(db, "quizzes", quizIdParam));
           if (snap.exists()) {
             const data: any = snap.data();
-            setQuizTitle(data.title?.[language] || data.title?.en || "Bhagavad-gītā Wisdom Challenge");
+            const dynamicTitle = extractTitle(data);
+            if (dynamicTitle && !titleFromParam) {
+              setQuizTitle(dynamicTitle);
+            }
             setQuestions(data.questions || []);
             if (data.timerSeconds !== undefined) {
               setTimerDuration(Number(data.timerSeconds));
@@ -403,6 +458,8 @@ function QuizPlayInner() {
       setScore((s) => s + pointsEarned);
       setFloatingScore(pointsEarned);
       playFx("correct");
+      // Trigger Cute Dancing Celebration Animation (Option C) alongside flowers for 2.0s
+      setCorrectAnimation(true);
 
       confetti({
         particleCount: 65,
@@ -415,7 +472,9 @@ function QuizPlayInner() {
       setTimeout(() => setFloatingScore(null), 1200);
 
       // Auto-advance within strictly 2 seconds on correct answer (no waiting for 10s)
+      if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
       autoAdvanceRef.current = setTimeout(() => {
+        setCorrectAnimation(false);
         handleNextQuestion();
       }, 2000);
     } else {
@@ -439,6 +498,9 @@ function QuizPlayInner() {
       clearTimeout(autoAdvanceRef.current);
       autoAdvanceRef.current = null;
     }
+    setWrongAnimation(false);
+    setCorrectAnimation(false);
+    setIsThinking(false);
 
     if (currentIndex + 1 < questions.length) {
       setCurrentIndex((prev) => prev + 1);
@@ -1540,40 +1602,43 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* Wrong Answer Overlay (Pure Sadness Crying Animation for strictly 1.5 seconds - NO TEXT, NO BOX) */}
-          {wrongAnimation && (
-            <div className="fixed inset-0 z-[99999] pointer-events-none flex items-center justify-center animate-fade-in bg-black/40 backdrop-blur-[2px]">
-              <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 drop-shadow-[0_25px_40px_rgba(0,0,0,0.6)] animate-pop-grow">
-                <Image
-                  src="/images/quiz/cry.gif"
-                  alt="Crying Animation"
-                  fill
-                  className="object-contain"
-                  priority
-                  unoptimized
+          {/* Correct Answer Celebration Dance (Option C: Cute Dancing Animation for 2.0s alongside flowers) */}
+          {correctAnimation && (
+            <div className="fixed inset-0 z-[99999] pointer-events-none flex flex-col items-center justify-center animate-fade-in bg-black/40 backdrop-blur-[2px]">
+              <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 drop-shadow-[0_25px_40px_rgba(0,0,0,0.6)] animate-pop-grow flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/quiz/dance_option3_cute.gif"
+                  alt="Dancing Celebration Animation"
+                  className="w-full h-full object-contain filter drop-shadow-2xl"
                 />
               </div>
             </div>
           )}
 
-          {/* Thinking Animation (Pure Thinking Animation when waiting > 5 seconds - NO TEXT, NO BOX, DOES NOT COVER QUESTION IMAGE) */}
-          {isThinking && !isAnswered && (
-            <div className="absolute top-2 right-2 sm:top-3 sm:right-4 z-40 pointer-events-none flex flex-col items-end">
-              {/* Animated Thought Bubbles */}
-              <div className="flex items-center gap-1 mb-1 mr-2">
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 animate-ping opacity-75" />
-                <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-600 animate-bounce delay-100" />
-                <span className="text-sm sm:text-base font-black text-amber-700 animate-pulse">?</span>
+          {/* Wrong Answer Overlay (Option 1: Sadness Crying Animation for strictly 1.5 seconds) */}
+          {wrongAnimation && (
+            <div className="fixed inset-0 z-[99999] pointer-events-none flex items-center justify-center animate-fade-in bg-black/40 backdrop-blur-[2px]">
+              <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 drop-shadow-[0_25px_40px_rgba(0,0,0,0.6)] animate-pop-grow">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/quiz/cry.gif"
+                  alt="Sadness Crying Animation"
+                  className="w-full h-full object-contain"
+                />
               </div>
-              {/* Floating Thinking Character */}
-              <div className="relative w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 animate-think-float drop-shadow-[0_8px_16px_rgba(217,119,6,0.3)]">
-                <Image
+            </div>
+          )}
+
+          {/* Thinking Animation (Direct Thinking Boy Character visible after 5s when user is thinking) */}
+          {isThinking && !isAnswered && (
+            <div className="fixed sm:absolute top-16 sm:top-3 right-3 sm:right-6 z-50 pointer-events-none animate-think-float drop-shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
+              <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src="/images/quiz/thinking.png"
-                  alt="Thinking Animation"
-                  fill
-                  className="object-contain"
-                  priority
-                  unoptimized
+                  alt="Thinking Character"
+                  className="w-full h-full object-contain filter drop-shadow-lg"
                 />
               </div>
             </div>

@@ -150,7 +150,7 @@ export default function QuizOverviewPage() {
               </div>
 
               <Link
-                href="/quiz/play"
+                href={`/quiz/play?id=${q.id}`}
                 className="w-full py-3.5 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md flex items-center justify-center gap-2 transform active:scale-95 transition-all cursor-pointer"
               >
                 <HelpCircle className="w-4 h-4 text-amber-200" />
