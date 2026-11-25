@@ -1,82 +1,138 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Calendar, Clock, MapPin, Sparkles, User, Users, CheckCircle2, Video } from "lucide-react";
+import { Calendar, Clock, MapPin, Sparkles, User, Users } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
+import { db } from "@/lib/firebase/client";
+import { collection, getDocs } from "firebase/firestore";
+
+const INITIAL_CLASSES: ClassItem[] = [
+  {
+    id: "class-sunday-gita",
+    title: {
+      en: "Bhagavad-gītā Unveiled: The Science of Soul & Karma",
+      hi: "श्रीमद्भगवद्गीता का रहस्य: आत्मा एवं कर्म का विज्ञान"
+    },
+    isPaid: false,
+    date: "Every Sunday",
+    time: "06:00 PM – 07:30 PM IST",
+    mode: "Temple Hall & Zoom Stream",
+    instructor: "H.G. Gauranga Das",
+  },
+  {
+    id: "class-wed-meditation",
+    title: {
+      en: "Mantra Meditation & Mind Control Workshop",
+      hi: "मंत्र ध्यान एवं मन-नियंत्रण कार्यशाला"
+    },
+    isPaid: false,
+    date: "Every Wednesday",
+    time: "07:30 PM – 08:30 PM IST",
+    mode: "Interactive Online Zoom",
+    instructor: "H.G. Radheshyam Das",
+  },
+  {
+    id: "class-sat-youth",
+    title: {
+      en: "VOICE Youth Forum: Focus, Purpose & Spiritual Life",
+      hi: "युवा मंच (VOICE): एकाग्रता, जीवन का उद्देश्य और साधना"
+    },
+    isPaid: false,
+    date: "Every Saturday",
+    time: "06:30 PM – 08:00 PM IST",
+    mode: "NVCC Youth Center & Online",
+    instructor: "Resident Monks & Youth Mentors",
+  },
+  {
+    id: "class-seminar-leadership",
+    title: {
+      en: "Vedic Wisdom for Modern Professionals (Leadership & Ethics)",
+      hi: "आधुनिक पेशेवरों के लिए वैदिक नेतृत्व एवं कार्यकुशलता सूत्र"
+    },
+    isPaid: true,
+    price: "₹499",
+    date: "Dec 12, 2026",
+    time: "05:00 PM – 08:00 PM IST",
+    mode: "Special 3-Hour Interactive Masterclass",
+    instructor: "Dr. Sumit Sharma (IIT-B Alumnus)",
+  },
+  {
+    id: "class-seminar-relationships",
+    title: {
+      en: "Harmonious Relationships: Bhagavad-gītā in Family Life",
+      hi: "पारिवारिक सद्भाव: गृहस्थ जीवन में भगवद्गीता के सिद्धांत"
+    },
+    isPaid: true,
+    price: "₹399",
+    date: "Dec 20, 2026",
+    time: "06:00 PM – 08:30 PM IST",
+    mode: "Special Family Counseling & Q&A",
+    instructor: "Senior Grhastha Counselors",
+  }
+];
 
 export default function LiveClassesPage() {
   const { t, language } = useLanguage();
   const [filter, setFilter] = useState<"all" | "free" | "paid">("all");
   const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
+  const [classList, setClassList] = useState<ClassItem[]>(INITIAL_CLASSES);
 
-  const classes: ClassItem[] = [
-    {
-      id: "class-sunday-gita",
-      title: {
-        en: "Bhagavad-gītā Unveiled: The Science of Soul & Karma",
-        hi: "श्रीमद्भगवद्गीता का रहस्य: आत्मा एवं कर्म का विज्ञान"
-      },
-      isPaid: false,
-      date: language === "hi" ? "प्रत्येक रविवार" : "Every Sunday",
-      time: "06:00 PM – 07:30 PM IST",
-      mode: language === "hi" ? "मंदिर सभागार एवं ऑनलाइन ज़ूम" : "Temple Hall & Zoom Stream",
-      instructor: "H.G. Gauranga Das",
-    },
-    {
-      id: "class-wed-meditation",
-      title: {
-        en: "Mantra Meditation & Mind Control Workshop",
-        hi: "मंत्र ध्यान एवं मन-नियंत्रण कार्यशाला"
-      },
-      isPaid: false,
-      date: language === "hi" ? "प्रत्येक बुधवार" : "Every Wednesday",
-      time: "07:30 PM – 08:30 PM IST",
-      mode: language === "hi" ? "इंटरैक्टिव ऑनलाइन ज़ूम" : "Interactive Online Zoom",
-      instructor: "H.G. Radheshyam Das",
-    },
-    {
-      id: "class-sat-youth",
-      title: {
-        en: "VOICE Youth Forum: Focus, Purpose & Spiritual Life",
-        hi: "युवा मंच (VOICE): एकाग्रता, जीवन का उद्देश्य और साधना"
-      },
-      isPaid: false,
-      date: language === "hi" ? "प्रत्येक शनिवार" : "Every Saturday",
-      time: "06:30 PM – 08:00 PM IST",
-      mode: language === "hi" ? "एनवीसीसी यूथ सेंटर एवं ऑनलाइन" : "NVCC Youth Center & Online",
-      instructor: "Resident Monks & Youth Mentors",
-    },
-    {
-      id: "class-seminar-leadership",
-      title: {
-        en: "Vedic Wisdom for Modern Professionals (Leadership & Ethics)",
-        hi: "आधुनिक पेशेवरों के लिए वैदिक नेतृत्व एवं कार्यकुशलता सूत्र"
-      },
-      isPaid: true,
-      price: "₹499",
-      date: language === "hi" ? "12 दिसंबर 2026" : "Dec 12, 2026",
-      time: "05:00 PM – 08:00 PM IST",
-      mode: language === "hi" ? "विशेष 3-घंटे की गहन कार्यशाला" : "Special 3-Hour Interactive Masterclass",
-      instructor: "Dr. Sumit Sharma (IIT-B Alumnus)",
-    },
-    {
-      id: "class-seminar-relationships",
-      title: {
-        en: "Harmonious Relationships: Bhagavad-gītā in Family Life",
-        hi: "पारिवारिक सद्भाव: गृहस्थ जीवन में भगवद्गीता के सिद्धांत"
-      },
-      isPaid: true,
-      price: "₹399",
-      date: language === "hi" ? "20 दिसंबर 2026" : "Dec 20, 2026",
-      time: "06:00 PM – 08:30 PM IST",
-      mode: language === "hi" ? "विशेष परामर्श एवं प्रश्नोत्तर सत्र" : "Special Family Counseling & Q&A",
-      instructor: "Senior Grhastha Counselors",
+  useEffect(() => {
+    // 1. Check local storage cache from Admin
+    const cached = localStorage.getItem("sr_ongoing_classes");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const formatted: ClassItem[] = parsed.map((item: any) => ({
+            id: item.id || `class-${Date.now()}`,
+            title: typeof item.title === "object" ? item.title : { en: item.title, hi: item.title },
+            isPaid: Boolean(item.isPaid),
+            price: item.price || (item.isPaid ? "₹499" : undefined),
+            date: item.date || "Every Sunday",
+            time: item.time || "06:00 PM IST",
+            mode: item.mode || "Online Zoom & Hall",
+            instructor: item.instructor || "Resident Faculty",
+          }));
+          setClassList(formatted);
+        }
+      } catch (e) {
+        console.warn("Could not parse cached classes:", e);
+      }
     }
-  ];
 
-  const filteredClasses = classes.filter((c) => {
+    // 2. Fetch from Firestore
+    async function fetchClasses() {
+      try {
+        const snap = await getDocs(collection(db, "classes"));
+        if (!snap.empty) {
+          const list: ClassItem[] = [];
+          snap.forEach((d) => {
+            const data = d.data();
+            list.push({
+              id: d.id,
+              title: typeof data.title === "object" ? data.title : { en: data.title || "Course", hi: data.title || "Course" },
+              isPaid: Boolean(data.isPaid),
+              price: data.price || (data.isPaid ? "₹499" : undefined),
+              date: data.date || "Upcoming",
+              time: data.time || "06:00 PM IST",
+              mode: data.mode || "Online / Temple Hall",
+              instructor: data.instructor || "Vedic Faculty",
+            });
+          });
+          setClassList(list);
+          localStorage.setItem("sr_ongoing_classes", JSON.stringify(list));
+        }
+      } catch (e) {
+        // Fallback to local cache or INITIAL_CLASSES
+      }
+    }
+    fetchClasses();
+  }, []);
+
+  const filteredClasses = classList.filter((c) => {
     if (filter === "free") return !c.isPaid;
     if (filter === "paid") return c.isPaid;
     return true;
@@ -114,7 +170,7 @@ export default function LiveClassesPage() {
                 : "text-amber-900 hover:text-amber-700"
             }`}
           >
-            {language === "hi" ? "सभी कक्षाएं" : "All Classes"} ({classes.length})
+            {language === "hi" ? "सभी कक्षाएं" : "All Classes"} ({classList.length})
           </button>
           <button
             type="button"

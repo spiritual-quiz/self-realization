@@ -1578,33 +1578,33 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* Correct Answer Celebration Dance (Cute Dancing Animation for 2.0s alongside flowers) */}
+          {/* Correct Answer Celebration Dance (Visible ABOVE questions and answers, zero backdrop blockage) */}
           {correctAnimation && (
-            <div className="fixed inset-0 z-[99999] pointer-events-none flex flex-col items-center justify-center animate-fade-in bg-black/40 backdrop-blur-[2px]">
-              <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 drop-shadow-[0_25px_40px_rgba(0,0,0,0.6)] animate-pop-grow flex items-center justify-center">
+            <div className="fixed top-12 sm:top-14 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/images/quiz/dance.gif"
                   alt="Dancing Celebration Animation"
-                  className="w-full h-full object-contain filter drop-shadow-2xl"
+                  className="w-full h-full object-contain filter drop-shadow-xl"
                 />
               </div>
-              <div className="mt-3 px-4 py-1.5 rounded-full bg-emerald-600/90 text-white font-black text-sm sm:text-base border-2 border-emerald-300 shadow-xl backdrop-blur-xs flex items-center gap-1.5 animate-bounce">
+              <div className="mt-1 px-3.5 py-1 rounded-full bg-emerald-600 text-white font-black text-xs sm:text-sm border-2 border-emerald-300 shadow-xl flex items-center gap-1 animate-bounce">
                 <span>+{floatingScore || 10} Points!</span>
                 <span>🌸</span>
               </div>
             </div>
           )}
 
-          {/* Wrong Answer Overlay (Option 1: Sadness Crying Animation for strictly 1.5 seconds) */}
+          {/* Wrong Answer Overlay (Visible ABOVE questions and answers, zero backdrop blockage) */}
           {wrongAnimation && (
-            <div className="fixed inset-0 z-[99999] pointer-events-none flex items-center justify-center animate-fade-in bg-black/40 backdrop-blur-[2px]">
-              <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 drop-shadow-[0_25px_40px_rgba(0,0,0,0.6)] animate-pop-grow">
+            <div className="fixed top-12 sm:top-14 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/images/quiz/cry.gif"
                   alt="Sadness Crying Animation"
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain filter drop-shadow-xl"
                 />
               </div>
             </div>
