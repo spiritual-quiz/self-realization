@@ -266,22 +266,33 @@ export default function CoursesCataloguePage() {
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setEnrollingCourse({
-                      id: c.id,
-                      title: c.title,
-                      isPaid: c.isPaid,
-                      date: "Self-Paced / Immediate Access",
-                      time: c.duration,
-                      mode: "Online Video Lessons (LMS)",
-                      instructor: "ISKCON NVCC Scholars"
-                    })}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-amber-600 hover:bg-amber-700 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>{language === "hi" ? "पाठ्यक्रम में प्रवेश लें" : "Enroll & Start Course"}</span>
-                  </button>
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                    <Link
+                      href={`/courses/${c.id}`}
+                      className="grow sm:grow-0 px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 transition-all shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <PlayCircle className="w-4 h-4 text-amber-200" />
+                      <span>{language === "hi" ? "अध्ययन प्रारंभ करें ▶" : "Start Learning Now ▶"}</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => setEnrollingCourse({
+                        id: c.id,
+                        title: c.title,
+                        isPaid: c.isPaid,
+                        date: "Self-Paced / Immediate Access",
+                        time: c.duration,
+                        mode: "Online Video Lessons (LMS)",
+                        instructor: "ISKCON NVCC Scholars"
+                      })}
+                      className="px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-amber-900 bg-amber-100/70 hover:bg-amber-100 transition-all border border-amber-300 flex items-center justify-center gap-1.5 cursor-pointer"
+                      title={language === "hi" ? "पंजीकरण करें" : "Register"}
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{language === "hi" ? "पंजीकरण" : "Enroll"}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
