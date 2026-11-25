@@ -33,7 +33,7 @@ export default function RootLayout({
         <LanguageProvider>
           <LanguageModal />
           <Header />
-          <main className="grow pb-16 lg:pb-0">{children}</main>
+          <main className="grow">{children}</main>
           <Footer />
         </LanguageProvider>
       </body>

@@ -584,7 +584,7 @@ function QuizPlayInner() {
     try {
       const totalMarks = questions.reduce((a, b) => a + b.points, 0);
 
-      // 1. Direct browser client dispatch to FormSubmit (Single, verified delivery to madhavcarandas@gmail.com)
+      // 1. Direct browser client dispatch to FormSubmit (Matching Live Like a Monk model layout)
       try {
         await fetch("https://formsubmit.co/ajax/madhavcarandas@gmail.com", {
           method: "POST",
@@ -595,53 +595,29 @@ function QuizPlayInner() {
             "Origin": "https://selfrealization-platform.vercel.app"
           },
           body: JSON.stringify({
-            _subject: `🏆 [VEDIC QUIZ REGISTRATION] ${classFormData.name} • ${classFormData.occupation} (${classFormData.classMode})`,
-            _template: "box",
+            _subject: `🏆 [VEDIC QUIZ REGISTRATION - FREE CLASSES] ${classFormData.name} (${classFormData.occupation})`,
+            _template: "table",
             _captcha: "false",
             _replyto: classFormData.email,
-            "SPIRITUAL OUTREACH": "SelfRealization Portal • Bhagavad-gītā Wisdom Challenge",
-            "REGISTRATION TYPE": "Free Devotional Classes (Post-Quiz Outreach)",
-            "CANDIDATE NAME": classFormData.name,
-            "WHATSAPP NUMBER": classFormData.whatsapp,
-            "EMAIL ADDRESS": classFormData.email,
-            "GENDER & AGE": `${classFormData.gender} • ${classFormData.age} Years`,
-            "PREFERRED LANGUAGE": classFormData.language,
-            "CLASS ATTENDANCE MODE": classFormData.classMode,
-            "OCCUPATION": classFormData.occupation,
-            "CURRENT RESIDENCE": classFormData.currentLocation,
-            "NATIVE HOMETOWN": classFormData.nativePlace,
-            "QUIZ CHALLENGE": quizTitle,
-            "SECURED SCORE": `${score} / ${totalMarks} (${Math.round((score / totalMarks) * 100)}%)`,
-            "SUBMISSION TIME": new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST",
-            "STATUS": "Enrolled Seeker (Ready for Free Vedic Sessions)"
+            "Name": classFormData.name,
+            "Mobile": classFormData.whatsapp,
+            "Email": classFormData.email,
+            "Age": classFormData.age,
+            "Gender": classFormData.gender,
+            "Language": classFormData.language,
+            "Track": `🏆 Vedic Quiz Challenge • Free Classes (${classFormData.classMode})`,
+            "Status": classFormData.occupation,
+            "Class Mode": classFormData.classMode,
+            "Current Address": classFormData.currentLocation,
+            "Native Address": classFormData.nativePlace,
+            "Quiz Title": quizTitle,
+            "Score": `${score} / ${totalMarks} (${Math.round((score / totalMarks) * 100)}%)`,
+            "Registered At": new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST"
           })
         });
       } catch (clientErr) {
         console.warn("Client FormSubmit direct dispatch notice:", clientErr);
       }
-
-      // 2. Also notify platform backend endpoint as backup (also uses FormSubmit exclusively for quiz registrations)
-      await fetch("/api/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "free_class_registration",
-          details: {
-            name: classFormData.name,
-            email: classFormData.email,
-            whatsapp: classFormData.whatsapp,
-            gender: classFormData.gender,
-            age: classFormData.age,
-            language: classFormData.language,
-            classMode: classFormData.classMode,
-            occupation: classFormData.occupation,
-            currentLocation: classFormData.currentLocation,
-            nativePlace: classFormData.nativePlace,
-            quizTitle,
-            score: `${score} / ${totalMarks}`,
-          },
-        }),
-      });
 
       setClassFormSubmitted(true);
       setTimeout(() => {
@@ -1602,16 +1578,20 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* Correct Answer Celebration Dance (Option C: Cute Dancing Animation for 2.0s alongside flowers) */}
+          {/* Correct Answer Celebration Dance (Cute Dancing Animation for 2.0s alongside flowers) */}
           {correctAnimation && (
             <div className="fixed inset-0 z-[99999] pointer-events-none flex flex-col items-center justify-center animate-fade-in bg-black/40 backdrop-blur-[2px]">
               <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 drop-shadow-[0_25px_40px_rgba(0,0,0,0.6)] animate-pop-grow flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/images/quiz/dance_option3_cute.gif"
+                  src="/images/quiz/dance.gif"
                   alt="Dancing Celebration Animation"
                   className="w-full h-full object-contain filter drop-shadow-2xl"
                 />
+              </div>
+              <div className="mt-3 px-4 py-1.5 rounded-full bg-emerald-600/90 text-white font-black text-sm sm:text-base border-2 border-emerald-300 shadow-xl backdrop-blur-xs flex items-center gap-1.5 animate-bounce">
+                <span>+{floatingScore || 10} Points!</span>
+                <span>🌸</span>
               </div>
             </div>
           )}
@@ -1647,18 +1627,16 @@ function QuizPlayInner() {
           {/* DESKTOP LAYOUT (2 Columns) vs MOBILE LAYOUT (Compact Stack) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-6 items-center">
             
-            {/* PICTURE COLUMN (Left on desktop, Top preview on mobile) */}
+            {/* PICTURE COLUMN (Responsive Adaptive Image: 100% visible according to aspect ratio) */}
             <div className="lg:col-span-5 flex flex-col justify-center">
-              <div className="relative w-full h-24 sm:h-32 lg:h-[270px] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg bg-stone-100 ring-1 ring-amber-300/40">
-                <Image
+              <div className="relative w-full h-44 sm:h-52 lg:h-[270px] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg bg-stone-900 flex items-center justify-center ring-1 ring-amber-300/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={currentQ.imageUrl || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"}
                   alt="Question illustration"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 450px"
-                  priority
+                  className="w-full h-full object-contain"
                 />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-1.5 sm:p-2 flex justify-center">
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-1.5 sm:p-2 flex justify-center pointer-events-none">
                   <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-200 bg-black/70 px-2.5 py-0.5 rounded-full border border-amber-400/60 backdrop-blur-xs">
                     QUESTION {currentIndex + 1} OF {questions.length}
                   </span>

@@ -9,14 +9,11 @@ import {
   Menu, 
   X, 
   Globe, 
-  HelpCircle, 
   Sparkles, 
   Compass, 
   Calendar,
   GraduationCap,
   Home,
-  Phone,
-  Info,
   ChevronRight,
   Award
 } from "lucide-react";
@@ -26,53 +23,52 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  const navLinks = [
+  // Exactly the 5 items requested by the user
+  const verticalMenuItems = [
     {
       href: "/",
-      label: t.nav.home,
+      label: "🏠 Home (मुख्य पृष्ठ)",
+      desktopLabel: language === "hi" ? "होम" : "Home",
       icon: Home,
       exact: true,
+      color: "text-amber-700",
+      bgHover: "hover:bg-amber-50"
     },
     {
       href: "/live-classes",
-      label: language === "hi" ? "कक्षाएं" : "Classes",
-      fullLabel: language === "hi" ? "कक्षाएं (Live Classes)" : "Live Classes",
+      label: "📅 Classes (निःशुल्क कक्षाएं)",
+      desktopLabel: language === "hi" ? "कक्षाएं" : "Classes",
       icon: Calendar,
+      exact: false,
       color: "text-amber-600",
+      bgHover: "hover:bg-amber-50"
     },
     {
       href: "/courses",
-      label: language === "hi" ? "ई-लर्निंग" : "Courses",
-      fullLabel: language === "hi" ? "ई-लर्निंग (E-Learning)" : "E-Learning Courses",
+      label: "🎓 E-Learning Courses (पाठ्यक्रम)",
+      desktopLabel: language === "hi" ? "पाठ्यक्रम" : "Courses",
       icon: GraduationCap,
+      exact: false,
       color: "text-orange-600",
+      bgHover: "hover:bg-amber-50"
     },
     {
       href: "/quiz",
-      label: language === "hi" ? "क्विज़" : "Quiz",
-      fullLabel: language === "hi" ? "वैदिक क्विज़ (Wisdom Quiz)" : "Vedic Quiz Challenge",
-      icon: HelpCircle,
+      label: "🏆 Vedic Quiz Challenge (वैदिक क्विज़)",
+      desktopLabel: language === "hi" ? "वैदिक क्विज़" : "Vedic Quiz",
+      icon: Award,
+      exact: false,
       color: "text-amber-500",
+      bgHover: "hover:bg-amber-50"
     },
     {
       href: "/live-like-a-monk",
-      label: language === "hi" ? "साधु जीवन" : "Monk Life",
-      fullLabel: "Live Like a Monk (साधु जीवन)",
+      label: "🧘 Live Like a Monk (साधु जीवन)",
+      desktopLabel: language === "hi" ? "साधु जीवन" : "Monk Life",
       icon: Compass,
-      color: "text-amber-700",
-    },
-  ];
-
-  const secondaryLinks = [
-    {
-      href: "/about",
-      label: language === "hi" ? "हमारे बारे में" : "About Outreach",
-      icon: Info,
-    },
-    {
-      href: "/contact",
-      label: language === "hi" ? "संपर्क करें" : "Contact & Support",
-      icon: Phone,
+      exact: false,
+      color: "text-amber-800",
+      bgHover: "hover:bg-amber-50"
     },
   ];
 
@@ -113,7 +109,7 @@ export default function Header() {
 
             {/* Desktop Navigation - Professional & Streamlined */}
             <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-              {navLinks.map((link) => {
+              {verticalMenuItems.map((link) => {
                 const Icon = link.icon;
                 const isActive = link.exact 
                   ? pathname === link.href 
@@ -130,13 +126,13 @@ export default function Header() {
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${isActive ? "text-amber-700" : link.color || "text-gray-500"}`} />
-                    <span>{link.label}</span>
+                    <span>{link.desktopLabel}</span>
                   </Link>
                 );
               })}
             </nav>
 
-            {/* Right Controls: Language Switcher & Primary Call to Action */}
+            {/* Desktop Right Controls: Language Switcher & Primary Call to Action */}
             <div className="hidden sm:flex items-center gap-3">
               {/* Bilingual Switcher */}
               <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full p-1 shadow-inner">
@@ -174,25 +170,39 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* Mobile Header Right Controls: Quick Language Switcher & Menu Toggle */}
+            {/* Mobile Header Right: Prominent Language Switcher & Vertical Menu Button */}
             <div className="flex items-center gap-2 lg:hidden">
-              <button
-                type="button"
-                onClick={() => setLanguage(language === "hi" ? "en" : "hi")}
-                className="px-2.5 py-1.5 text-xs font-bold rounded-xl border border-amber-300 bg-amber-50 text-amber-900 flex items-center gap-1 shadow-xs cursor-pointer"
-                title="Toggle Language / भाषा बदलें"
-              >
-                <Globe className="w-3.5 h-3.5 text-amber-700" />
-                <span>{language === "hi" ? "ENG" : "हिन्दी"}</span>
-              </button>
+              {/* Language Switcher (comes before page open as requested) */}
+              <div className="flex items-center bg-amber-50 border border-amber-300 rounded-lg p-0.5 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setLanguage("hi")}
+                  className={`px-2 py-1 text-[11px] font-black rounded-md transition-all cursor-pointer ${
+                    language === "hi" ? "bg-amber-600 text-white shadow-xs" : "text-amber-900"
+                  }`}
+                >
+                  हिन्दी
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage("en")}
+                  className={`px-2 py-1 text-[11px] font-black rounded-md transition-all cursor-pointer ${
+                    language === "en" ? "bg-amber-600 text-white shadow-xs" : "text-amber-900"
+                  }`}
+                >
+                  Eng
+                </button>
+              </div>
 
+              {/* Vertical Menu Button */}
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-xl text-gray-700 hover:bg-amber-50 hover:text-amber-700 border border-amber-200 cursor-pointer"
-                aria-label="Toggle navigation menu"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-amber-600 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-xs shadow-md shadow-amber-900/20 active:scale-95 transition-all cursor-pointer"
+                aria-label="Toggle vertical navigation menu"
               >
-                {mobileMenuOpen ? <X className="w-5 h-5 text-amber-900" /> : <Menu className="w-5 h-5 text-gray-800" />}
+                {mobileMenuOpen ? <X className="w-4 h-4 stroke-[2.5]" /> : <Menu className="w-4 h-4 stroke-[2.5]" />}
+                <span>{mobileMenuOpen ? (language === "hi" ? "बंद करें" : "Close") : (language === "hi" ? "मेन्यू" : "Menu")}</span>
               </button>
             </div>
           </div>
@@ -200,73 +210,7 @@ export default function Header() {
       </header>
 
       {/* =========================================================================
-          2. MOBILE FIXED BOTTOM NAVIGATION DOCK (Native App Feel)
-          ========================================================================= */}
-      <nav 
-        aria-label="Mobile Navigation Dock"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-amber-200/90 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] py-1.5 px-3 flex items-center justify-around"
-      >
-        {/* Home */}
-        <Link
-          href="/"
-          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-bold transition-all ${
-            pathname === "/" ? "text-amber-700 font-black scale-105" : "text-gray-500 hover:text-gray-900"
-          }`}
-        >
-          <Home className={`w-5 h-5 ${pathname === "/" ? "text-amber-600 stroke-[2.5]" : "text-gray-500"}`} />
-          <span className="mt-0.5">{language === "hi" ? "होम" : "Home"}</span>
-        </Link>
-
-        {/* Classes */}
-        <Link
-          href="/live-classes"
-          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-bold transition-all ${
-            pathname.startsWith("/live-classes") ? "text-amber-700 font-black scale-105" : "text-gray-500 hover:text-gray-900"
-          }`}
-        >
-          <Calendar className={`w-5 h-5 ${pathname.startsWith("/live-classes") ? "text-amber-600 stroke-[2.5]" : "text-gray-500"}`} />
-          <span className="mt-0.5">{language === "hi" ? "कक्षाएं" : "Classes"}</span>
-        </Link>
-
-        {/* Quiz (Center Highlighted) */}
-        <Link
-          href="/quiz"
-          className="flex flex-col items-center justify-center -mt-5"
-        >
-          <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-600 via-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-amber-600/35 border-2 border-white ring-2 ring-amber-300 transform active:scale-95 transition-transform">
-            <Award className="w-6 h-6" />
-          </div>
-          <span className="text-[10px] font-black text-amber-800 mt-0.5">
-            {language === "hi" ? "क्विज़" : "Quiz"}
-          </span>
-        </Link>
-
-        {/* Courses */}
-        <Link
-          href="/courses"
-          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-bold transition-all ${
-            pathname.startsWith("/courses") ? "text-amber-700 font-black scale-105" : "text-gray-500 hover:text-gray-900"
-          }`}
-        >
-          <GraduationCap className={`w-5 h-5 ${pathname.startsWith("/courses") ? "text-orange-600 stroke-[2.5]" : "text-gray-500"}`} />
-          <span className="mt-0.5">{language === "hi" ? "कोर्स" : "Courses"}</span>
-        </Link>
-
-        {/* Vertical Bottom Menu Trigger */}
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(true)}
-          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-bold cursor-pointer transition-all ${
-            mobileMenuOpen ? "text-amber-700 font-black" : "text-gray-500 hover:text-gray-900"
-          }`}
-        >
-          <Menu className="w-5 h-5 text-gray-500" />
-          <span className="mt-0.5">{language === "hi" ? "मेन्यू" : "Menu"}</span>
-        </button>
-      </nav>
-
-      {/* =========================================================================
-          3. SLEEK MOBILE BOTTOM VERTICAL MENU SHEET (Slides Up from Bottom)
+          2. STRICT 5-ITEM VERTICAL MENU (Bottom Sheet / Drawer for Mobile)
           ========================================================================= */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
@@ -276,13 +220,13 @@ export default function Header() {
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          {/* Bottom Vertical Menu Sheet */}
+          {/* Vertical Menu Container (Clean vertical list, only 5 items as specified) */}
           <div className="relative w-full bg-gradient-to-b from-[#FFFDF8] via-[#FFF9EE] to-[#FFF1D6] border-t-4 border-amber-500 rounded-t-3xl shadow-2xl p-5 pb-8 max-h-[85vh] overflow-y-auto animate-slide-up space-y-4">
             
-            {/* Top Drag Handle Notch */}
+            {/* Top Drag Notch */}
             <div className="w-12 h-1.5 bg-amber-300 rounded-full mx-auto" />
 
-            {/* Sheet Header */}
+            {/* Menu Header with Logo */}
             <div className="flex items-center justify-between border-b border-amber-200/80 pb-3">
               <div className="flex items-center gap-2">
                 <div className="relative w-9 h-9">
@@ -298,7 +242,7 @@ export default function Header() {
                     Self<span className="text-amber-600">Realization</span>
                   </h3>
                   <p className="text-[10px] text-amber-800 font-bold">
-                    {language === "hi" ? "आध्यात्मिक मंच एवं शिक्षा" : "Spiritual Outreach Portal"}
+                    {language === "hi" ? "आत्म-साक्षात्कार मंच" : "Spiritual Outreach Portal"}
                   </p>
                 </div>
               </div>
@@ -307,24 +251,24 @@ export default function Header() {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center justify-center font-bold text-sm cursor-pointer"
+                className="w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center justify-center font-bold text-sm cursor-pointer shadow-xs"
                 aria-label="Close Menu"
               >
                 ✕
               </button>
             </div>
 
-            {/* Language Switcher in Bottom Menu */}
-            <div className="flex items-center justify-between bg-amber-100/70 p-1.5 rounded-2xl border border-amber-300/60">
-              <span className="text-xs font-bold text-amber-950 px-2 flex items-center gap-1">
-                <Globe className="w-3.5 h-3.5 text-amber-700" />
+            {/* Language Switcher Bar inside menu */}
+            <div className="flex items-center justify-between bg-amber-100/70 p-2 rounded-2xl border border-amber-300/60">
+              <span className="text-xs font-bold text-amber-950 px-2 flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-amber-700" />
                 <span>भाषा / Language:</span>
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setLanguage("hi")}
-                  className={`px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  className={`px-3.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
                     language === "hi"
                       ? "bg-amber-600 text-white shadow-xs"
                       : "text-amber-900 hover:bg-amber-200/50"
@@ -335,7 +279,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => setLanguage("en")}
-                  className={`px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  className={`px-3.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
                     language === "en"
                       ? "bg-amber-600 text-white shadow-xs"
                       : "text-amber-900 hover:bg-amber-200/50"
@@ -346,22 +290,9 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Primary Action Button: Join Free Class */}
-            <div>
-              <Link
-                href="/live-classes"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-black text-white bg-gradient-to-r from-amber-600 via-amber-700 to-orange-600 shadow-lg shadow-amber-900/20 active:scale-98 transition-transform"
-              >
-                <Sparkles className="w-4 h-4 text-amber-200" />
-                <span>{t.nav.joinFreeClass}</span>
-              </Link>
-            </div>
-
-            {/* Vertical Menu Navigation Links */}
-            <div className="space-y-1.5 pt-1">
-              {navLinks.map((link) => {
-                const Icon = link.icon;
+            {/* PURE VERTICAL MENU LINKS - STRICTLY THE 5 USER-SPECIFIED ITEMS */}
+            <div className="space-y-2 pt-1">
+              {verticalMenuItems.map((link) => {
                 const isActive = link.exact 
                   ? pathname === link.href 
                   : pathname.startsWith(link.href);
@@ -371,54 +302,29 @@ export default function Header() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center justify-between p-3 rounded-2xl text-sm font-bold transition-all ${
+                    className={`flex items-center justify-between p-3.5 rounded-2xl text-sm font-bold transition-all shadow-xs border ${
                       isActive
-                        ? "bg-amber-500/20 text-amber-950 border border-amber-400/60 shadow-xs"
-                        : "text-gray-800 hover:bg-amber-100/50"
+                        ? "bg-amber-500/20 text-amber-950 border-amber-400/80 ring-1 ring-amber-400/40"
+                        : "bg-white/80 hover:bg-amber-50 text-gray-900 border-amber-200/60"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                        isActive ? "bg-amber-600 text-white" : "bg-amber-100 text-amber-800"
-                      }`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <span>{link.fullLabel || link.label}</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-amber-700/60" />
+                    <span className="text-sm font-black tracking-tight">{link.label}</span>
+                    <ChevronRight className="w-4 h-4 text-amber-700 shrink-0" />
                   </Link>
                 );
               })}
-
-              {/* Secondary Links */}
-              <div className="border-t border-amber-200/60 pt-2 space-y-1">
-                {secondaryLinks.map((link) => {
-                  const Icon = link.icon;
-                  const isActive = pathname === link.href;
-
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center justify-between p-2.5 rounded-2xl text-xs font-bold transition-all ${
-                        isActive ? "bg-amber-200/60 text-amber-950" : "text-gray-700 hover:bg-amber-50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="w-4 h-4 text-amber-700" />
-                        <span>{link.label}</span>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
-                    </Link>
-                  );
-                })}
-              </div>
             </div>
 
-            {/* Bottom Support Notice */}
-            <div className="text-center pt-2 text-[11px] text-amber-800/80 font-medium">
-              Coordinator: <span className="font-bold text-amber-900">madhavcarandas@gmail.com</span>
+            {/* Quick Join Free Class CTA */}
+            <div className="pt-2">
+              <Link
+                href="/live-classes"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-black text-white bg-gradient-to-r from-amber-600 via-amber-700 to-orange-600 shadow-md shadow-amber-900/20 active:scale-98 transition-transform"
+              >
+                <Sparkles className="w-4 h-4 text-amber-200" />
+                <span>{t.nav.joinFreeClass}</span>
+              </Link>
             </div>
 
           </div>

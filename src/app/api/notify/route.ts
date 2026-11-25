@@ -111,7 +111,15 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
     // 1. Send via EmailJS (Exclusively for Live Like a Monk & General Inquiries — NEVER for Vedic Quiz)
     const isQuizReg = type === "free_class_registration";
 
-    if (!isQuizReg) {
+    if (isQuizReg) {
+      // Vedic Quiz registration is dispatched strictly ONCE directly by the client to FormSubmit
+      return NextResponse.json({
+        success: true,
+        message: "Quiz registration handled exclusively by direct FormSubmit client dispatch to prevent duplicate emails.",
+        recipient: ADMIN_EMAIL,
+        timestamp: new Date().toISOString()
+      });
+    }
       const emailJsServiceId = "service_1ve1iom";
       const emailJsTemplateId = "template_ypw8wpq";
 
@@ -147,7 +155,6 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
       } catch (e) {
         console.warn("EmailJS registration notice:", e);
       }
-    }
 
     // 2. Primary / Exclusive Dispatch via FormSubmit (Ultra-Clean Executive Box Layout)
     try {
