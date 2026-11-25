@@ -67,9 +67,9 @@ export default function Header() {
       {/* =========================================================================
           1. TOP STICKY HEADER (Desktop & Mobile Brand / Ribbon)
           ========================================================================= */}
-      <header className="sticky top-0 z-40 w-full bg-[#064E3B] border-b-2 border-emerald-400/80 shadow-md transition-all">
+      <header className="sticky top-0 z-40 w-full bg-[#1E293B] border-b-2 border-emerald-400/80 shadow-md transition-all">
         {/* Sacred Mahamantra Ribbon */}
-        <div className="bg-gradient-to-r from-[#022c22] via-[#064E3B] to-[#022c22] text-emerald-200 text-[11px] sm:text-xs py-1 px-4 text-center tracking-wider font-semibold flex items-center justify-center gap-2 border-b border-emerald-500/20">
+        <div className="bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#0F172A] text-emerald-200 text-[11px] sm:text-xs py-1 px-4 text-center tracking-wider font-semibold flex items-center justify-center gap-2 border-b border-emerald-500/20">
           <span>Hare Kṛṣṇa Hare Kṛṣṇa Kṛṣṇa Kṛṣṇa Hare Hare • Hare Rāma Hare Rāma Rāma Rāma Hare Hare</span>
         </div>
 
@@ -91,7 +91,7 @@ export default function Header() {
                 <span className="text-lg sm:text-xl font-black tracking-tight text-white group-hover:text-amber-300 transition-colors">
                   Self<span className="text-amber-300">Realization</span>
                 </span>
-                <span className="text-[10px] sm:text-[11px] text-emerald-200/90 font-bold tracking-wide">
+                <span className="text-[10px] sm:text-[11px] text-emerald-300/90 font-bold tracking-wide">
                   {language === "hi" ? "आत्म-साक्षात्कार मंच" : "Spiritual Outreach & LMS"}
                 </span>
               </div>
@@ -112,7 +112,7 @@ export default function Header() {
                     className={`px-3 py-1.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 ${
                       isActive
                         ? "bg-emerald-500/30 text-amber-300 shadow-xs ring-1 ring-emerald-400/60"
-                        : "text-emerald-100 hover:text-amber-300 hover:bg-white/10"
+                        : "text-slate-200 hover:text-amber-300 hover:bg-white/10"
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${isActive ? "text-amber-300" : "text-emerald-300"}`} />
@@ -125,14 +125,14 @@ export default function Header() {
             {/* Desktop Right Controls: Language Switcher & Primary Call to Action */}
             <div className="hidden sm:flex items-center gap-3">
               {/* Bilingual Switcher */}
-              <div className="flex items-center bg-[#022c22] border border-emerald-500/40 rounded-full p-0.5 shadow-inner">
+              <div className="flex items-center bg-[#0F172A] border border-slate-700 rounded-full p-0.5 shadow-inner">
                 <button
                   type="button"
                   onClick={() => setLanguage("hi")}
                   className={`px-3 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
                     language === "hi"
                       ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-xs"
-                      : "text-emerald-200 hover:text-white"
+                      : "text-slate-300 hover:text-white"
                   }`}
                 >
                   हिन्दी
@@ -143,7 +143,7 @@ export default function Header() {
                   className={`px-3 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
                     language === "en"
                       ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-xs"
-                      : "text-emerald-200 hover:text-white"
+                      : "text-slate-300 hover:text-white"
                   }`}
                 >
                   English
@@ -162,12 +162,12 @@ export default function Header() {
 
             {/* Mobile Header Right: Language Switcher */}
             <div className="flex items-center gap-1.5 lg:hidden">
-              <div className="flex items-center bg-[#022c22] border border-emerald-500/40 rounded-lg p-0.5 shadow-xs">
+              <div className="flex items-center bg-[#0F172A] border border-slate-700 rounded-lg p-0.5 shadow-xs">
                 <button
                   type="button"
                   onClick={() => setLanguage("hi")}
                   className={`px-2 py-1 text-[11px] font-black rounded-md transition-all cursor-pointer ${
-                    language === "hi" ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950" : "text-emerald-200"
+                    language === "hi" ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950" : "text-slate-300"
                   }`}
                 >
                   हिन्दी
@@ -176,7 +176,7 @@ export default function Header() {
                   type="button"
                   onClick={() => setLanguage("en")}
                   className={`px-2 py-1 text-[11px] font-black rounded-md transition-all cursor-pointer ${
-                    language === "en" ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950" : "text-emerald-200"
+                    language === "en" ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950" : "text-slate-300"
                   }`}
                 >
                   Eng
@@ -193,7 +193,7 @@ export default function Header() {
           ========================================================================= */}
       <nav 
         aria-label="Mobile Bottom Horizontal Menu"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#064E3B] border-t-2 border-emerald-400/60 shadow-[0_-4px_25px_rgba(0,0,0,0.5)] py-1.5 px-1.5 flex items-center justify-around"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#1E293B] border-t-2 border-emerald-400/60 shadow-[0_-4px_25px_rgba(0,0,0,0.6)] py-1.5 px-1.5 flex items-center justify-around"
       >
         {/* 1. 🏠 Home */}
         <Link
@@ -201,10 +201,10 @@ export default function Header() {
           className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
             pathname === "/" 
               ? "text-amber-300 font-black scale-105" 
-              : "text-emerald-200/80 hover:text-white font-medium"
+              : "text-slate-300 hover:text-white font-medium"
           }`}
         >
-          <Home className={`w-5 h-5 ${pathname === "/" ? "text-amber-300 stroke-[2.5]" : "text-emerald-200/80"}`} />
+          <Home className={`w-5 h-5 ${pathname === "/" ? "text-amber-300 stroke-[2.5]" : "text-slate-300"}`} />
           <span className="text-[10px] mt-0.5 leading-tight truncate">
             {language === "hi" ? "होम" : "Home"}
           </span>
@@ -216,10 +216,10 @@ export default function Header() {
           className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
             pathname.startsWith("/live-classes") 
               ? "text-amber-300 font-black scale-105" 
-              : "text-emerald-200/80 hover:text-white font-medium"
+              : "text-slate-300 hover:text-white font-medium"
           }`}
         >
-          <Calendar className={`w-5 h-5 ${pathname.startsWith("/live-classes") ? "text-amber-300 stroke-[2.5]" : "text-emerald-200/80"}`} />
+          <Calendar className={`w-5 h-5 ${pathname.startsWith("/live-classes") ? "text-amber-300 stroke-[2.5]" : "text-slate-300"}`} />
           <span className="text-[10px] mt-0.5 leading-tight truncate">
             {language === "hi" ? "कक्षाएं" : "Classes"}
           </span>
@@ -231,10 +231,10 @@ export default function Header() {
           className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
             pathname.startsWith("/courses") 
               ? "text-amber-300 font-black scale-105" 
-              : "text-emerald-200/80 hover:text-white font-medium"
+              : "text-slate-300 hover:text-white font-medium"
           }`}
         >
-          <GraduationCap className={`w-5 h-5 ${pathname.startsWith("/courses") ? "text-amber-300 stroke-[2.5]" : "text-emerald-200/80"}`} />
+          <GraduationCap className={`w-5 h-5 ${pathname.startsWith("/courses") ? "text-amber-300 stroke-[2.5]" : "text-slate-300"}`} />
           <span className="text-[10px] mt-0.5 leading-tight truncate">
             {language === "hi" ? "ई-लर्निंग" : "E-Learning"}
           </span>
@@ -246,10 +246,10 @@ export default function Header() {
           className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
             pathname.startsWith("/quiz") 
               ? "text-amber-300 font-black scale-105" 
-              : "text-emerald-200/80 hover:text-white font-medium"
+              : "text-slate-300 hover:text-white font-medium"
           }`}
         >
-          <Award className={`w-5 h-5 ${pathname.startsWith("/quiz") ? "text-amber-300 stroke-[2.5]" : "text-emerald-200/80"}`} />
+          <Award className={`w-5 h-5 ${pathname.startsWith("/quiz") ? "text-amber-300 stroke-[2.5]" : "text-slate-300"}`} />
           <span className="text-[10px] mt-0.5 leading-tight truncate">
             {language === "hi" ? "क्विज़" : "Quiz"}
           </span>
@@ -261,10 +261,10 @@ export default function Header() {
           className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all grow text-center ${
             pathname.startsWith("/live-like-a-monk") 
               ? "text-amber-300 font-black scale-105" 
-              : "text-emerald-200/80 hover:text-white font-medium"
+              : "text-slate-300 hover:text-white font-medium"
           }`}
         >
-          <Compass className={`w-5 h-5 ${pathname.startsWith("/live-like-a-monk") ? "text-amber-300 stroke-[2.5]" : "text-emerald-200/80"}`} />
+          <Compass className={`w-5 h-5 ${pathname.startsWith("/live-like-a-monk") ? "text-amber-300 stroke-[2.5]" : "text-slate-300"}`} />
           <span className="text-[10px] mt-0.5 leading-tight truncate font-bold">
             Live Like a Monk
           </span>
