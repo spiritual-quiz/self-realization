@@ -26,7 +26,9 @@ import {
   GraduationCap,
   Edit,
   Save,
-  X
+  X,
+  Music,
+  Volume2
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { SAMPLE_CSV_CONTENT, parseCSVToQuestions, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
@@ -110,12 +112,15 @@ export default function AdminDashboardPage() {
   ]);
   const [savingCourse, setSavingCourse] = useState(false);
 
-  // CSV Quiz Upload State
+  // CSV Quiz Upload & Customization State
   const [csvRawText, setCsvRawText] = useState("");
   const [quizTitleEn, setQuizTitleEn] = useState("Bhagavad-gītā Wisdom Challenge");
   const [quizTitleHi, setQuizTitleHi] = useState("श्रीमद्भगवद्गीता ज्ञान प्रश्नोत्तरी");
   const [category, setCategory] = useState("Bhagavad-gītā");
   const [timerSeconds, setTimerSeconds] = useState<number>(10);
+  const [bgMusicUrl, setBgMusicUrl] = useState<string>("/audio/bg-music.mp3");
+  const [correctSoundUrl, setCorrectSoundUrl] = useState<string>("/audio/correct.mp3");
+  const [wrongSoundUrl, setWrongSoundUrl] = useState<string>("/audio/wrong.mp3");
   const [parsedQuestions, setParsedQuestions] = useState<ParsedQuizQuestion[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -333,6 +338,14 @@ export default function AdminDashboardPage() {
     reader.readAsText(file);
   };
 
+  const handleUpdateQuestionImage = (index: number, newUrl: string) => {
+    setParsedQuestions((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], imageUrl: newUrl };
+      return copy;
+    });
+  };
+
   const handleUploadQuiz = async () => {
     if (parsedQuestions.length === 0) return;
     setUploading(true);
@@ -341,6 +354,9 @@ export default function AdminDashboardPage() {
       title: { en: quizTitleEn, hi: quizTitleHi },
       category,
       timerSeconds,
+      bgMusicUrl,
+      correctSoundUrl,
+      wrongSoundUrl,
       questionCount: parsedQuestions.length,
       totalMarks: parsedQuestions.reduce((a, b) => a + b.points, 0),
       questions: parsedQuestions,
@@ -380,6 +396,30 @@ export default function AdminDashboardPage() {
     const updated = customQuizzes.filter((q) => q.id !== quizId);
     setCustomQuizzes(updated);
     localStorage.setItem("sr_custom_quizzes", JSON.stringify(updated));
+  };
+
+  const handleDeleteRegistration = async (regId: string) => {
+    if (!confirm("Are you sure you want to delete this class registration?")) return;
+
+    try {
+      await deleteDoc(doc(db, "classRegistrations", regId));
+    } catch (e) {
+      console.warn("Firestore delete registration notice:", e);
+    }
+
+    setRegistrations((prev) => prev.filter((r) => r.id !== regId));
+  };
+
+  const handleDeleteInquiry = async (inqId: string) => {
+    if (!confirm("Are you sure you want to delete this inquiry?")) return;
+
+    try {
+      await deleteDoc(doc(db, "inquiries", inqId));
+    } catch (e) {
+      console.warn("Firestore delete inquiry notice:", e);
+    }
+
+    setInquiries((prev) => prev.filter((i) => i.id !== inqId));
   };
 
   if (!isAuthenticated) return null;
@@ -746,10 +786,93 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
+              {/* AUDIO & AMBIENCE CUSTOMIZATION */}
+              <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Music className="w-4 h-4 text-amber-700" />
+                  <h3 className="text-xs font-bold text-amber-950 uppercase tracking-wider">Audio & Sound FX Customization</h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Background Music */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-gray-700 uppercase flex items-center gap-1">
+                      <Music className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Background Music</span>
+                    </label>
+                    <select
+                      value={bgMusicUrl}
+                      onChange={(e) => setBgMusicUrl(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-white"
+                    >
+                      <option value="/audio/bg-music.mp3">Divine Flute Meditation (Default)</option>
+                      <option value="https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3">Sacred Sitar & Temple Bells</option>
+                      <option value="https://assets.mixkit.co/music/preview/mixkit-meditation-flute-247.mp3">Peaceful Ambient Flute</option>
+                      <option value="https://assets.mixkit.co/music/preview/mixkit-valley-sunset-127.mp3">Peaceful Yamuna Ambient</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Or enter custom MP3 URL..."
+                      value={bgMusicUrl}
+                      onChange={(e) => setBgMusicUrl(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white text-gray-700"
+                    />
+                  </div>
+
+                  {/* Right Answer Sound */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-gray-700 uppercase flex items-center gap-1">
+                      <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Right Answer Sound FX</span>
+                    </label>
+                    <select
+                      value={correctSoundUrl}
+                      onChange={(e) => setCorrectSoundUrl(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-white"
+                    >
+                      <option value="/audio/correct.mp3">Harinam Chime & Bell (Default)</option>
+                      <option value="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3">Temple Bell Ding</option>
+                      <option value="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3">Celestial Flute Note</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Or enter custom MP3 URL..."
+                      value={correctSoundUrl}
+                      onChange={(e) => setCorrectSoundUrl(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white text-gray-700"
+                    />
+                  </div>
+
+                  {/* Wrong Answer Sound */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-gray-700 uppercase flex items-center gap-1">
+                      <Volume2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Wrong Answer Sound FX</span>
+                    </label>
+                    <select
+                      value={wrongSoundUrl}
+                      onChange={(e) => setWrongSoundUrl(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-white"
+                    >
+                      <option value="/audio/wrong.mp3">Soft Temple Gong (Default)</option>
+                      <option value="https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3">Deep Resonance Bell</option>
+                      <option value="https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3">Low Meditation Tone</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Or enter custom MP3 URL..."
+                      value={wrongSoundUrl}
+                      onChange={(e) => setWrongSoundUrl(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white text-gray-700"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-700 uppercase flex items-center justify-between">
                   <span>Upload CSV File</span>
-                  <span className="text-[11px] text-gray-400 font-normal">Supports headers: question_en, question_hi, optA_en, etc.</span>
+                  <span className="text-[11px] text-gray-400 font-normal">Supports headers: question_en, question_hi, image_url, etc.</span>
                 </label>
                 <input
                   type="file"
@@ -760,20 +883,71 @@ export default function AdminDashboardPage() {
               </div>
 
               {parsedQuestions.length > 0 && (
-                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-amber-900">
-                      ✓ {parsedQuestions.length} Questions Verified & Ready to Publish
-                    </p>
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-200">
+                    <div>
+                      <p className="text-xs font-bold text-amber-950">
+                        ✓ {parsedQuestions.length} Questions Verified & Ready to Publish
+                      </p>
+                      <p className="text-[11px] text-amber-800">
+                        You can review or change the image URL for any individual question below.
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={handleUploadQuiz}
                       disabled={uploading}
-                      className="px-6 py-2.5 rounded-xl font-bold text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-md flex items-center gap-2 cursor-pointer"
+                      className="px-6 py-2.5 rounded-xl font-bold text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0"
                     >
                       {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                       <span>Publish Quiz Now</span>
                     </button>
+                  </div>
+
+                  {/* Individual Question Images & Options Review */}
+                  <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                    {parsedQuestions.map((q, idx) => (
+                      <div key={idx} className="p-3 bg-white rounded-xl border border-amber-200/80 shadow-xs flex flex-col sm:flex-row items-start gap-3">
+                        <span className="w-6 h-6 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                          {idx + 1}
+                        </span>
+
+                        {/* Thumbnail */}
+                        <div className="relative w-16 h-12 rounded-lg bg-stone-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
+                          {q.imageUrl ? (
+                            <Image
+                              src={q.imageUrl}
+                              alt={`Q${idx + 1}`}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <span className="text-[10px] text-gray-400">No Image</span>
+                          )}
+                        </div>
+
+                        {/* Details & Image Input */}
+                        <div className="grow space-y-1.5 w-full">
+                          <p className="text-xs font-bold text-gray-900 leading-tight">
+                            {q.question.hi}
+                          </p>
+                          <p className="text-[11px] text-gray-500 italic">
+                            {q.question.en}
+                          </p>
+                          <div className="flex items-center gap-2 pt-1">
+                            <label className="text-[10px] font-bold text-amber-900 uppercase shrink-0">Image URL:</label>
+                            <input
+                              type="text"
+                              value={q.imageUrl || ""}
+                              onChange={(e) => handleUpdateQuestionImage(idx, e.target.value)}
+                              placeholder="https://... (individual question image)"
+                              className="w-full px-2.5 py-1 text-[11px] rounded-lg border border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-1 focus:ring-amber-500 text-gray-800"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -840,6 +1014,7 @@ export default function AdminDashboardPage() {
                       <th className="p-3">Class / Course</th>
                       <th className="p-3">Mode</th>
                       <th className="p-3">Date</th>
+                      <th className="p-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -852,6 +1027,17 @@ export default function AdminDashboardPage() {
                         <td className="p-3 capitalize">{r.preferredMode || "Online"}</td>
                         <td className="p-3 text-gray-500 font-mono text-[11px]">
                           {r.createdAt?.seconds ? new Date(r.createdAt.seconds * 1000).toLocaleDateString() : "Recent"}
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRegistration(r.id)}
+                            className="p-1.5 rounded-lg text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer inline-flex items-center gap-1 text-[11px] font-bold"
+                            title="Delete Registration"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -878,7 +1064,18 @@ export default function AdminDashboardPage() {
                   <div key={inq.id} className="p-4 rounded-2xl border border-gray-200 space-y-1.5 bg-stone-50/50">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-bold text-gray-900">{inq.fullName} <span className="text-xs font-normal text-gray-500 font-mono">({inq.phone} • {inq.email})</span></p>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 uppercase">{inq.subject}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 uppercase">{inq.subject}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteInquiry(inq.id)}
+                          className="p-1 rounded-lg text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer text-[11px] font-bold flex items-center gap-1 px-2"
+                          title="Delete Inquiry"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <p className="text-xs text-gray-700 leading-relaxed bg-white p-3 rounded-xl border border-gray-100">{inq.message}</p>
                   </div>

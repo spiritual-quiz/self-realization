@@ -77,6 +77,7 @@ function QuizPlayInner() {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [certificateId, setCertificateId] = useState("");
   const [printMode, setPrintMode] = useState<"cert-only" | "full-report">("cert-only");
+  const [showReviewDetails, setShowReviewDetails] = useState<boolean>(false);
 
   // Free Classes Offer & Registration Modals
   const [showClassOfferModal, setShowClassOfferModal] = useState<boolean>(false);
@@ -157,6 +158,17 @@ function QuizPlayInner() {
                 setTimerDuration(Number(selected.timerSeconds));
                 setTimeLeft(Number(selected.timerSeconds));
               }
+              if (selected.bgMusicUrl && typeof window !== "undefined") {
+                bgAudioRef.current = new Audio(selected.bgMusicUrl);
+                bgAudioRef.current.loop = true;
+                bgAudioRef.current.volume = 0.35;
+              }
+              if (selected.correctSoundUrl && typeof window !== "undefined") {
+                correctAudioRef.current = new Audio(selected.correctSoundUrl);
+              }
+              if (selected.wrongSoundUrl && typeof window !== "undefined") {
+                wrongAudioRef.current = new Audio(selected.wrongSoundUrl);
+              }
               return;
             }
           }
@@ -175,6 +187,17 @@ function QuizPlayInner() {
             if (data.timerSeconds !== undefined) {
               setTimerDuration(Number(data.timerSeconds));
               setTimeLeft(Number(data.timerSeconds));
+            }
+            if (data.bgMusicUrl && typeof window !== "undefined") {
+              bgAudioRef.current = new Audio(data.bgMusicUrl);
+              bgAudioRef.current.loop = true;
+              bgAudioRef.current.volume = 0.35;
+            }
+            if (data.correctSoundUrl && typeof window !== "undefined") {
+              correctAudioRef.current = new Audio(data.correctSoundUrl);
+            }
+            if (data.wrongSoundUrl && typeof window !== "undefined") {
+              wrongAudioRef.current = new Audio(data.wrongSoundUrl);
             }
             return;
           }
@@ -315,7 +338,7 @@ function QuizPlayInner() {
     setStreak(0);
     playFx("wrong");
 
-    // Show Option A Sad Boy animation in front of screen (NO confetti/flowers)
+    // Show Big Crying Animation 'cry.jpg' in front of screen for 1.5s
     setWrongAnimation(true);
 
     const currentQ = questions[currentIndex];
@@ -329,12 +352,12 @@ function QuizPlayInner() {
       },
     ]);
 
-    // Auto-advance within 1.8 seconds on timeup automatically (no waiting or manual click needed)
+    // Auto-advance within strictly 1.5 seconds on timeup automatically
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     autoAdvanceRef.current = setTimeout(() => {
       setWrongAnimation(false);
       handleNextQuestion();
-    }, 1800);
+    }, 1500);
   };
 
   // Handle Option Select
@@ -389,15 +412,15 @@ function QuizPlayInner() {
     } else {
       setStreak(0);
       playFx("wrong");
-      // Show Option A Sad Boy animation in front of screen (NO confetti/flowers)
+      // Show Big Crying Animation 'cry.jpg' in front of screen for strictly 1.5 seconds
       setWrongAnimation(true);
 
-      // Auto-advance within 1.8 seconds on wrong answer (allows seeing correct answer highlighted)
+      // Auto-advance within strictly 1.5 seconds on wrong answer
       if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
       autoAdvanceRef.current = setTimeout(() => {
         setWrongAnimation(false);
         handleNextQuestion();
-      }, 1800);
+      }, 1500);
     }
   };
 
@@ -1252,95 +1275,114 @@ function QuizPlayInner() {
           </button>
         </div>
 
-        {/* DETAILED QUESTION & ANSWER REVIEW (Wrong Answer Analysis) */}
-        <div className="hide-on-cert-only bg-white rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-lg space-y-6">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <div>
-              <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+        {/* DETAILED QUESTION & ANSWER REVIEW (Collapsible / Expandable Accordion) */}
+        <div className="hide-on-cert-only bg-white rounded-3xl border border-amber-200 shadow-lg overflow-hidden transition-all">
+          <div 
+            onClick={() => setShowReviewDetails(!showReviewDetails)}
+            className="p-5 sm:p-6 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:bg-amber-100/60 transition-colors"
+          >
+            <div className="text-center sm:text-left">
+              <h3 className="text-lg sm:text-xl font-black text-gray-900 flex items-center justify-center sm:justify-start gap-2">
                 <FileText className="w-5 h-5 text-amber-600" />
                 <span>Detailed Question Review & Explanations</span>
               </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Review your selections, correct answers, and scriptural purports.
+              <p className="text-xs text-gray-600 mt-1">
+                विस्तृत प्रश्न एवं उत्तर समीक्षा • {showReviewDetails ? "Click to collapse / छिपाने के लिए क्लिक करें" : "Click to expand complete explanations / पूर्ण विवरण देखने के लिए क्लिक करें"}
               </p>
             </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900">
-              {questions.length} Total Questions
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                {questions.length} Questions
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowReviewDetails(!showReviewDetails);
+                }}
+                className="px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 text-white shadow-md flex items-center gap-1.5 cursor-pointer shrink-0 transition-transform active:scale-95"
+              >
+                <span>{showReviewDetails ? "Hide Review ▲" : "View Detailed Review ▼"}</span>
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-4">
-            {questions.map((q, idx) => {
-              const log = answersLog.find((a) => a.questionId === q.id);
-              const isCorrect = log?.isCorrect;
+          {showReviewDetails && (
+            <div className="p-6 sm:p-8 space-y-6 border-t border-amber-200/80 animate-fade-in">
+              <div className="space-y-4">
+                {questions.map((q, idx) => {
+                  const log = answersLog.find((a) => a.questionId === q.id);
+                  const isCorrect = log?.isCorrect;
 
-              return (
-                <div
-                  key={q.id}
-                  className={`p-4 sm:p-5 rounded-2xl border-2 space-y-3 ${
-                    isCorrect
-                      ? "bg-emerald-50/40 border-emerald-200"
-                      : "bg-rose-50/40 border-rose-200"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${isCorrect ? "bg-emerald-600" : "bg-rose-600"}`}>
-                          {idx + 1}
-                        </span>
-                        <span className={`text-xs font-bold uppercase tracking-wider ${isCorrect ? "text-emerald-700" : "text-rose-700"}`}>
-                          {isCorrect ? "Correct Answer ✓" : "Incorrect Answer ✕"}
+                  return (
+                    <div
+                      key={q.id}
+                      className={`p-4 sm:p-5 rounded-2xl border-2 space-y-3 ${
+                        isCorrect
+                          ? "bg-emerald-50/40 border-emerald-200"
+                          : "bg-rose-50/40 border-rose-200"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${isCorrect ? "bg-emerald-600" : "bg-rose-600"}`}>
+                              {idx + 1}
+                            </span>
+                            <span className={`text-xs font-bold uppercase tracking-wider ${isCorrect ? "text-emerald-700" : "text-rose-700"}`}>
+                              {isCorrect ? "Correct Answer ✓" : "Incorrect Answer ✕"}
+                            </span>
+                          </div>
+                          <h4 className="text-sm sm:text-base font-bold text-gray-900">
+                            {q.question.hi}
+                          </h4>
+                          <p className="text-xs text-gray-500 italic">
+                            {q.question.en}
+                          </p>
+                        </div>
+
+                        <span className="text-xs font-mono font-bold text-amber-800 bg-amber-100/70 px-2 py-1 rounded-md shrink-0">
+                          {q.points} Pts
                         </span>
                       </div>
-                      <h4 className="text-sm sm:text-base font-bold text-gray-900">
-                        {q.question.hi}
-                      </h4>
-                      <p className="text-xs text-gray-500 italic">
-                        {q.question.en}
-                      </p>
-                    </div>
 
-                    <span className="text-xs font-mono font-bold text-amber-800 bg-amber-100/70 px-2 py-1 rounded-md shrink-0">
-                      {q.points} Pts
-                    </span>
-                  </div>
+                      {/* Selected vs Correct Comparison */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
+                        <div className={`p-3 rounded-xl border ${isCorrect ? "bg-emerald-100/60 border-emerald-300 text-emerald-950" : "bg-rose-100/60 border-rose-300 text-rose-950"}`}>
+                          <p className="font-bold text-[10px] uppercase tracking-wider mb-0.5">Your Selected Answer:</p>
+                          <p className="font-semibold">
+                            {log?.selected && log.selected !== "TIMEOUT" ? (
+                              <>
+                                Option {log.selected}: {q.options[log.selected as 'A'|'B'|'C'|'D']?.hi}
+                              </>
+                            ) : (
+                              "Timed Out (No Answer)"
+                            )}
+                          </p>
+                        </div>
 
-                  {/* Selected vs Correct Comparison */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
-                    <div className={`p-3 rounded-xl border ${isCorrect ? "bg-emerald-100/60 border-emerald-300 text-emerald-950" : "bg-rose-100/60 border-rose-300 text-rose-950"}`}>
-                      <p className="font-bold text-[10px] uppercase tracking-wider mb-0.5">Your Selected Answer:</p>
-                      <p className="font-semibold">
-                        {log?.selected && log.selected !== "TIMEOUT" ? (
-                          <>
-                            Option {log.selected}: {q.options[log.selected as 'A'|'B'|'C'|'D']?.hi}
-                          </>
-                        ) : (
-                          "Timed Out (No Answer)"
-                        )}
-                      </p>
-                    </div>
+                        <div className="p-3 rounded-xl border bg-emerald-100/60 border-emerald-300 text-emerald-950">
+                          <p className="font-bold text-[10px] uppercase tracking-wider mb-0.5 text-emerald-800">Correct Answer:</p>
+                          <p className="font-semibold">
+                            Option {q.correctAnswer}: {q.options[q.correctAnswer]?.hi}
+                          </p>
+                        </div>
+                      </div>
 
-                    <div className="p-3 rounded-xl border bg-emerald-100/60 border-emerald-300 text-emerald-950">
-                      <p className="font-bold text-[10px] uppercase tracking-wider mb-0.5 text-emerald-800">Correct Answer:</p>
-                      <p className="font-semibold">
-                        Option {q.correctAnswer}: {q.options[q.correctAnswer]?.hi}
-                      </p>
+                      {/* Explanation Note */}
+                      {q.explanation.hi && (
+                        <div className="p-3 bg-white/80 rounded-xl border border-gray-200 text-xs text-gray-700 space-y-0.5">
+                          <span className="font-bold text-amber-900 text-[11px] block">शास्त्रोक्त व्याख्या / Scriptural Explanation:</span>
+                          <p>{q.explanation.hi}</p>
+                          <p className="text-gray-500 italic text-[11px]">{q.explanation.en}</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Explanation Note */}
-                  {q.explanation.hi && (
-                    <div className="p-3 bg-white/80 rounded-xl border border-gray-200 text-xs text-gray-700 space-y-0.5">
-                      <span className="font-bold text-amber-900 text-[11px] block">शास्त्रोक्त व्याख्या / Scriptural Explanation:</span>
-                      <p>{q.explanation.hi}</p>
-                      <p className="text-gray-500 italic text-[11px]">{q.explanation.en}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
@@ -1449,91 +1491,59 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* Wrong Answer Overlay (Option A: Sad Devotee Boy with animated teardrops in front of the screen) */}
+          {/* Wrong Answer Overlay (Attached Big Crying Animation 'cry.jpg' for strictly 1.5 seconds) */}
           {wrongAnimation && (
-            <div className="absolute inset-0 z-50 bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-3 animate-fade-in pointer-events-none">
-              <div className="bg-gradient-to-b from-[#FFF5F5] via-[#FFEBEB] to-[#FED7D7] border-3 border-rose-500 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center text-center max-w-xs sm:max-w-sm w-full animate-scale-in">
-                {/* Animated Sad Boy with Teardrops */}
-                <div className="relative w-16 h-16 sm:w-20 sm:h-20 mb-2 bg-rose-100/80 rounded-2xl border-2 border-rose-300 flex items-center justify-center shadow-inner">
-                  <svg viewBox="0 0 100 100" className="w-14 h-14 sm:w-16 sm:h-16 animate-wobble">
-                    {/* Hair */}
-                    <ellipse cx="50" cy="42" rx="26" ry="24" fill="#3D2314" />
-                    <path d="M 24 45 Q 50 20 76 45 Q 65 30 50 30 Q 35 30 24 45 Z" fill="#29150B" />
-                    {/* Face */}
-                    <ellipse cx="50" cy="54" rx="22" ry="22" fill="#FDD6B5" />
-                    {/* Ears */}
-                    <ellipse cx="28" cy="54" rx="4" ry="6" fill="#F7C49D" />
-                    <ellipse cx="72" cy="54" rx="4" ry="6" fill="#F7C49D" />
-                    {/* Tilak */}
-                    <path d="M 48 37 L 52 37 L 50 46 Z" fill="#D97706" />
-                    <circle cx="50" cy="48" r="1.3" fill="#DC2626" />
-                    {/* Sad drooping eyes */}
-                    <path d="M 39 49 Q 43 46 47 50" stroke="#3D2314" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                    <path d="M 53 50 Q 57 46 61 49" stroke="#3D2314" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                    {/* Downward curved sad mouth */}
-                    <path d="M 43 65 Q 50 59 57 65" stroke="#991B1B" strokeWidth="3" fill="none" strokeLinecap="round" />
-                    {/* Animated Falling Teardrops */}
-                    <path d="M 41 53 Q 43 58 41 61 Q 39 58 41 53 Z" fill="#38BDF8" className="animate-tear-1" />
-                    <path d="M 59 53 Q 61 58 59 61 Q 57 58 59 53 Z" fill="#38BDF8" className="animate-tear-2" />
-                    {/* Red Kurta */}
-                    <path d="M 32 74 C 35 88, 65 88, 68 74 Z" fill="#EF4444" />
-                  </svg>
+            <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in pointer-events-none">
+              <div className="bg-gradient-to-b from-[#FFF5F5] via-[#FFEBEB] to-[#FED7D7] border-4 border-rose-600 rounded-3xl p-5 sm:p-7 shadow-2xl flex flex-col items-center text-center max-w-sm sm:max-w-md w-full animate-scale-in">
+                {/* Big Crying Character Image */}
+                <div className="relative w-64 h-52 sm:w-80 sm:h-64 mb-3 rounded-2xl overflow-hidden border-3 border-rose-400/80 shadow-xl bg-black/10">
+                  <Image
+                    src="/images/quiz/cry.jpg"
+                    alt="Wrong Answer - Sadness Crying"
+                    fill
+                    className="object-contain"
+                    priority
+                    unoptimized
+                  />
                 </div>
 
-                <div className="space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600 text-white font-black text-xs sm:text-sm shadow-md">
+                <div className="space-y-1.5">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-600 text-white font-black text-sm sm:text-base shadow-lg">
                     <span>✕</span>
                     <span>{isTimeUp ? "समय समाप्त! / Time's Up!" : "अशुद्ध उत्तर! / Incorrect Answer!"}</span>
                   </div>
-                  <p className="text-[11px] sm:text-xs text-rose-800 font-semibold mt-0.5">
-                    चिंता न करें, सही उत्तर देखें! / See correct answer!
+                  <p className="text-xs sm:text-sm text-rose-900 font-bold mt-1">
+                    चिंता न करें, सही उत्तर नीचे देखें! / Don&apos;t worry, see correct answer!
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Thinking Animation (Small boy thinking illustration when player waits > 5 seconds) */}
+          {/* Thinking Animation (Attached Big Thinking Character 'thinking.png' when waiting > 5 seconds) */}
           {isThinking && !isAnswered && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 via-orange-300 to-amber-400 text-amber-950 font-black text-xs sm:text-sm shadow-2xl border-2 border-amber-400 animate-pulse pointer-events-none backdrop-blur-xs">
-              <div className="relative w-7 h-7 sm:w-8 sm:h-8 shrink-0">
-                {/* Floating thought bubbles */}
-                <div className="absolute -top-1 -right-1 flex items-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-200 animate-ping mr-0.5" />
-                  <span className="text-[9px] font-black text-white bg-amber-700 px-1 rounded-full leading-tight">?</span>
-                </div>
-                <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-xs animate-wobble">
-                  {/* Hair */}
-                  <ellipse cx="50" cy="42" rx="28" ry="26" fill="#3D2314" />
-                  <path d="M 24 45 Q 50 18 76 45 Q 65 30 50 30 Q 35 30 24 45 Z" fill="#29150B" />
-                  {/* Face */}
-                  <ellipse cx="50" cy="54" rx="22" ry="22" fill="#FDD6B5" />
-                  {/* Ears */}
-                  <ellipse cx="28" cy="54" rx="4" ry="6" fill="#F7C49D" />
-                  <ellipse cx="72" cy="54" rx="4" ry="6" fill="#F7C49D" />
-                  {/* Tilak */}
-                  <path d="M 48 37 L 52 37 L 50 47 Z" fill="#D97706" />
-                  <circle cx="50" cy="49" r="1.5" fill="#DC2626" />
-                  {/* Eyes looking up thoughtfully */}
-                  <ellipse cx="42" cy="50" rx="3" ry="4" fill="#3D2314" />
-                  <circle cx="43" cy="48" r="1.2" fill="#FFFFFF" />
-                  <ellipse cx="58" cy="50" rx="3" ry="4" fill="#3D2314" />
-                  <circle cx="59" cy="48" r="1.2" fill="#FFFFFF" />
-                  {/* Eyebrows */}
-                  <path d="M 38 44 Q 42 41 46 44" stroke="#3D2314" strokeWidth="2" fill="none" strokeLinecap="round" />
-                  <path d="M 54 44 Q 58 41 62 44" stroke="#3D2314" strokeWidth="2" fill="none" strokeLinecap="round" />
-                  {/* Mouth */}
-                  <ellipse cx="50" cy="63" rx="3" ry="2" fill="#C46E56" />
-                  {/* Hand on chin */}
-                  <path d="M 56 68 Q 62 64 64 58 Q 58 60 52 64 Z" fill="#F7C49D" stroke="#DCA27E" strokeWidth="1" />
-                  <rect x="52" y="65" width="10" height="4" rx="2" fill="#F7C49D" />
-                  {/* Yellow Kurta */}
-                  <path d="M 32 74 C 35 88, 65 88, 68 74 Z" fill="#F59E0B" />
-                </svg>
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 bg-gradient-to-r from-[#FFFDF6] via-[#FFF8E7] to-[#FDF0D2] border-3 sm:border-4 border-amber-500 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl flex items-center gap-3 sm:gap-4 max-w-sm sm:max-w-md w-auto animate-bounce pointer-events-none ring-4 ring-amber-300/40">
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl overflow-hidden bg-white/90 border-2 border-amber-300 shadow-md">
+                <Image
+                  src="/images/quiz/thinking.png"
+                  alt="Thinking Boy"
+                  fill
+                  className="object-contain"
+                  priority
+                  unoptimized
+                />
               </div>
               <div className="flex flex-col text-left">
-                <span className="leading-tight tracking-wide font-black">गहन चिंतन... / Deep Contemplation...</span>
-                <span className="text-[9px] font-semibold text-amber-900/90">सोच रहे हैं... / Thinking...</span>
+                <span className="text-xs sm:text-sm font-black text-amber-950 flex items-center gap-1">
+                  <span>🤔</span>
+                  <span>गहन चिंतन... / Deep Contemplation...</span>
+                </span>
+                <span className="text-[11px] sm:text-xs font-bold text-amber-900/90 mt-0.5">
+                  सोच रहे हैं... क्या है सही उत्तर?
+                </span>
+                <span className="text-[10px] text-amber-700 italic">
+                  Take your time to find the right answer!
+                </span>
               </div>
             </div>
           )}

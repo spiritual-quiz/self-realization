@@ -108,29 +108,42 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
 
     let emailDispatched = false;
 
-    // 1. Send via EmailJS
+    // 1. Send via EmailJS (Separate Template ID & Quiz Palette for Quiz Registrations)
+    const isQuizReg = type === "free_class_registration";
+    const emailJsServiceId = isQuizReg 
+      ? (process.env.EMAILJS_QUIZ_SERVICE_ID || "service_1ve1iom")
+      : "service_1ve1iom";
+    const emailJsTemplateId = isQuizReg
+      ? (process.env.EMAILJS_QUIZ_TEMPLATE_ID || "template_quiz_registration")
+      : "template_ypw8wpq";
+
     try {
       const emailJsRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Origin": "https://live-like-a-monk.vercel.app"
+          "Origin": "https://selfrealization-platform.vercel.app"
         },
         body: JSON.stringify({
-          service_id: "service_1ve1iom",
-          template_id: "template_ypw8wpq",
+          service_id: emailJsServiceId,
+          template_id: emailJsTemplateId,
           user_id: "8jCdn6vjWwsSe9CNK",
           template_params: {
             name: details.name || details.fullName || "Participant",
             mobile: details.whatsapp || details.phone || "Not provided",
             email: details.email || ADMIN_EMAIL,
             language: details.language || "English",
-            track: subject,
+            track: isQuizReg ? `🏆 [Vedic Quiz Registration] ${details.name} - ${details.occupation}` : subject,
             notes: messageBody,
             age: details.age || "N/A",
-            status: type || "Notification",
+            status: isQuizReg ? "Vedic Quiz Free Class Registration" : (type || "Notification"),
             native_address: details.nativePlace || "SelfRealization Portal",
-            current_address: details.currentLocation || "https://selfrealization-platform.vercel.app"
+            current_address: details.currentLocation || "https://selfrealization-platform.vercel.app",
+            // Dedicated Quiz Template Color Palette & Branding
+            brand_title: "SelfRealization - Bhagavad-gītā Wisdom Challenge",
+            brand_color: "#D97706",
+            header_bg: "#B45309",
+            portal_url: "https://selfrealization-platform.vercel.app/quiz",
           }
         })
       });
@@ -142,17 +155,19 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
       console.warn("EmailJS registration notice:", e);
     }
 
-    // 2. Primary / Backup via FormSubmit (Full structured table of all 10 details)
+    // 2. Primary / Backup via FormSubmit (Full structured table of all 10 details with Quiz Branding)
     try {
       const formSubmitBody: Record<string, any> = {
-        _subject: subject,
+        _subject: isQuizReg ? `🏆 [Vedic Quiz Registration] ${details.name} - ${details.occupation}` : subject,
         _replyto: details.email || ADMIN_EMAIL,
         _captcha: "false",
-        _template: "box",
+        _template: "table",
       };
 
       if (type === "free_class_registration") {
+        formSubmitBody["PORTAL"] = "SelfRealization • Vedic Quiz Outreach";
         formSubmitBody["REGISTRATION TYPE"] = "Free Vedic Class (Post-Quiz Seeker Outreach)";
+        formSubmitBody["THEME COLOR"] = "Vedic Golden Amber (#D97706)";
         formSubmitBody["Name / नाम"] = details.name;
         formSubmitBody["Email / ईमेल"] = details.email;
         formSubmitBody["WhatsApp / व्हाट्सएप"] = details.whatsapp;
