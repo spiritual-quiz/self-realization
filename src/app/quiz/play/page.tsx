@@ -1607,47 +1607,47 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* Correct Answer Celebration Dance (Always restarts from frame 0, visible ABOVE questions and answers) */}
+          {/* Correct Answer Celebration Emoticon (Restarts from frame 0, clearly positioned below header on mobile) */}
           {correctAnimation && (
-            <div className="fixed top-8 sm:top-12 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-bounce">
+            <div className="fixed top-20 sm:top-24 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-bounce">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   key={`dance-${animKey}`}
                   src={`/images/quiz/dance.gif?k=${animKey}`}
-                  alt="Dancing Celebration Animation"
+                  alt="Party Celebration Emoticon Animation"
                   className="w-full h-full object-contain filter drop-shadow-xl"
                 />
               </div>
-              <div className="mt-1 px-4 py-1.5 rounded-full bg-emerald-600 text-white font-black text-xs sm:text-sm border-2 border-emerald-300 shadow-xl flex items-center gap-1.5 animate-pulse">
+              <div className="mt-1.5 px-4 py-1.5 rounded-full bg-emerald-600 text-white font-black text-xs sm:text-sm border-2 border-emerald-300 shadow-xl flex items-center gap-1.5 animate-pulse">
                 <span>+{floatingScore || 10} Points!</span>
-                <span>🌸 ✨</span>
+                <span>🎉 🌸</span>
               </div>
             </div>
           )}
 
-          {/* Wrong Answer Crying Animation (Always restarts from frame 0, visible ABOVE questions and answers) */}
+          {/* Wrong Answer Crying Emoticon (Restarts from frame 0, clearly positioned below header on mobile) */}
           {wrongAnimation && (
-            <div className="fixed top-8 sm:top-12 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-shake">
+            <div className="fixed top-20 sm:top-24 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center animate-pop-in drop-shadow-2xl">
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-shake">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   key={`cry-${animKey}`}
                   src={`/images/quiz/cry.gif?k=${animKey}`}
-                  alt="Crying Sadness Animation"
+                  alt="Crying Sadness Emoticon Animation"
                   className="w-full h-full object-contain filter drop-shadow-xl"
                 />
               </div>
-              <div className="mt-1 px-3.5 py-1 rounded-full bg-rose-600 text-white font-black text-xs sm:text-sm border-2 border-rose-300 shadow-xl flex items-center gap-1.5">
+              <div className="mt-1.5 px-3.5 py-1 rounded-full bg-rose-600 text-white font-black text-xs sm:text-sm border-2 border-rose-300 shadow-xl flex items-center gap-1.5">
                 <span>गलत उत्तर / Incorrect • Keep Going!</span>
-                <span>😢</span>
+                <span>😭</span>
               </div>
             </div>
           )}
 
           {/* Thinking Animation (Direct Thinking Boy Character visible after 5s when user is thinking) */}
           {isThinking && !isAnswered && (
-            <div className="fixed sm:absolute top-16 sm:top-3 right-3 sm:right-6 z-50 pointer-events-none animate-think-float drop-shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
+            <div className="fixed sm:absolute top-20 sm:top-3 right-3 sm:right-6 z-50 pointer-events-none animate-think-float drop-shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
               <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
