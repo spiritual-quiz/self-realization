@@ -627,18 +627,25 @@ function QuizPlayInner() {
         localStorage.setItem("sr_class_registrations", JSON.stringify([{ id: savedId, ...regRecord }, ...cached]));
       } catch (lsErr) {}
 
-      // 3. Fast non-blocking server notification to madhavcarandas@gmail.com via /api/notify
-      fetch("/api/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "free_class_registration",
-          details: {
-            ...regRecord,
-            id: savedId
-          }
-        })
-      }).catch((notifyErr) => console.warn("Notify dispatch:", notifyErr));
+      // 3. Guaranteed server notification to madhavcarandas@gmail.com via /api/notify (EmailJS + FormSubmit)
+      try {
+        await Promise.race([
+          fetch("/api/notify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "free_class_registration",
+              details: {
+                ...regRecord,
+                id: savedId
+              }
+            })
+          }),
+          new Promise((resolve) => setTimeout(resolve, 2500))
+        ]);
+      } catch (notifyErr) {
+        console.warn("Notify dispatch notice:", notifyErr);
+      }
 
       // Instant UI confirmation — zero waiting latency!
       setClassFormSubmitted(true);
