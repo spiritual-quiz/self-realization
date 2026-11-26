@@ -121,7 +121,7 @@ export default function CoursesCataloguePage() {
   const [courses, setCourses] = useState<any[]>(DEFAULT_COURSES);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | "free" | "paid">("all");
-  const [expandedCourse, setExpandedCourse] = useState<string | null>("discover-yourself");
+  const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [enrollingCourse, setEnrollingCourse] = useState<ClassItem | null>(null);
 
   useEffect(() => {
@@ -257,19 +257,23 @@ export default function CoursesCataloguePage() {
           return (
             <div
               key={c.id}
-              className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:border-emerald-400"
+              className="bg-gradient-to-b from-white via-white to-amber-50/20 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-2xl hover:border-amber-400/80 transition-all duration-300 flex flex-col justify-between overflow-hidden group"
             >
               <div>
                 {/* 1. Header Image Banner (Aspect 16:9 like reference) */}
-                <div className="relative w-full h-44 sm:h-48 bg-stone-900 overflow-hidden">
+                <div className="relative w-full h-48 sm:h-52 bg-gradient-to-br from-slate-950 via-indigo-950 to-stone-900 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={c.thumbnail || c.image || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"}
                     alt={getLocalized(c.title)}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-95 group-hover:opacity-100"
                   />
-                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-white border border-white/20 uppercase tracking-wider">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20 pointer-events-none" />
+                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-amber-300 border border-amber-400/30 uppercase tracking-wider shadow-sm">
                     E-Learning LMS
+                  </div>
+                  <div className="absolute bottom-2.5 right-3 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[11px] font-bold text-white/90">
+                    {c.duration || "4 Hours"}
                   </div>
                 </div>
 
@@ -346,34 +350,40 @@ export default function CoursesCataloguePage() {
                 </div>
               </div>
 
-              {/* 3. Action Buttons Row: Enroll Now, WhatsApp & Syllabus */}
-              <div className="p-5 sm:p-6 pt-0 space-y-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <Link
-                    href={`/courses/${c.id}`}
-                    className="w-full py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black text-sky-600 hover:text-white bg-white hover:bg-sky-600 border-2 border-sky-500 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer text-center"
-                  >
-                    <span>Enroll Now</span>
-                  </Link>
-
-                  <a
-                    href={c.whatsappGroupUrl || "https://chat.whatsapp.com/SelfRealizationGita"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 border-2 border-emerald-500 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer text-center"
-                    title="Directly join our WhatsApp group"
-                  >
-                    <MessageCircle className="w-4 h-4 text-emerald-600 group-hover:text-white shrink-0" />
-                    <span>WhatsApp</span>
-                  </a>
-                </div>
+              {/* 3. Action Buttons Row: Enroll Now (Opens registration modal with WhatsApp join link) & Syllabus Toggle */}
+              <div className="p-5 sm:p-6 pt-0 space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnrollingCourse({
+                      id: c.id,
+                      title: typeof c.title === "object" ? c.title : { en: c.title, hi: c.title },
+                      description: typeof c.desc === "object" ? c.desc : { en: c.desc || "", hi: c.desc || "" },
+                      image: c.thumbnail || c.image,
+                      isPaid: !!c.isPaid,
+                      price: c.price,
+                      date: c.timing || "Immediate Access",
+                      time: c.timing || "Self-Paced / Weekly",
+                      mode: c.mode || "Online & Offline (Hybrid)",
+                      venue: c.venue || "ISKCON Mandir",
+                      roomNumber: c.roomNumber || "Room 108",
+                      whatsappGroupUrl: c.whatsappGroupUrl || "https://chat.whatsapp.com/SelfRealizationGita",
+                      instructor: c.instructor || "ISKCON NVCC Scholars",
+                      hours: c.duration || "4 Hours"
+                    });
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-amber-900 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 hover:from-emerald-600 hover:to-teal-600 hover:text-white hover:border-emerald-600 hover:shadow-lg hover:shadow-emerald-600/30 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer text-center"
+                >
+                  <span>Enroll Now</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </button>
 
                 <button
                   type="button"
                   onClick={() => setExpandedCourse(isExpanded ? null : c.id)}
-                  className="w-full py-1 text-center text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1 cursor-pointer"
+                  className="w-full py-1.5 text-center text-xs font-bold text-slate-500 hover:text-amber-700 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  <span>{isExpanded ? "Hide Syllabus ▲" : "View Curriculum ▼"}</span>
+                  <span>{isExpanded ? (language === "hi" ? "पाठ्यक्रम विवरण छुपाएं ▲" : "Hide Curriculum ▲") : (language === "hi" ? "पाठ्यक्रम देखें (View Curriculum) ▼" : "View Curriculum ▼")}</span>
                 </button>
               </div>
 

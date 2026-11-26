@@ -247,18 +247,19 @@ export default function LiveClassesPage() {
         {filteredClasses.map((item) => (
           <div
             key={item.id}
-            className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:border-emerald-400"
+            className="bg-gradient-to-b from-white via-white to-emerald-50/20 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-2xl hover:border-emerald-400/80 transition-all duration-300 flex flex-col justify-between overflow-hidden group"
           >
             <div>
               {/* 1. Header Image Banner (Aspect 16:9 like reference) */}
-              <div className="relative w-full h-44 sm:h-48 bg-stone-900 overflow-hidden">
+              <div className="relative w-full h-48 sm:h-52 bg-gradient-to-br from-slate-950 via-teal-950 to-stone-900 overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.image || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"}
                   alt={item.title[language] || item.title.en}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-95 group-hover:opacity-100"
                 />
-                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-white border border-white/20 uppercase tracking-wider">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20 pointer-events-none" />
+                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-emerald-300 border border-emerald-400/30 uppercase tracking-wider shadow-sm">
                   SelfRealization Academy
                 </div>
               </div>
@@ -319,14 +320,15 @@ export default function LiveClassesPage() {
               </div>
             </div>
 
-            {/* 3. Enroll Action Button */}
+            {/* 3. Enroll Action Button with Color Hover Transition */}
             <div className="p-5 sm:p-6 pt-0">
               <button
                 type="button"
                 onClick={() => setSelectedClass(item)}
-                className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-sky-600 hover:text-white bg-white hover:bg-sky-600 border-2 border-sky-500 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-emerald-900 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-400 hover:from-amber-600 hover:to-orange-600 hover:text-white hover:border-amber-600 hover:shadow-lg hover:shadow-amber-600/30 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer text-center"
               >
                 <span>Enroll Now</span>
+                <Sparkles className="w-4 h-4 transition-transform group-hover:rotate-12" />
               </button>
             </div>
           </div>

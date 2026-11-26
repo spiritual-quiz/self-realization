@@ -212,23 +212,48 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
                 )}
               </div>
 
-              {/* Direct WhatsApp Group Invite Button */}
-              {classItem.whatsappGroupUrl && (
-                <div className="pt-1">
-                  <a
-                    href={classItem.whatsappGroupUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 px-4 rounded-xl font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition-all shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm"
-                  >
-                    <span>💬</span>
-                    <span>{language === "hi" ? "व्हाट्सएप ग्रुप से जुड़ें (Join WhatsApp Group)" : "Join Course WhatsApp Group"}</span>
-                  </a>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    {language === "hi" ? "सत्र लिंक एवं अध्ययन सामग्री हेतु ग्रुप जॉइन करें।" : "Join to receive zoom links, study notes & daily announcements."}
-                  </p>
-                </div>
-              )}
+              {/* Dedicated WhatsApp Group Community Box with Link */}
+              {(() => {
+                const waLink = classItem.whatsappGroupUrl || "https://chat.whatsapp.com/SelfRealizationGita";
+                return (
+                  <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border-2 border-emerald-400 text-center space-y-2.5 shadow-sm">
+                    <div className="flex items-center justify-center gap-2 text-emerald-900 font-bold text-sm">
+                      <span className="text-xl">💬</span>
+                      <span>{language === "hi" ? "व्हाट्सएप ग्रुप से जुड़ें" : "Join Official WhatsApp Group"}</span>
+                    </div>
+                    
+                    <p className="text-xs text-gray-700 leading-relaxed">
+                      {language === "hi"
+                        ? "सत्र लिंक, अध्ययन सामग्री एवं दैनिक सूचनाओं के लिए नीचे दिए गए लिंक पर क्लिक करके हमारे व्हाट्सएप ग्रुप से जुड़ें:"
+                        : "To receive class links, study materials, and daily updates, please click the link below to join our WhatsApp group:"}
+                    </p>
+
+                    <a
+                      href={waLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3 px-4 rounded-xl font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition-all shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer hover:scale-[1.02]"
+                    >
+                      <span>💬</span>
+                      <span>{language === "hi" ? "व्हाट्सएप ग्रुप से जुड़ें (Join WhatsApp Group)" : "Join WhatsApp Group Now"}</span>
+                    </a>
+
+                    <div className="pt-1">
+                      <p className="text-[10px] text-gray-500 mb-1">
+                        {language === "hi" ? "सीधा ग्रुप लिंक:" : "Direct WhatsApp Link:"}
+                      </p>
+                      <a
+                        href={waLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-emerald-800 font-mono font-bold underline hover:text-emerald-950 break-all bg-white/90 px-3 py-1.5 rounded-lg border border-emerald-200 block"
+                      >
+                        {waLink}
+                      </a>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <button
                 type="button"

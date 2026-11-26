@@ -110,18 +110,19 @@ export default function QuizOverviewPage() {
             return (
               <div
                 key={q.id}
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:border-amber-400"
+                className="bg-gradient-to-b from-white via-white to-amber-50/20 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-2xl hover:border-amber-400/80 transition-all duration-300 flex flex-col justify-between overflow-hidden group"
               >
                 <div>
                   {/* 1. Header Image Banner (Aspect 16:9 like reference) */}
-                  <div className="relative w-full h-44 sm:h-48 bg-stone-900 overflow-hidden">
+                  <div className="relative w-full h-48 sm:h-52 bg-gradient-to-br from-amber-950 via-stone-900 to-indigo-950 overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={imgUrl}
                       alt={titleStr}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-95 group-hover:opacity-100"
                     />
-                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-white border border-white/20 uppercase tracking-wider">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20 pointer-events-none" />
+                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-amber-300 border border-amber-400/30 uppercase tracking-wider shadow-sm">
                       Vedic Quiz Arena
                     </div>
                   </div>
@@ -174,13 +175,14 @@ export default function QuizOverviewPage() {
                   </div>
                 </div>
 
-                {/* 3. Action Button (Enroll Now / Play Now) */}
+                {/* 3. Action Button (Play Now) with Color Hover Transition */}
                 <div className="p-5 sm:p-6 pt-0">
                   <Link
                     href={`/quiz/play?id=${q.id}`}
-                    className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-sky-600 hover:text-white bg-white hover:bg-sky-600 border-2 border-sky-500 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-sky-900 bg-gradient-to-r from-sky-50 to-blue-50 border-2 border-sky-400 hover:from-emerald-600 hover:to-teal-600 hover:text-white hover:border-emerald-600 hover:shadow-lg hover:shadow-emerald-600/30 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer text-center"
                   >
                     <span>Play Quiz Now</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </div>
               </div>
