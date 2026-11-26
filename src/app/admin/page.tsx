@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { SAMPLE_CSV_CONTENT, parseCSVToQuestions, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
+import { DEFAULT_SYSTEM_QUIZZES, SystemQuiz } from "@/lib/defaultQuizzes";
 import { db } from "@/lib/firebase/client";
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, query, limit } from "firebase/firestore";
 
@@ -259,6 +260,25 @@ export default function AdminDashboardPage() {
   const [editWrongSoundUrl, setEditWrongSoundUrl] = useState<string>("/audio/wrong.mp3");
   const [editBgMusicVolume, setEditBgMusicVolume] = useState<number>(0.35);
 
+  // Deep Quiz Questions Manager State (Requirement: Admin view, add, edit, delete individual questions)
+  const [activeManagingQuiz, setActiveManagingQuiz] = useState<any | null>(null);
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
+  const [isAddingNewQuestion, setIsAddingNewQuestion] = useState(false);
+  const [questionFormData, setQuestionFormData] = useState<ParsedQuizQuestion>({
+    id: 1,
+    question: { en: "", hi: "" },
+    options: {
+      A: { en: "", hi: "" },
+      B: { en: "", hi: "" },
+      C: { en: "", hi: "" },
+      D: { en: "", hi: "" }
+    },
+    correctAnswer: "A",
+    explanation: { en: "", hi: "" },
+    points: 10,
+    imageUrl: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"
+  });
+
   // Preview Audio Player
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [playingPreviewUrl, setPlayingPreviewUrl] = useState<string | null>(null);
@@ -356,16 +376,29 @@ export default function AdminDashboardPage() {
       inqSnap.forEach((doc) => inqList.push({ id: doc.id, ...doc.data() }));
       setInquiries(inqList);
 
-      // 3. Fetch Quizzes
+      // 3. Fetch Quizzes (Include System Quizzes + User Custom Quizzes)
+      const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
       const quizSnap = await getDocs(query(collection(db, "quizzes"), limit(100)));
       const quizList: any[] = [];
-      quizSnap.forEach((doc) => quizList.push({ id: doc.id, ...doc.data() }));
+      quizSnap.forEach((doc) => {
+        if (!deletedQuizIds.includes(doc.id)) {
+          quizList.push({ id: doc.id, ...doc.data() });
+        }
+      });
       if (quizList.length > 0) {
         setCustomQuizzes(quizList);
         localStorage.setItem("sr_custom_quizzes", JSON.stringify(quizList));
       } else {
         const localQ = JSON.parse(localStorage.getItem("sr_custom_quizzes") || "[]");
-        setCustomQuizzes(localQ);
+        if (localQ && localQ.length > 0) {
+          const filtered = localQ.filter((q: any) => !deletedQuizIds.includes(q.id));
+          setCustomQuizzes(filtered);
+        } else {
+          // Initialize with Default System Quizzes
+          const initialQuizzes = DEFAULT_SYSTEM_QUIZZES.filter(q => !deletedQuizIds.includes(q.id));
+          setCustomQuizzes(initialQuizzes);
+          localStorage.setItem("sr_custom_quizzes", JSON.stringify(initialQuizzes));
+        }
       }
 
       // 4. Fetch LMS Courses from Firestore with Local fallback
@@ -665,9 +698,131 @@ export default function AdminDashboardPage() {
     try {
       await deleteDoc(doc(db, "quizzes", quizId));
     } catch (e) {}
+
+    // Record in deleted blacklist for cross-tab sync
+    const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
+    if (!deletedQuizIds.includes(quizId)) {
+      deletedQuizIds.push(quizId);
+      localStorage.setItem("sr_deleted_quizzes", JSON.stringify(deletedQuizIds));
+    }
+
     const updated = customQuizzes.filter((q) => q.id !== quizId);
     setCustomQuizzes(updated);
     localStorage.setItem("sr_custom_quizzes", JSON.stringify(updated));
+    if (activeManagingQuiz?.id === quizId) {
+      setActiveManagingQuiz(null);
+    }
+  };
+
+  // --- QUESTION-LEVEL MANAGEMENT HANDLERS (Requirement 1: Add, edit, delete individual questions in quiz) ---
+  const handleOpenManageQuestions = (quiz: any) => {
+    setActiveManagingQuiz(quiz);
+    setEditingQuestionIndex(null);
+    setIsAddingNewQuestion(false);
+  };
+
+  const handleOpenEditQuestion = (index: number) => {
+    if (!activeManagingQuiz || !activeManagingQuiz.questions) return;
+    const q = activeManagingQuiz.questions[index];
+    setQuestionFormData({
+      id: q.id || index + 1,
+      question: {
+        en: q.question?.en || "",
+        hi: q.question?.hi || ""
+      },
+      options: {
+        A: { en: q.options?.A?.en || "", hi: q.options?.A?.hi || "" },
+        B: { en: q.options?.B?.en || "", hi: q.options?.B?.hi || "" },
+        C: { en: q.options?.C?.en || "", hi: q.options?.C?.hi || "" },
+        D: { en: q.options?.D?.en || "", hi: q.options?.D?.hi || "" }
+      },
+      correctAnswer: q.correctAnswer || "A",
+      explanation: {
+        en: q.explanation?.en || "",
+        hi: q.explanation?.hi || ""
+      },
+      points: q.points || 10,
+      imageUrl: q.imageUrl || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"
+    });
+    setEditingQuestionIndex(index);
+    setIsAddingNewQuestion(false);
+  };
+
+  const handleOpenAddNewQuestion = () => {
+    if (!activeManagingQuiz) return;
+    const nextId = (activeManagingQuiz.questions?.length || 0) + 1;
+    setQuestionFormData({
+      id: nextId,
+      question: { en: "", hi: "" },
+      options: {
+        A: { en: "", hi: "" },
+        B: { en: "", hi: "" },
+        C: { en: "", hi: "" },
+        D: { en: "", hi: "" }
+      },
+      correctAnswer: "A",
+      explanation: { en: "", hi: "" },
+      points: 10,
+      imageUrl: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"
+    });
+    setEditingQuestionIndex(null);
+    setIsAddingNewQuestion(true);
+  };
+
+  const handleSaveQuestion = async () => {
+    if (!activeManagingQuiz) return;
+    let questionsList = [...(activeManagingQuiz.questions || [])];
+
+    if (isAddingNewQuestion) {
+      questionsList.push(questionFormData);
+    } else if (editingQuestionIndex !== null) {
+      questionsList[editingQuestionIndex] = questionFormData;
+    }
+
+    const updatedQuiz = {
+      ...activeManagingQuiz,
+      questionCount: questionsList.length,
+      totalMarks: questionsList.reduce((acc: number, curr: any) => acc + (Number(curr.points) || 10), 0),
+      questions: questionsList
+    };
+
+    const updatedQuizzes = customQuizzes.map((q) => q.id === activeManagingQuiz.id ? updatedQuiz : q);
+    setCustomQuizzes(updatedQuizzes);
+    localStorage.setItem("sr_custom_quizzes", JSON.stringify(updatedQuizzes));
+    setActiveManagingQuiz(updatedQuiz);
+
+    try {
+      await setDoc(doc(db, "quizzes", updatedQuiz.id), updatedQuiz);
+    } catch (e) {
+      console.warn("Could not save updated quiz to Firestore:", e);
+    }
+
+    setEditingQuestionIndex(null);
+    setIsAddingNewQuestion(false);
+  };
+
+  const handleDeleteQuestion = async (index: number) => {
+    if (!activeManagingQuiz) return;
+    if (!confirm(`Are you sure you want to delete Question #${index + 1}?`)) return;
+
+    const questionsList = activeManagingQuiz.questions.filter((_: any, idx: number) => idx !== index);
+    const updatedQuiz = {
+      ...activeManagingQuiz,
+      questionCount: questionsList.length,
+      totalMarks: questionsList.reduce((acc: number, curr: any) => acc + (Number(curr.points) || 10), 0),
+      questions: questionsList
+    };
+
+    const updatedQuizzes = customQuizzes.map((q) => q.id === activeManagingQuiz.id ? updatedQuiz : q);
+    setCustomQuizzes(updatedQuizzes);
+    localStorage.setItem("sr_custom_quizzes", JSON.stringify(updatedQuizzes));
+    setActiveManagingQuiz(updatedQuiz);
+
+    try {
+      await setDoc(doc(db, "quizzes", updatedQuiz.id), updatedQuiz);
+    } catch (e) {
+      console.warn("Could not delete question from Firestore:", e);
+    }
   };
 
   // Open & Save Audio Settings for existing quiz
@@ -1122,7 +1277,17 @@ export default function AdminDashboardPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          {/* Manage Individual Questions Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenManageQuestions(q)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <HelpCircle className="w-3.5 h-3.5" />
+                            <span>Manage Questions ({q.questions?.length || 0})</span>
+                          </button>
+
                           {/* Audio Edit Button */}
                           <button
                             type="button"
@@ -1516,6 +1681,284 @@ export default function AdminDashboardPage() {
 
         </div>
       </main>
+
+      {/* =========================================================================
+          MODAL 0: QUIZ QUESTIONS MANAGER (View, Add, Edit, Delete Question by Question)
+          ========================================================================= */}
+      {activeManagingQuiz && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 sm:p-8 max-w-4xl w-full max-h-[92vh] flex flex-col justify-between border-2 border-amber-400 shadow-2xl relative my-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-amber-200 shrink-0">
+              <div>
+                <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                  Quiz Questions Manager
+                </span>
+                <h3 className="text-lg sm:text-xl font-black text-gray-900 mt-1">
+                  {activeManagingQuiz.title?.en}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {activeManagingQuiz.questions?.length || 0} Total Questions • Click any question to edit or delete it
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenAddNewQuestion}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Question</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveManagingQuiz(null);
+                    setEditingQuestionIndex(null);
+                    setIsAddingNewQuestion(false);
+                  }}
+                  className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content: Form vs Questions List */}
+            <div className="overflow-y-auto py-4 space-y-4 grow pr-1">
+              
+              {/* Question Add / Edit Form */}
+              {(isAddingNewQuestion || editingQuestionIndex !== null) ? (
+                <div className="p-5 rounded-2xl bg-amber-50/70 border-2 border-amber-400 space-y-4 animate-fade-in">
+                  <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+                    <h4 className="text-sm font-bold text-amber-950 flex items-center gap-2">
+                      <Edit className="w-4 h-4 text-amber-700" />
+                      <span>{isAddingNewQuestion ? "Add New Question" : `Edit Question #${editingQuestionIndex! + 1}`}</span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingQuestionIndex(null);
+                        setIsAddingNewQuestion(false);
+                      }}
+                      className="text-xs font-bold text-gray-500 hover:text-gray-800"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {/* Hindi & English Question Text */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-800">Question in English *</label>
+                      <textarea
+                        rows={2}
+                        value={questionFormData.question.en}
+                        onChange={(e) => setQuestionFormData({
+                          ...questionFormData,
+                          question: { ...questionFormData.question, en: e.target.value }
+                        })}
+                        placeholder="e.g. According to Bhagavad-gita, what is the soul?"
+                        className="w-full p-2.5 rounded-xl border border-gray-200 text-xs bg-white focus:ring-1 focus:ring-amber-500 outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-800">Question in Hindi *</label>
+                      <textarea
+                        rows={2}
+                        value={questionFormData.question.hi}
+                        onChange={(e) => setQuestionFormData({
+                          ...questionFormData,
+                          question: { ...questionFormData.question, hi: e.target.value }
+                        })}
+                        placeholder="उदा. भगवद्गीता के अनुसार आत्मा का क्या स्वभाव है?"
+                        className="w-full p-2.5 rounded-xl border border-gray-200 text-xs bg-white focus:ring-1 focus:ring-amber-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 4 Options Grid */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-800">4 Answer Options & Mark Correct Option:</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {(['A', 'B', 'C', 'D'] as const).map((opt) => (
+                        <div key={opt} className={`p-3 rounded-xl border ${questionFormData.correctAnswer === opt ? "bg-emerald-50 border-emerald-500 ring-1 ring-emerald-400" : "bg-white border-gray-200"}`}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="w-5 h-5 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center">
+                              {opt}
+                            </span>
+                            <label className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="correctOptionRadio"
+                                checked={questionFormData.correctAnswer === opt}
+                                onChange={() => setQuestionFormData({ ...questionFormData, correctAnswer: opt })}
+                                className="accent-emerald-600 cursor-pointer"
+                              />
+                              <span>Correct Answer</span>
+                            </label>
+                          </div>
+                          <input
+                            type="text"
+                            value={questionFormData.options[opt].en}
+                            onChange={(e) => setQuestionFormData({
+                              ...questionFormData,
+                              options: {
+                                ...questionFormData.options,
+                                [opt]: { ...questionFormData.options[opt], en: e.target.value }
+                              }
+                            })}
+                            placeholder={`Option ${opt} (English)`}
+                            className="w-full p-2 rounded-lg border border-gray-200 text-xs mb-1.5 bg-white"
+                          />
+                          <input
+                            type="text"
+                            value={questionFormData.options[opt].hi}
+                            onChange={(e) => setQuestionFormData({
+                              ...questionFormData,
+                              options: {
+                                ...questionFormData.options,
+                                [opt]: { ...questionFormData.options[opt], hi: e.target.value }
+                              }
+                            })}
+                            placeholder={`विकल्प ${opt} (हिन्दी)`}
+                            className="w-full p-2 rounded-lg border border-gray-200 text-xs bg-white"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Explanation & Points */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-xs font-bold text-gray-800">Explanation Note (Hindi / English)</label>
+                      <input
+                        type="text"
+                        value={questionFormData.explanation.hi}
+                        onChange={(e) => setQuestionFormData({
+                          ...questionFormData,
+                          explanation: { ...questionFormData.explanation, hi: e.target.value, en: questionFormData.explanation.en || e.target.value }
+                        })}
+                        placeholder="उदा. अध्याय 2 श्लोक 20 के अनुसार आत्मा शाश्वत है।"
+                        className="w-full p-2 rounded-xl border border-gray-200 text-xs bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-800">Points Awarded</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={questionFormData.points}
+                        onChange={(e) => setQuestionFormData({ ...questionFormData, points: Number(e.target.value) || 10 })}
+                        className="w-full p-2 rounded-xl border border-gray-200 text-xs bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Save Question Actions */}
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingQuestionIndex(null);
+                        setIsAddingNewQuestion(false);
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveQuestion}
+                      className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md cursor-pointer"
+                    >
+                      Save Question
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* List of Current Questions */}
+              {(!activeManagingQuiz.questions || activeManagingQuiz.questions.length === 0) ? (
+                <div className="p-8 text-center text-gray-500 italic bg-stone-50 rounded-2xl border border-gray-200">
+                  No questions in this quiz yet. Click "+ Add Question" above to add the first question.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {activeManagingQuiz.questions.map((q: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl border border-gray-200 bg-stone-50/70 hover:bg-white hover:border-amber-300 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs"
+                    >
+                      <div className="space-y-1.5 grow">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-amber-600 text-white text-xs font-black flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                          <span className="text-xs font-black text-gray-900 line-clamp-1">
+                            {q.question?.hi || q.question?.en}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                            Correct: Option {q.correctAnswer}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 italic pl-8 line-clamp-1">
+                          {q.question?.en}
+                        </p>
+                        <div className="pl-8 text-[11px] text-gray-600 flex flex-wrap gap-2 pt-0.5">
+                          <span className="bg-white px-2 py-0.5 rounded border border-gray-200">A: {q.options?.A?.hi || q.options?.A?.en}</span>
+                          <span className="bg-white px-2 py-0.5 rounded border border-gray-200">B: {q.options?.B?.hi || q.options?.B?.en}</span>
+                          <span className="bg-white px-2 py-0.5 rounded border border-gray-200">C: {q.options?.C?.hi || q.options?.C?.en}</span>
+                          <span className="bg-white px-2 py-0.5 rounded border border-gray-200">D: {q.options?.D?.hi || q.options?.D?.en}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditQuestion(idx)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuestion(idx)}
+                          className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-100 cursor-pointer"
+                          title="Delete Question"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer */}
+            <div className="pt-3 border-t border-gray-200 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveManagingQuiz(null);
+                  setEditingQuestionIndex(null);
+                  setIsAddingNewQuestion(false);
+                }}
+                className="px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-gray-900 hover:bg-black text-white shadow-sm cursor-pointer"
+              >
+                Close & Return
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           MODAL 1: EDIT QUIZ AUDIO SETTINGS (Requirement 2)
