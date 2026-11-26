@@ -214,11 +214,45 @@ export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminEmail, setAdminEmail] = useState("madhavcarandas@gmail.com");
   
-  // Left Sidebar Tabs strictly matching user requests
+  // Left Sidebar Tabs strictly matching user requests (Persisted across page refreshes)
   const [activeTab, setActiveTab] = useState<
     "overview" | "courses" | "ongoing-courses" | "quizzes" | "media-library" | "classes" | "inquiries"
-  >("overview");
+  >(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabFromUrl = urlParams.get("tab");
+      const validTabs = ["overview", "courses", "ongoing-courses", "quizzes", "media-library", "classes", "inquiries"];
+      if (tabFromUrl && validTabs.includes(tabFromUrl)) return tabFromUrl as any;
+      const savedTab = localStorage.getItem("sr_admin_active_tab");
+      if (savedTab && validTabs.includes(savedTab)) return savedTab as any;
+    }
+    return "overview";
+  });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Tab Selection Handler (Saves active tab to localStorage, syncs URL, and scrolls to top of page)
+  const handleSelectTab = (tab: "overview" | "courses" | "ongoing-courses" | "quizzes" | "media-library" | "classes" | "inquiries") => {
+    setActiveTab(tab);
+    setMobileSidebarOpen(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sr_admin_active_tab", tab);
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState({}, "", url.toString());
+      window.scrollTo({ top: 0, behavior: "instant" });
+      const mainEl = document.querySelector("main");
+      if (mainEl) mainEl.scrollTop = 0;
+    }
+  };
+
+  // Scroll to top whenever tab loads or changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "instant" });
+      const mainEl = document.querySelector("main");
+      if (mainEl) mainEl.scrollTop = 0;
+    }
+  }, [activeTab]);
 
   // Central Audio Library State
   const [bgTracks, setBgTracks] = useState<AudioTrack[]>(DEFAULT_BG_MUSIC);
@@ -369,12 +403,27 @@ export default function AdminDashboardPage() {
     });
   };
 
-  // Direct Audio File Upload via FileReader
+  // Direct Audio File Upload via FileReader - Automatically registers & saves to Central Audio Library
   const handleAudioUpload = (file: File, target: "bg" | "correct" | "wrong" | "edit-bg" | "edit-correct" | "edit-wrong") => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
+      const cleanTitle = file.name.replace(/\.[^/.]+$/, "");
+      const trackType: "bg" | "correct" | "wrong" = target.includes("bg") ? "bg" : target.includes("correct") ? "correct" : "wrong";
+      const track: AudioTrack = {
+        id: `audio-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: cleanTitle.toLowerCase().replace(/[^a-z0-9_-]/g, "-"),
+        title: cleanTitle,
+        url: dataUrl,
+        type: trackType
+      };
+      saveAudioTrack(track);
+      const lib = getStoredAudioLibrary();
+      setBgTracks(lib.bgTracks);
+      setCorrectSounds(lib.correctSounds);
+      setWrongSounds(lib.wrongSounds);
+
       if (target === "bg") setBgMusicUrl(dataUrl);
       else if (target === "correct") setCorrectSoundUrl(dataUrl);
       else if (target === "wrong") setWrongSoundUrl(dataUrl);
@@ -579,13 +628,30 @@ export default function AdminDashboardPage() {
     setNewAudioUrl("");
   };
 
-  const handleDeleteAudioTrack = (id: string, type: "bg" | "correct" | "wrong") => {
-    if (!confirm("Are you sure you want to delete this audio track from your library?")) return;
-    deleteAudioTrack(id, type);
+  const handleDeleteAudioTrack = (idOrUrl: string, type: "bg" | "correct" | "wrong") => {
+    const list = type === "bg" ? bgTracks : type === "correct" ? correctSounds : wrongSounds;
+    const found = list.find(t => t.id === idOrUrl || t.url === idOrUrl);
+    if (found) {
+      deleteAudioTrack(found.id, type);
+      deleteAudioTrack(found.url, type);
+    } else {
+      deleteAudioTrack(idOrUrl, type);
+    }
     const lib = getStoredAudioLibrary();
     setBgTracks(lib.bgTracks);
     setCorrectSounds(lib.correctSounds);
     setWrongSounds(lib.wrongSounds);
+
+    // If currently selected audio was deleted, reset selection
+    if (type === "bg" && (!lib.bgTracks.some(t => t.url === bgMusicUrl) || bgMusicUrl === idOrUrl)) {
+      setBgMusicUrl(lib.bgTracks[0]?.url || "");
+    }
+    if (type === "correct" && (!lib.correctSounds.some(s => s.url === correctSoundUrl) || correctSoundUrl === idOrUrl)) {
+      setCorrectSoundUrl(lib.correctSounds[0]?.url || "");
+    }
+    if (type === "wrong" && (!lib.wrongSounds.some(s => s.url === wrongSoundUrl) || wrongSoundUrl === idOrUrl)) {
+      setWrongSoundUrl(lib.wrongSounds[0]?.url || "");
+    }
   };
 
   // --- IMAGE LIBRARY HANDLERS (Requirement: Separate Banner vs Individual Question Images) ---
@@ -1245,8 +1311,7 @@ export default function AdminDashboardPage() {
                   key={item.id}
                   type="button"
                   onClick={() => {
-                    setActiveTab(item.id as any);
-                    setMobileSidebarOpen(false);
+                    handleSelectTab(item.id as any);
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     isActive
@@ -1335,7 +1400,7 @@ export default function AdminDashboardPage() {
                 
                 {/* 1. Total Course Details */}
                 <div 
-                  onClick={() => setActiveTab("courses")}
+                  onClick={() => handleSelectTab("courses")}
                   className="bg-white p-5 rounded-3xl border border-amber-200/90 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
                 >
                   <div>
@@ -1352,7 +1417,7 @@ export default function AdminDashboardPage() {
 
                 {/* 2. Live Quizzes */}
                 <div 
-                  onClick={() => setActiveTab("quizzes")}
+                  onClick={() => handleSelectTab("quizzes")}
                   className="bg-white p-5 rounded-3xl border border-amber-200/90 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
                 >
                   <div>
@@ -1369,7 +1434,7 @@ export default function AdminDashboardPage() {
 
                 {/* 3. Registrations */}
                 <div 
-                  onClick={() => setActiveTab("classes")}
+                  onClick={() => handleSelectTab("classes")}
                   className="bg-white p-5 rounded-3xl border border-amber-200/90 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
                 >
                   <div>
@@ -1384,7 +1449,7 @@ export default function AdminDashboardPage() {
 
                 {/* 4. Inquiries Received Details */}
                 <div 
-                  onClick={() => setActiveTab("inquiries")}
+                  onClick={() => handleSelectTab("inquiries")}
                   className="bg-white p-5 rounded-3xl border border-amber-200/90 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
                 >
                   <div>

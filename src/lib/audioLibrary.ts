@@ -91,30 +91,42 @@ export function getStoredAudioLibrary(): {
     };
   }
 
-  let bg = [...DEFAULT_BG_MUSIC];
-  let correct = [...DEFAULT_CORRECT_SOUNDS];
-  let wrong = [...DEFAULT_WRONG_SOUNDS];
+  let deletedIds: string[] = [];
+  try {
+    const rawDel = localStorage.getItem("sr_deleted_audio_ids");
+    if (rawDel) deletedIds = JSON.parse(rawDel);
+  } catch (e) {}
+
+  let bg = DEFAULT_BG_MUSIC.filter(t => !deletedIds.includes(t.id) && !deletedIds.includes(t.url));
+  let correct = DEFAULT_CORRECT_SOUNDS.filter(t => !deletedIds.includes(t.id) && !deletedIds.includes(t.url));
+  let wrong = DEFAULT_WRONG_SOUNDS.filter(t => !deletedIds.includes(t.id) && !deletedIds.includes(t.url));
 
   try {
     const customBg = localStorage.getItem("sr_audio_bg_tracks");
     if (customBg) {
       const parsed: AudioTrack[] = JSON.parse(customBg);
       parsed.forEach(p => {
-        if (!bg.some(b => b.id === p.id || b.name === p.name)) bg.push(p);
+        if (!deletedIds.includes(p.id) && !deletedIds.includes(p.url) && !bg.some(b => b.id === p.id || b.url === p.url)) {
+          bg.push(p);
+        }
       });
     }
     const customCorrect = localStorage.getItem("sr_audio_correct_sounds");
     if (customCorrect) {
       const parsed: AudioTrack[] = JSON.parse(customCorrect);
       parsed.forEach(p => {
-        if (!correct.some(b => b.id === p.id || b.name === p.name)) correct.push(p);
+        if (!deletedIds.includes(p.id) && !deletedIds.includes(p.url) && !correct.some(b => b.id === p.id || b.url === p.url)) {
+          correct.push(p);
+        }
       });
     }
     const customWrong = localStorage.getItem("sr_audio_wrong_sounds");
     if (customWrong) {
       const parsed: AudioTrack[] = JSON.parse(customWrong);
       parsed.forEach(p => {
-        if (!wrong.some(b => b.id === p.id || b.name === p.name)) wrong.push(p);
+        if (!deletedIds.includes(p.id) && !deletedIds.includes(p.url) && !wrong.some(b => b.id === p.id || b.url === p.url)) {
+          wrong.push(p);
+        }
       });
     }
   } catch (e) {}
@@ -132,9 +144,17 @@ export function saveAudioTrack(track: AudioTrack) {
         : "sr_audio_wrong_sounds";
 
   try {
+    // If track was previously in deletedIds, un-delete it
+    const rawDel = localStorage.getItem("sr_deleted_audio_ids");
+    if (rawDel) {
+      let deletedIds: string[] = JSON.parse(rawDel);
+      deletedIds = deletedIds.filter(id => id !== track.id && id !== track.url);
+      localStorage.setItem("sr_deleted_audio_ids", JSON.stringify(deletedIds));
+    }
+
     const raw = localStorage.getItem(storageKey);
     let list: AudioTrack[] = raw ? JSON.parse(raw) : [];
-    const idx = list.findIndex(l => l.id === track.id || l.name === track.name);
+    const idx = list.findIndex(l => l.id === track.id || l.url === track.url);
     if (idx >= 0) {
       list[idx] = track;
     } else {
@@ -144,7 +164,7 @@ export function saveAudioTrack(track: AudioTrack) {
   } catch (e) {}
 }
 
-export function deleteAudioTrack(id: string, type: "bg" | "correct" | "wrong") {
+export function deleteAudioTrack(idOrUrl: string, type: "bg" | "correct" | "wrong") {
   if (typeof window === "undefined") return;
   const storageKey = 
     type === "bg" 
@@ -154,10 +174,19 @@ export function deleteAudioTrack(id: string, type: "bg" | "correct" | "wrong") {
         : "sr_audio_wrong_sounds";
 
   try {
+    // 1. Add to permanent deleted list
+    const rawDel = localStorage.getItem("sr_deleted_audio_ids");
+    let deletedIds: string[] = rawDel ? JSON.parse(rawDel) : [];
+    if (!deletedIds.includes(idOrUrl)) {
+      deletedIds.push(idOrUrl);
+    }
+    localStorage.setItem("sr_deleted_audio_ids", JSON.stringify(deletedIds));
+
+    // 2. Remove from custom tracks
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       const list: AudioTrack[] = JSON.parse(raw);
-      const filtered = list.filter(l => l.id !== id);
+      const filtered = list.filter(l => l.id !== idOrUrl && l.url !== idOrUrl);
       localStorage.setItem(storageKey, JSON.stringify(filtered));
     }
   } catch (e) {}
