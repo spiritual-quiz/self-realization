@@ -3,12 +3,19 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { MapPin, Phone, Mail, Heart, ExternalLink } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 
 export default function Footer() {
   const { t, language } = useLanguage();
+  const pathname = usePathname();
+
+  // Hide footer on Live Like a Monk page (or quiz play) if needed
+  if (pathname === "/live-like-a-monk") {
+    return null;
+  }
 
   return (
     <footer className="bg-gradient-to-b from-[#1E293B] via-[#141E2E] to-[#0F172A] text-slate-300 pt-14 pb-12 border-t-2 border-emerald-400">
@@ -16,7 +23,7 @@ export default function Footer() {
         
         {/* Top Sacred Decorative Divider */}
         <div className="text-center mb-10">
-          <span className="text-2xl font-serif text-amber-300">ॐ नमो भगवते वासुदेवाय</span>
+          <span className="text-2xl sm:text-3xl font-serif text-amber-300 font-bold tracking-wide">हरे कृष्ण • Hare Krishna</span>
           <LotusAccent className="opacity-70 my-2" />
         </div>
 

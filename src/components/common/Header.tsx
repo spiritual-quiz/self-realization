@@ -76,23 +76,24 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
             
-            {/* Logo / Brand */}
-            <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-              <div className="relative w-9 h-9 sm:w-11 sm:h-11 shrink-0 group-hover:scale-105 transition-transform">
+            {/* Logo / Brand - Highlighted with crisp golden-emerald ambient aura & distinct backdrop */}
+            <Link href="/" className="flex items-center gap-3 group shrink-0">
+              <div className="relative w-10 h-10 sm:w-12 sm:h-12 shrink-0 p-1 rounded-2xl bg-gradient-to-br from-amber-400/25 via-emerald-400/20 to-emerald-500/30 border border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.35)] group-hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] group-hover:scale-105 transition-all">
                 <Image
                   src="/images/logo.png"
                   alt="SelfRealization Logo"
                   fill
-                  className="object-contain"
+                  className="object-contain p-0.5 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
                   priority
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-lg sm:text-xl font-black tracking-tight text-white group-hover:text-emerald-300 transition-colors">
-                  Self<span className="text-emerald-400">Realization</span>
+                <span className="text-lg sm:text-2xl font-black tracking-tight text-white group-hover:text-emerald-300 transition-colors flex items-center gap-1">
+                  Self<span className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]">Realization</span>
                 </span>
-                <span className="text-[10px] sm:text-[11px] text-emerald-300/90 font-bold tracking-wide">
-                  {language === "hi" ? "आत्म-साक्षात्कार मंच" : "Spiritual Outreach & LMS"}
+                <span className="text-[10px] sm:text-xs text-emerald-300 font-bold tracking-wide flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>{language === "hi" ? "आत्म-साक्षात्कार मंच" : "Spiritual Outreach & LMS"}</span>
                 </span>
               </div>
             </Link>

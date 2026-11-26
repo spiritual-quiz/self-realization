@@ -2012,36 +2012,6 @@ export default function LiveLikeAMonkClient() {
         </div>
       </section>
 
-      {/* ================= FOOTER ================= */}
-      <footer className="footer">
-        <div className="footer-inner">
-          <div className="footer-top-row">
-            <div className="footer-brand">
-              <span className="brand-mark" style={{ width: 40, height: 40 }}>
-                <img src={lotusImage} alt="" />
-              </span>
-              <div>
-                <strong style={{ display: 'block', fontSize: 13, letterSpacing: 2 }}>
-                  LIVE LIKE A MONK
-                </strong>
-                <span style={{ fontSize: 11, color: '#D4AF37' }}>
-                  ISKCON NVCC PUNE (NEW VEDIC CULTURAL CENTER)
-                </span>
-              </div>
-            </div>
-
-            <div className="footer-mantra">
-              <span>॥ हरे कृष्ण हरे कृष्ण कृष्ण कृष्ण हरे हरे । हरे राम हरे राम राम राम हरे हरे ॥</span>
-            </div>
-          </div>
-
-          <div className="footer-bottom-row">
-            <span>{c.footer.tagline}</span>
-            <span>{c.footer.copyright}</span>
-          </div>
-        </div>
-      </footer>
-
       {/* ================= REGISTRATION MODAL FORM ================= */}
       {openModal && (
         <div
