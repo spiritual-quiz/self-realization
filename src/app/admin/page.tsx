@@ -277,12 +277,60 @@ export default function AdminDashboardPage() {
   const [imageUploading, setImageUploading] = useState(false);
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
 
-  // Analytics & Collections State
-  const [registrations, setRegistrations] = useState<any[]>([]);
+  // Analytics & Collections State (Initialized synchronously from localStorage to prevent any count flicker on refresh)
+  const [registrations, setRegistrations] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("sr_class_registrations");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
+  });
   const [inquiries, setInquiries] = useState<any[]>([]);
-  const [customQuizzes, setCustomQuizzes] = useState<any[]>([]);
-  const [lmsCoursesList, setLmsCoursesList] = useState<any[]>(INITIAL_LMS_COURSES);
-  const [ongoingCoursesList, setOngoingCoursesList] = useState<any[]>(INITIAL_ONGOING_CLASSES);
+  const [customQuizzes, setCustomQuizzes] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
+        const rawCustom = localStorage.getItem("sr_custom_quizzes");
+        if (rawCustom !== null) {
+          const parsed = JSON.parse(rawCustom);
+          if (Array.isArray(parsed)) {
+            return parsed.filter((q: any) => !deletedQuizIds.includes(q.id));
+          }
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [lmsCoursesList, setLmsCoursesList] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const deleted = JSON.parse(localStorage.getItem("sr_deleted_courses") || "[]");
+        const cached = localStorage.getItem("sr_lms_courses") || localStorage.getItem("sr_custom_courses");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.filter((c: any) => !deleted.includes(c.id));
+          }
+        }
+        return INITIAL_LMS_COURSES.filter((c: any) => !deleted.includes(c.id));
+      } catch (e) {}
+    }
+    return INITIAL_LMS_COURSES;
+  });
+  const [ongoingCoursesList, setOngoingCoursesList] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("sr_ongoing_classes");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_ONGOING_CLASSES;
+  });
   const [loadingData, setLoadingData] = useState(false);
 
   // LMS Course Management Modal State
@@ -518,10 +566,9 @@ export default function AdminDashboardPage() {
             });
           }
         } catch (e) {}
-      } else if (allQuizzes.length === 0) {
-        // First visit only: seed with defaults minus any deleted
-        const initialQuizzes = DEFAULT_SYSTEM_QUIZZES.filter(q => !deletedQuizIds.includes(q.id));
-        allQuizzes = initialQuizzes;
+      } else if (allQuizzes.length === 0 && deletedQuizIds.length === 0 && rawCustom === null) {
+        // Absolute first visit only: seed with defaults if never deleted before
+        allQuizzes = [...DEFAULT_SYSTEM_QUIZZES];
       }
 
       // Strictly purge any deleted quiz ID

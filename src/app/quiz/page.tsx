@@ -11,7 +11,21 @@ import { collection, getDocs, query, limit } from "firebase/firestore";
 
 export default function QuizOverviewPage() {
   const { t, language } = useLanguage();
-  const [customQuizzes, setCustomQuizzes] = useState<any[]>([]);
+  const [customQuizzes, setCustomQuizzes] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
+        const raw = localStorage.getItem("sr_custom_quizzes");
+        if (raw !== null) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            return parsed.filter((q: any) => !deletedQuizIds.includes(q.id));
+          }
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
 
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -45,8 +59,8 @@ export default function QuizOverviewPage() {
             });
           }
         } catch (e) {}
-      } else if (list.length === 0) {
-        list = defaultQuizzes.filter((q) => !deletedQuizIds.includes(q.id));
+      } else if (list.length === 0 && deletedQuizIds.length === 0 && rawSaved === null) {
+        list = defaultQuizzes;
       }
 
       const finalList = list.filter((q) => !deletedQuizIds.includes(q.id));
