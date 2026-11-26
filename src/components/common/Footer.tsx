@@ -90,6 +90,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/login" className="hover:text-amber-400 transition-colors font-medium">
+                  {language === "hi" ? "लॉगिन पोर्टल (Login Portal)" : "Login Portal"}
+                </Link>
+              </li>
+              <li>
                 <Link href="/#about" className="hover:text-amber-400 transition-colors">
                   {t.nav.about}
                 </Link>

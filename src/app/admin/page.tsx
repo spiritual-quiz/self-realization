@@ -487,7 +487,7 @@ export default function AdminDashboardPage() {
 
   const handleLogout = () => {
     localStorage.removeItem("sr_admin_session");
-    router.push("/admin/login");
+    router.push("/login");
   };
 
   // --- AUDIO CLEAR / RESET HANDLERS ---

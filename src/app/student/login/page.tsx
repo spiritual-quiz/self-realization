@@ -11,6 +11,11 @@ import LotusAccent from "@/components/devotional/LotusAccent";
 export default function StudentLoginPage() {
   const { language } = useLanguage();
   const router = useRouter();
+
+  React.useEffect(() => {
+    router.replace("/login");
+  }, [router]);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);

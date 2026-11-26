@@ -28,14 +28,14 @@ export default function StudentDashboardPage() {
   useEffect(() => {
     const sessionStr = localStorage.getItem("sr_student_session");
     if (!sessionStr) {
-      router.push("/student/login");
+      router.push("/login");
       return;
     }
     try {
       const parsed = JSON.parse(sessionStr);
       setStudentSession(parsed);
     } catch (e) {
-      router.push("/student/login");
+      router.push("/login");
     }
 
     // Load custom courses or defaults
@@ -73,7 +73,7 @@ export default function StudentDashboardPage() {
 
   const handleLogout = () => {
     localStorage.removeItem("sr_student_session");
-    router.push("/student/login");
+    router.push("/login");
   };
 
   if (!studentSession) return null;
