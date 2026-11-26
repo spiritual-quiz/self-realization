@@ -1677,6 +1677,24 @@ export default function AdminDashboardPage() {
                             {playingPreviewUrl === bgMusicUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                             <span>{playingPreviewUrl === bgMusicUrl ? "Stop" : "Test"}</span>
                           </button>
+                          {(() => {
+                            const selectedTrack = bgTracks.find((t) => t.url === bgMusicUrl);
+                            if (!selectedTrack) return null;
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleDeleteAudioTrack(selectedTrack.id, "bg");
+                                  setBgMusicUrl("");
+                                }}
+                                className="text-[10px] text-rose-600 hover:text-rose-800 font-bold flex items-center gap-0.5 cursor-pointer bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200"
+                                title="Delete this background track from library"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            );
+                          })()}
                           {bgMusicUrl && (
                             <button
                               type="button"
@@ -1710,6 +1728,44 @@ export default function AdminDashboardPage() {
                           className="text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:bg-amber-100 file:text-amber-800 cursor-pointer"
                         />
                       </div>
+
+                      {/* Delete already uploaded background music list */}
+                      {bgTracks.length > 0 && (
+                        <div className="pt-1.5 border-t border-amber-200/60 space-y-1">
+                          <div className="flex items-center justify-between text-[10px] font-bold text-gray-600">
+                            <span>Uploaded Tracks ({bgTracks.length})</span>
+                            <span className="text-[9px] text-gray-400">Click 🗑️ to delete</span>
+                          </div>
+                          <div className="max-h-24 overflow-y-auto space-y-1">
+                            {bgTracks.map((trk) => (
+                              <div key={trk.id} className="flex items-center justify-between text-[10px] bg-white px-2 py-1 rounded-md border border-gray-100">
+                                <span className="truncate max-w-[140px] font-medium text-gray-800" title={trk.title}>{trk.title}</span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => togglePlayAudioPreview(trk.url, bgMusicVolume)}
+                                    className="text-amber-700 hover:text-amber-900"
+                                    title="Test track"
+                                  >
+                                    {playingPreviewUrl === trk.url ? <Pause className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleDeleteAudioTrack(trk.id, "bg");
+                                      if (bgMusicUrl === trk.url) setBgMusicUrl("");
+                                    }}
+                                    className="text-rose-600 hover:text-rose-800 cursor-pointer p-0.5 rounded hover:bg-rose-50"
+                                    title="Delete this audio track"
+                                  >
+                                    <Trash2 className="w-2.5 h-2.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* 2. Right Answer Sound from Library */}
@@ -1725,6 +1781,24 @@ export default function AdminDashboardPage() {
                             {playingPreviewUrl === correctSoundUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                             <span>{playingPreviewUrl === correctSoundUrl ? "Stop" : "Test"}</span>
                           </button>
+                          {(() => {
+                            const selectedTrack = correctSounds.find((s) => s.url === correctSoundUrl);
+                            if (!selectedTrack) return null;
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleDeleteAudioTrack(selectedTrack.id, "correct");
+                                  setCorrectSoundUrl("");
+                                }}
+                                className="text-[10px] text-rose-600 hover:text-rose-800 font-bold flex items-center gap-0.5 cursor-pointer bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200"
+                                title="Delete this right answer sound from library"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            );
+                          })()}
                           {correctSoundUrl && (
                             <button
                               type="button"
@@ -1757,6 +1831,44 @@ export default function AdminDashboardPage() {
                           className="text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:bg-amber-100 file:text-amber-800 cursor-pointer"
                         />
                       </div>
+
+                      {/* Delete already uploaded right answer music list */}
+                      {correctSounds.length > 0 && (
+                        <div className="pt-1.5 border-t border-amber-200/60 space-y-1">
+                          <div className="flex items-center justify-between text-[10px] font-bold text-gray-600">
+                            <span>Uploaded Sounds ({correctSounds.length})</span>
+                            <span className="text-[9px] text-gray-400">Click 🗑️ to delete</span>
+                          </div>
+                          <div className="max-h-24 overflow-y-auto space-y-1">
+                            {correctSounds.map((snd) => (
+                              <div key={snd.id} className="flex items-center justify-between text-[10px] bg-white px-2 py-1 rounded-md border border-gray-100">
+                                <span className="truncate max-w-[140px] font-medium text-gray-800" title={snd.title}>{snd.title}</span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => togglePlayAudioPreview(snd.url)}
+                                    className="text-emerald-700 hover:text-emerald-900"
+                                    title="Test sound"
+                                  >
+                                    {playingPreviewUrl === snd.url ? <Pause className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleDeleteAudioTrack(snd.id, "correct");
+                                      if (correctSoundUrl === snd.url) setCorrectSoundUrl("");
+                                    }}
+                                    className="text-rose-600 hover:text-rose-800 cursor-pointer p-0.5 rounded hover:bg-rose-50"
+                                    title="Delete this sound"
+                                  >
+                                    <Trash2 className="w-2.5 h-2.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* 3. Wrong Answer Sound from Library */}
@@ -1772,6 +1884,24 @@ export default function AdminDashboardPage() {
                             {playingPreviewUrl === wrongSoundUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                             <span>{playingPreviewUrl === wrongSoundUrl ? "Stop" : "Test"}</span>
                           </button>
+                          {(() => {
+                            const selectedTrack = wrongSounds.find((s) => s.url === wrongSoundUrl);
+                            if (!selectedTrack) return null;
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleDeleteAudioTrack(selectedTrack.id, "wrong");
+                                  setWrongSoundUrl("");
+                                }}
+                                className="text-[10px] text-rose-600 hover:text-rose-800 font-bold flex items-center gap-0.5 cursor-pointer bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200"
+                                title="Delete this wrong answer sound from library"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            );
+                          })()}
                           {wrongSoundUrl && (
                             <button
                               type="button"
@@ -1804,6 +1934,44 @@ export default function AdminDashboardPage() {
                           className="text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:bg-amber-100 file:text-amber-800 cursor-pointer"
                         />
                       </div>
+
+                      {/* Delete already uploaded wrong answer music list */}
+                      {wrongSounds.length > 0 && (
+                        <div className="pt-1.5 border-t border-amber-200/60 space-y-1">
+                          <div className="flex items-center justify-between text-[10px] font-bold text-gray-600">
+                            <span>Uploaded Sounds ({wrongSounds.length})</span>
+                            <span className="text-[9px] text-gray-400">Click 🗑️ to delete</span>
+                          </div>
+                          <div className="max-h-24 overflow-y-auto space-y-1">
+                            {wrongSounds.map((snd) => (
+                              <div key={snd.id} className="flex items-center justify-between text-[10px] bg-white px-2 py-1 rounded-md border border-gray-100">
+                                <span className="truncate max-w-[140px] font-medium text-gray-800" title={snd.title}>{snd.title}</span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => togglePlayAudioPreview(snd.url)}
+                                    className="text-rose-700 hover:text-rose-900"
+                                    title="Test sound"
+                                  >
+                                    {playingPreviewUrl === snd.url ? <Pause className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleDeleteAudioTrack(snd.id, "wrong");
+                                      if (wrongSoundUrl === snd.url) setWrongSoundUrl("");
+                                    }}
+                                    className="text-rose-600 hover:text-rose-800 cursor-pointer p-0.5 rounded hover:bg-rose-50"
+                                    title="Delete this sound"
+                                  >
+                                    <Trash2 className="w-2.5 h-2.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
