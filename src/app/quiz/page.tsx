@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { HelpCircle, Award, Sparkles, Volume2, ShieldCheck, ArrowRight, Upload, BookOpen } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
+import { resolveImageUrlByTag } from "@/lib/imageLibrary";
 import { db } from "@/lib/firebase/client";
 import { collection, getDocs, query, limit } from "firebase/firestore";
 
@@ -104,7 +105,7 @@ export default function QuizOverviewPage() {
             const titleStr = typeof q.title === "object" ? (q.title[language] || q.title.en || q.title.hi) : q.title;
             const descStr = q.description ? (typeof q.description === "object" ? (q.description[language] || q.description.en) : q.description) : "Test your spiritual intellect, earn marks, and receive an official verifiable devotional certificate.";
             const questionsCount = q.questionCount || q.questions?.length || q.questions || 10;
-            const imgUrl = q.image || q.imageUrl || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png";
+            const imgUrl = resolveImageUrlByTag(q.image || q.imageUrl || "krishna");
 
             return (
               <div

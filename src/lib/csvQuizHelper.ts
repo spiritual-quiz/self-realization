@@ -100,3 +100,16 @@ export function parseCSVToQuestions(csvText: string): { questions: ParsedQuizQue
     return { questions: [], error: "Failed to parse CSV: " + err.message };
   }
 }
+
+export function downloadSampleCsvTemplate(fileName = "sample_vedic_quiz_template.csv") {
+  if (typeof window === "undefined") return;
+  const blob = new Blob([SAMPLE_CSV_CONTENT], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", fileName);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}

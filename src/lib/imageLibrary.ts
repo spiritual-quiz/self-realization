@@ -4,6 +4,7 @@ export interface ImageAsset {
   title: string;
   url: string;
   category: "Deity" | "Philosophy" | "Temple" | "Course";
+  targetType?: "banner" | "question"; // banner (1200x675) or individual question (600x400)
 }
 
 export const DEFAULT_IMAGE_LIBRARY: ImageAsset[] = [
@@ -12,56 +13,64 @@ export const DEFAULT_IMAGE_LIBRARY: ImageAsset[] = [
     name: "krishna",
     title: "Lord Sri Krishna (Partha-sarathi)",
     url: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png",
-    category: "Deity"
+    category: "Deity",
+    targetType: "question"
   },
   {
     id: "img-rama",
     name: "rama",
     title: "Lord Ramachandra & Sita Lakshman Hanuman",
     url: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80",
-    category: "Deity"
+    category: "Deity",
+    targetType: "question"
   },
   {
     id: "img-vishnu",
     name: "vishnu",
     title: "Lord Vishnu & Vaikuntha Abode",
     url: "https://images.unsplash.com/photo-1609137144813-7d9921338f24?auto=format&fit=crop&w=800&q=80",
-    category: "Deity"
+    category: "Deity",
+    targetType: "question"
   },
   {
     id: "img-temple",
     name: "temple",
     title: "Vedic Temple & Lotus Architecture",
     url: "https://www.iskconpune.com/wp-content/uploads/2023/02/radha-vrindavanchandra-1024x683.jpeg",
-    category: "Temple"
+    category: "Temple",
+    targetType: "banner"
   },
   {
     id: "img-gita",
     name: "gita",
     title: "Bhagavad-gita As It Is & Kurukshetra",
     url: "https://images.unsplash.com/photo-1532012164546-f432f2e3edd4?auto=format&fit=crop&w=800&q=80",
-    category: "Philosophy"
+    category: "Philosophy",
+    targetType: "banner"
   },
   {
     id: "img-prabhupada",
     name: "prabhupada",
     title: "His Divine Grace A.C. Bhaktivedanta Swami Prabhupada",
     url: "https://www.iskconpune.com/wp-content/uploads/2023/02/srila-prabhupada.jpg",
-    category: "Philosophy"
+    category: "Philosophy",
+    targetType: "question"
   },
   {
     id: "img-meditation",
     name: "meditation",
     title: "Japa Meditation on Tulasi Beads",
     url: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80",
-    category: "Philosophy"
+    category: "Philosophy",
+    targetType: "question"
   },
   {
     id: "img-bhakti-vaibhava",
     name: "bhakti-vaibhava",
-    title: "Bhakti Vaibhava Srimad Bhagavatam Study",
+    title: "Bhakti Vaibhava Srimad Bhagavatam Study Banner",
     url: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png",
-    category: "Course"
+    category: "Course",
+    targetType: "banner"
   }
 ];
 
@@ -137,7 +146,9 @@ export function resolveImageUrlByTag(tagName?: string, fallbackUrl?: string): st
 }
 
 /**
- * Automatically resize & convert an image to optimal dimensions (800x500 16:9)
+ * Automatically resize & convert an image to optimal dimensions
+ * For Banners: 1200 x 675 (16:9)
+ * For Question Illustrations: 600 x 400 (3:2)
  */
 export async function scaleAndOptimizeImageFile(
   file: File, 
@@ -161,14 +172,14 @@ export async function scaleAndOptimizeImageFile(
           return;
         }
 
-        // Draw letterboxed or cropped to maintain aspect ratio
-        ctx.fillStyle = "#1E293B"; // Dark slate background fill
+        // Fill background
+        ctx.fillStyle = "#1E293B";
         ctx.fillRect(0, 0, targetWidth, targetHeight);
 
-        // Aspect fit centered
+        // Aspect fit / cover
         const hRatio = targetWidth / img.width;
         const vRatio = targetHeight / img.height;
-        const ratio = Math.max(hRatio, vRatio); // cover
+        const ratio = Math.max(hRatio, vRatio);
         const centerShiftX = (targetWidth - img.width * ratio) / 2;
         const centerShiftY = (targetHeight - img.height * ratio) / 2;
 
@@ -191,4 +202,12 @@ export async function scaleAndOptimizeImageFile(
     };
     reader.readAsDataURL(file);
   });
+}
+
+export async function scaleBannerImage(file: File): Promise<string> {
+  return scaleAndOptimizeImageFile(file, 1200, 675, 0.88);
+}
+
+export async function scaleQuestionImage(file: File): Promise<string> {
+  return scaleAndOptimizeImageFile(file, 600, 400, 0.85);
 }

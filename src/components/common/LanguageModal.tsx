@@ -1,15 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { Sparkles, Globe, Check } from "lucide-react";
 import { Language } from "@/types";
 
 export default function LanguageModal() {
+  const pathname = usePathname();
   const { showLangModal, confirmInitialLanguage, language } = useLanguage();
   const [selected, setSelected] = useState<Language>(language || "en");
 
-  if (!showLangModal) return null;
+  // The language selection pop-up must ONLY open on the Home page ('/'), never on login or other pages
+  if (pathname !== "/" || !showLangModal) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">

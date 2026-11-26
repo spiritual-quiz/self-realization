@@ -22,7 +22,10 @@ import {
   Check,
   RotateCcw,
   Menu,
-  X
+  X,
+  Globe,
+  MapPin,
+  MessageCircle
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import confetti from "canvas-confetti";
@@ -188,6 +191,58 @@ export default function CourseLearningRoomPage({ params }: PageProps) {
               LEFT COLUMN: VIDEO PLAYER & LESSON CONTENT (8 Cols)
               ========================================================================= */}
           <div className="lg:col-span-8 space-y-6">
+
+            {/* Course Information & Official WhatsApp Community Banner */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-emerald-300/80 shadow-md space-y-4 bg-gradient-to-br from-emerald-50/50 via-white to-amber-50/40">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-100">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
+                    {course.mode || "Online & Offline (Hybrid)"}
+                  </span>
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 mt-1">
+                    {course.title[language] || course.title.en}
+                  </h2>
+                </div>
+                
+                {/* WhatsApp Direct Join Link Button */}
+                <a
+                  href={course.whatsappGroupUrl || "https://chat.whatsapp.com/SelfRealizationGita"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition-all transform hover:scale-105 shrink-0 cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Join WhatsApp Group</span>
+                </a>
+              </div>
+
+              {/* Mode, Timing & Classroom Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-700">
+                <div className="flex items-center gap-2 bg-white/80 p-2.5 rounded-xl border border-slate-200">
+                  <Globe className="w-4 h-4 text-sky-600 shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Class Mode</p>
+                    <p className="font-bold text-slate-900 truncate">{course.mode || "Online & Offline"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white/80 p-2.5 rounded-xl border border-slate-200">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Class Timing</p>
+                    <p className="font-bold text-slate-900 truncate">{course.timing || "Every Sunday 10:00 AM IST"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white/80 p-2.5 rounded-xl border border-slate-200">
+                  <MapPin className="w-4 h-4 text-rose-600 shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Room & Venue</p>
+                    <p className="font-bold text-slate-900 truncate">{course.roomNumber ? `${course.roomNumber}, ` : ""}{course.venue || "ISKCON Mandir"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             {/* Embedded Responsive Video Player with 16:9 Aspect Ratio */}
             <div className="bg-black rounded-3xl overflow-hidden shadow-xl border-2 sm:border-4 border-amber-400/80 relative">

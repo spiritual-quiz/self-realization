@@ -26,6 +26,11 @@ export interface LMSCourse {
   isPaid: boolean;
   instructor: string;
   thumbnail: string;
+  mode?: string;
+  timing?: string;
+  venue?: string;
+  roomNumber?: string;
+  whatsappGroupUrl?: string;
   lessons: CourseLesson[];
   assessment: CourseQuizQuestion[];
 }
@@ -48,6 +53,11 @@ export const LMS_COURSES: LMSCourse[] = [
     isPaid: false,
     instructor: "H.G. Gauranga Das & Senior Vedic Scholars",
     thumbnail: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png",
+    mode: "Online & Offline (Hybrid)",
+    timing: "Every Sunday: 10:00 AM – 11:30 AM IST",
+    venue: "Sri Sri Radha Vrindavanchandra Mandir",
+    roomNumber: "Room 108 (Ground Floor)",
+    whatsappGroupUrl: "https://chat.whatsapp.com/SelfRealizationGita",
     lessons: [
       {
         id: "dysc-1",
@@ -286,6 +296,11 @@ export const LMS_COURSES: LMSCourse[] = [
     isPaid: false,
     instructor: "H.G. Radheshyam Das (M.Tech IIT Bombay)",
     thumbnail: "https://www.iskconpune.com/wp-content/uploads/2023/02/radha-vrindavanchandra-1024x683.jpeg",
+    mode: "Online (Live Zoom) & Offline (Temple Classroom)",
+    timing: "Wednesday & Friday: 07:00 PM – 08:30 PM IST",
+    venue: "ISKCON NVCC Vedic Cultural Centre",
+    roomNumber: "Hall 204 (First Floor)",
+    whatsappGroupUrl: "https://chat.whatsapp.com/ScienceOfSelfRealization",
     lessons: [
       {
         id: "ssr-1",
@@ -454,6 +469,11 @@ export function getCourseById(id: string): LMSCourse | undefined {
             isPaid: match.isPaid || false,
             instructor: match.instructor || "ISKCON NVCC Scholars",
             thumbnail: match.thumbnail || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png",
+            mode: match.mode || "Online & Offline (Hybrid)",
+            timing: match.timing || "Every Sunday: 10:00 AM – 11:30 AM IST",
+            venue: match.venue || "Sri Sri Radha Vrindavanchandra Mandir",
+            roomNumber: match.roomNumber || "Room 108",
+            whatsappGroupUrl: match.whatsappGroupUrl || match.whatsappGroupUrl || "https://chat.whatsapp.com/SelfRealizationGita",
             lessons: lessonsList,
             assessment: match.assessment || [
               {

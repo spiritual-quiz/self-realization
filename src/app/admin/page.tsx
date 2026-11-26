@@ -41,16 +41,27 @@ import {
   Image as ImageIcon
 } from "lucide-react";
 import { 
+  AudioTrack, 
+  DEFAULT_BG_MUSIC, 
+  DEFAULT_CORRECT_SOUNDS, 
+  DEFAULT_WRONG_SOUNDS, 
+  getStoredAudioLibrary, 
+  saveAudioTrack, 
+  deleteAudioTrack 
+} from "@/lib/audioLibrary";
+import { 
   ImageAsset, 
   DEFAULT_IMAGE_LIBRARY, 
   getStoredImageLibrary, 
   saveImageToLibrary, 
   deleteImageFromLibrary, 
   resolveImageUrlByTag, 
-  scaleAndOptimizeImageFile 
+  scaleAndOptimizeImageFile,
+  scaleBannerImage,
+  scaleQuestionImage
 } from "@/lib/imageLibrary";
 import LotusAccent from "@/components/devotional/LotusAccent";
-import { SAMPLE_CSV_CONTENT, parseCSVToQuestions, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
+import { SAMPLE_CSV_CONTENT, parseCSVToQuestions, ParsedQuizQuestion, downloadSampleCsvTemplate } from "@/lib/csvQuizHelper";
 import { DEFAULT_SYSTEM_QUIZZES, SystemQuiz } from "@/lib/defaultQuizzes";
 import { db } from "@/lib/firebase/client";
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, query, limit } from "firebase/firestore";
@@ -205,12 +216,26 @@ export default function AdminDashboardPage() {
   
   // Left Sidebar Tabs strictly matching user requests
   const [activeTab, setActiveTab] = useState<
-    "overview" | "courses" | "ongoing-courses" | "quizzes" | "image-library" | "classes" | "inquiries"
+    "overview" | "courses" | "ongoing-courses" | "quizzes" | "media-library" | "classes" | "inquiries"
   >("overview");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Devotional Image Library State (Shared tags: krishna, rama, vishnu, temple, etc.)
+  // Central Audio Library State
+  const [bgTracks, setBgTracks] = useState<AudioTrack[]>(DEFAULT_BG_MUSIC);
+  const [correctSounds, setCorrectSounds] = useState<AudioTrack[]>(DEFAULT_CORRECT_SOUNDS);
+  const [wrongSounds, setWrongSounds] = useState<AudioTrack[]>(DEFAULT_WRONG_SOUNDS);
+
+  // Audio Upload Form State
+  const [mediaActiveSubTab, setMediaActiveSubTab] = useState<"audio" | "banners" | "questions">("audio");
+  const [audioUploadType, setAudioUploadType] = useState<"bg" | "correct" | "wrong">("bg");
+  const [newAudioName, setNewAudioName] = useState("");
+  const [newAudioTitle, setNewAudioTitle] = useState("");
+  const [newAudioUrl, setNewAudioUrl] = useState("");
+  const [audioUploading, setAudioUploading] = useState(false);
+
+  // Devotional Image Library State (Separate Banner vs Question images)
   const [imageAssets, setImageAssets] = useState<ImageAsset[]>(DEFAULT_IMAGE_LIBRARY);
+  const [newImageTargetType, setNewImageTargetType] = useState<"banner" | "question">("banner");
   const [newImageTag, setNewImageTag] = useState("");
   const [newImageTitle, setNewImageTitle] = useState("");
   const [newImageCategory, setNewImageCategory] = useState<"Deity" | "Philosophy" | "Temple" | "Course">("Deity");
@@ -473,9 +498,14 @@ export default function AdminDashboardPage() {
         }
       }
 
-      // 6. Fetch Central Devotional Image Library
+      // 6. Fetch Central Devotional Image Library & Audio Library
       const library = getStoredImageLibrary();
       setImageAssets(library);
+
+      const audioLib = getStoredAudioLibrary();
+      setBgTracks(audioLib.bgTracks);
+      setCorrectSounds(audioLib.correctSounds);
+      setWrongSounds(audioLib.wrongSounds);
     } catch (error) {
       console.warn("Could not fetch Firestore collections:", error);
       const localQ = JSON.parse(localStorage.getItem("sr_custom_quizzes") || "[]");
@@ -500,12 +530,72 @@ export default function AdminDashboardPage() {
     else if (target === "edit-wrong") setEditWrongSoundUrl("");
   };
 
-  // --- IMAGE LIBRARY HANDLERS ---
-  const handleUploadImageFile = async (file: File) => {
+  // --- AUDIO LIBRARY HANDLERS (Requirement: Upload background music, right & wrong answer music) ---
+  const handleUploadAudioFileToLibrary = (file: File) => {
+    if (!file) return;
+    setAudioUploading(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setNewAudioUrl(dataUrl);
+      if (!newAudioTitle) {
+        setNewAudioTitle(file.name.replace(/\.[^/.]+$/, ""));
+      }
+      if (!newAudioName) {
+        setNewAudioName(file.name.replace(/\.[^/.]+$/, "").toLowerCase().replace(/[^a-z0-9_-]/g, "-"));
+      }
+      setAudioUploading(false);
+    };
+    reader.onerror = () => {
+      alert("Could not read audio file.");
+      setAudioUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveAudioTrack = () => {
+    if (!newAudioTitle.trim()) {
+      alert("Please enter a title for this audio track.");
+      return;
+    }
+    if (!newAudioUrl.trim()) {
+      alert("Please upload an audio file or select one.");
+      return;
+    }
+    const track: AudioTrack = {
+      id: `audio-${Date.now()}`,
+      name: newAudioName.trim() || newAudioTitle.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-"),
+      title: newAudioTitle.trim(),
+      url: newAudioUrl.trim(),
+      type: audioUploadType
+    };
+    saveAudioTrack(track);
+    const lib = getStoredAudioLibrary();
+    setBgTracks(lib.bgTracks);
+    setCorrectSounds(lib.correctSounds);
+    setWrongSounds(lib.wrongSounds);
+    setNewAudioTitle("");
+    setNewAudioName("");
+    setNewAudioUrl("");
+  };
+
+  const handleDeleteAudioTrack = (id: string, type: "bg" | "correct" | "wrong") => {
+    if (!confirm("Are you sure you want to delete this audio track from your library?")) return;
+    deleteAudioTrack(id, type);
+    const lib = getStoredAudioLibrary();
+    setBgTracks(lib.bgTracks);
+    setCorrectSounds(lib.correctSounds);
+    setWrongSounds(lib.wrongSounds);
+  };
+
+  // --- IMAGE LIBRARY HANDLERS (Requirement: Separate Banner vs Individual Question Images) ---
+  const handleUploadImageFile = async (file: File, target: "banner" | "question" = newImageTargetType) => {
     if (!file) return;
     setImageUploading(true);
     try {
-      const dataUrl = await scaleAndOptimizeImageFile(file, 800, 500);
+      const dataUrl = target === "banner"
+        ? await scaleBannerImage(file)
+        : await scaleQuestionImage(file);
       setNewImageUrl(dataUrl);
       if (!newImageTag) {
         const cleanTag = file.name.replace(/\.[^/.]+$/, "").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
@@ -536,6 +626,7 @@ export default function AdminDashboardPage() {
       title: newImageTitle.trim() || newImageTag.trim(),
       url: newImageUrl.trim(),
       category: newImageCategory,
+      targetType: newImageTargetType
     };
     const updated = saveImageToLibrary(asset);
     setImageAssets(updated);
@@ -589,6 +680,10 @@ export default function AdminDashboardPage() {
     setEditQuizDescHi(quiz.description?.hi || "");
     setEditQuizTimerSeconds(Number(quiz.timerSeconds) || 10);
     setEditQuizImage(quiz.image || quiz.thumbnail || "krishna");
+    setEditBgMusicUrl(quiz.bgMusicUrl || "/audio/bg-music.mp3");
+    setEditCorrectSoundUrl(quiz.correctSoundUrl || "/audio/correct.mp3");
+    setEditWrongSoundUrl(quiz.wrongSoundUrl || "/audio/wrong.mp3");
+    setEditBgMusicVolume(quiz.bgMusicVolume !== undefined ? Number(quiz.bgMusicVolume) : 0.35);
   };
 
   const handleSaveQuizDetails = async () => {
@@ -606,7 +701,11 @@ export default function AdminDashboardPage() {
       category: editQuizCategory,
       timerSeconds: editQuizTimerSeconds,
       image: editQuizImage,
-      thumbnail: editQuizImage
+      thumbnail: editQuizImage,
+      bgMusicUrl: editBgMusicUrl,
+      correctSoundUrl: editCorrectSoundUrl,
+      wrongSoundUrl: editWrongSoundUrl,
+      bgMusicVolume: editBgMusicVolume
     };
 
     const updatedQuizzes = customQuizzes.map(q => q.id === editingQuizDetails.id ? updatedQuiz : q);
@@ -1087,7 +1186,7 @@ export default function AdminDashboardPage() {
     { id: "courses", label: "Manage Course LMS", icon: GraduationCap, count: lmsCoursesList.length },
     { id: "ongoing-courses", label: "Courses & Live Classes", icon: BookOpen, count: ongoingCoursesList.length },
     { id: "quizzes", label: "Quizzes & Audio", icon: Award, count: customQuizzes.length + 3 },
-    { id: "image-library", label: "Devotional Image Library", icon: ImageIcon, count: imageAssets.length },
+    { id: "media-library", label: "🎵 Media & Asset Library", icon: Music, count: bgTracks.length + correctSounds.length + wrongSounds.length + imageAssets.length },
     { id: "classes", label: "Seeker Registrations", icon: Calendar, count: registrations.length },
     { id: "inquiries", label: "Contact Enquiries", icon: Mail, count: inquiries.length },
   ] as const;
@@ -1207,7 +1306,7 @@ export default function AdminDashboardPage() {
                 {activeTab === "courses" && "🎓 Manage Course LMS"}
                 {activeTab === "ongoing-courses" && "📅 Manage Ongoing Courses & Live Classes"}
                 {activeTab === "quizzes" && "🏆 Vedic Quizzes & Audio Settings"}
-                {activeTab === "image-library" && "🖼️ Devotional Image Library"}
+                {activeTab === "media-library" && "🎵 Central Media & Devotional Asset Library"}
                 {activeTab === "classes" && "📋 Seeker Registrations"}
                 {activeTab === "inquiries" && "✉️ Contact Enquiries"}
               </h1>
@@ -1519,15 +1618,39 @@ export default function AdminDashboardPage() {
                 )}
               </div>
 
-              {/* Bulk CSV Quiz Creator with Sound Upload Options */}
+              {/* Add New Quiz & Bulk CSV Importer (Requirement: Download sample CSV first, edit, and upload) */}
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-sm space-y-6">
+                
+                {/* 1. Download Sample CSV File Header Banner */}
+                <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 p-5 rounded-2xl border-2 border-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-amber-700" />
+                      <h4 className="text-sm font-black text-amber-950">
+                        Step 1: Download Sample Quiz CSV Template
+                      </h4>
+                    </div>
+                    <p className="text-xs text-amber-900 font-medium">
+                      Download this sample CSV template. Edit it in Excel, Google Sheets, or Notepad to add your questions, then upload below.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => downloadSampleCsvTemplate()}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-black text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Sample CSV File</span>
+                  </button>
+                </div>
+
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
                     <Upload className="w-5 h-5 text-amber-600" />
-                    <span>Upload New Quiz via Bulk CSV</span>
+                    <span>Step 2: Add Quiz Details & Select Audio / Banner</span>
                   </h3>
                   <p className="text-xs text-gray-600 mt-1">
-                    Upload a CSV of questions and set specific background music, right answer, and wrong answer sounds.
+                    Configure the quiz title, description, thumbnail banner, and select audio tracks from your media library.
                   </p>
                 </div>
 
@@ -1541,10 +1664,10 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* 1. Background Music */}
+                    {/* 1. Background Music from Library */}
                     <div className="space-y-1.5 bg-white/80 p-3 rounded-xl border border-amber-200">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-gray-700">Background Music</label>
+                        <label className="text-[11px] font-bold text-gray-700">Select Background Music</label>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -1571,12 +1694,15 @@ export default function AdminDashboardPage() {
                         onChange={(e) => setBgMusicUrl(e.target.value)}
                         className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white"
                       >
-                        <option value="/audio/bg-music.mp3">Divine Flute (Default)</option>
-                        <option value="https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3">Sacred Sitar & Bells</option>
-                        <option value="https://assets.mixkit.co/music/preview/mixkit-meditation-flute-247.mp3">Ambient Flute</option>
+                        <option value="">No Background Music (Mute)</option>
+                        {bgTracks.map((trk) => (
+                          <option key={trk.id} value={trk.url}>
+                            {trk.title}
+                          </option>
+                        ))}
                       </select>
                       <div className="pt-1">
-                        <label className="text-[10px] text-gray-500 font-semibold block">Or Upload MP3/WAV File:</label>
+                        <label className="text-[10px] text-gray-500 font-semibold block">Or Upload New Music File:</label>
                         <input
                           type="file"
                           accept="audio/*"
@@ -1586,10 +1712,10 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
 
-                    {/* 2. Right Answer Sound */}
+                    {/* 2. Right Answer Sound from Library */}
                     <div className="space-y-1.5 bg-white/80 p-3 rounded-xl border border-amber-200">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-gray-700">Right Answer Sound</label>
+                        <label className="text-[11px] font-bold text-gray-700">Select Right Answer Sound</label>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -1616,9 +1742,11 @@ export default function AdminDashboardPage() {
                         onChange={(e) => setCorrectSoundUrl(e.target.value)}
                         className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white"
                       >
-                        <option value="/audio/correct.mp3">Harinam Chime (Default)</option>
-                        <option value="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3">Temple Bell Ding</option>
-                        <option value="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3">Celestial Flute Note</option>
+                        {correctSounds.map((snd) => (
+                          <option key={snd.id} value={snd.url}>
+                            {snd.title}
+                          </option>
+                        ))}
                       </select>
                       <div className="pt-1">
                         <label className="text-[10px] text-gray-500 font-semibold block">Or Upload Sound File:</label>
@@ -1631,10 +1759,10 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
 
-                    {/* 3. Wrong Answer Sound */}
+                    {/* 3. Wrong Answer Sound from Library */}
                     <div className="space-y-1.5 bg-white/80 p-3 rounded-xl border border-amber-200">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-gray-700">Wrong Answer Sound</label>
+                        <label className="text-[11px] font-bold text-gray-700">Select Wrong Answer Sound</label>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -1661,9 +1789,11 @@ export default function AdminDashboardPage() {
                         onChange={(e) => setWrongSoundUrl(e.target.value)}
                         className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white"
                       >
-                        <option value="/audio/wrong.mp3">Soft Temple Gong (Default)</option>
-                        <option value="https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3">Deep Resonance Bell</option>
-                        <option value="https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3">Low Tone</option>
+                        {wrongSounds.map((snd) => (
+                          <option key={snd.id} value={snd.url}>
+                            {snd.title}
+                          </option>
+                        ))}
                       </select>
                       <div className="pt-1">
                         <label className="text-[10px] text-gray-500 font-semibold block">Or Upload Sound File:</label>
@@ -1776,12 +1906,241 @@ export default function AdminDashboardPage() {
           )}
 
           {/* =========================================================================
-              TAB: DEVOTIONAL IMAGE LIBRARY (Requirement: Upload images separately,
-              auto-convert to proper size or mention proper size below upload,
-              tag by image name like Krishna, Rama, Vishnu, Temple to reuse across quizzes)
+              TAB: MEDIA & DEVOTIONAL ASSET LIBRARY (Requirement 2: Separate options for
+              background music, right answer music, wrong answer music, thumbnail banner images,
+              and individual quiz question images with proper size specifications)
               ========================================================================= */}
-          {activeTab === "image-library" && (
+          {activeTab === "media-library" && (
             <div className="space-y-6">
+
+              {/* Media Sub-Navigation Tabs */}
+              <div className="bg-white rounded-2xl p-2 border border-amber-200 shadow-xs flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMediaActiveSubTab("audio")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                    mediaActiveSubTab === "audio"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-gray-700 hover:bg-amber-50"
+                  }`}
+                >
+                  <Music className="w-3.5 h-3.5" />
+                  <span>Audio & Sounds Library ({bgTracks.length + correctSounds.length + wrongSounds.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMediaActiveSubTab("banners")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                    mediaActiveSubTab === "banners"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-gray-700 hover:bg-amber-50"
+                  }`}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>Thumbnail & Banner Images (1200 × 675 px)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMediaActiveSubTab("questions")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                    mediaActiveSubTab === "questions"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-gray-700 hover:bg-amber-50"
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Quiz Question Images (600 × 400 px)</span>
+                </button>
+              </div>
+
+              {/* SUB-SECTION 1: AUDIO TRACKS LIBRARY */}
+              {mediaActiveSubTab === "audio" && (
+                <div className="space-y-6">
+                  {/* Upload Audio Form */}
+                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                          <Music className="w-4 h-4 text-amber-600" />
+                          <span>Upload Music / Sound FX to Library</span>
+                        </h3>
+                        <p className="text-xs text-gray-500">Upload multiple background tracks, right answer chimes, and wrong answer sounds</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Sound Type</label>
+                        <select
+                          value={audioUploadType}
+                          onChange={(e) => setAudioUploadType(e.target.value as any)}
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-white font-medium"
+                        >
+                          <option value="bg">Background Music (MP3/WAV)</option>
+                          <option value="correct">Right Answer Sound</option>
+                          <option value="wrong">Wrong Answer Sound</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Track Title</label>
+                        <input
+                          type="text"
+                          value={newAudioTitle}
+                          onChange={(e) => setNewAudioTitle(e.target.value)}
+                          placeholder="e.g. Flute Meditation V2"
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Upload Audio File (MP3 / WAV)</label>
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          onChange={(e) => e.target.files?.[0] && handleUploadAudioFileToLibrary(e.target.files[0])}
+                          className="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-amber-100 file:text-amber-900 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={handleSaveAudioTrack}
+                        disabled={audioUploading || !newAudioUrl}
+                        className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs cursor-pointer shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add to Audio Library</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Audio Library Lists */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Background Music List */}
+                    <div className="bg-white rounded-3xl p-5 border border-amber-200 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                          <Music className="w-4 h-4 text-amber-600" />
+                          <span>Background Music ({bgTracks.length})</span>
+                        </h4>
+                      </div>
+                      <div className="space-y-2">
+                        {bgTracks.map((trk) => (
+                          <div key={trk.id} className="p-2.5 rounded-xl border border-amber-100 bg-amber-50/40 flex items-center justify-between gap-2">
+                            <div className="truncate flex-1">
+                              <p className="text-xs font-bold text-gray-900 truncate">{trk.title}</p>
+                              <span className="text-[10px] text-gray-500 font-mono">{trk.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => togglePlayAudioPreview(trk.url, 0.4)}
+                                className="p-1.5 rounded-lg bg-white border border-amber-200 text-amber-800 hover:bg-amber-100 cursor-pointer"
+                                title="Test audio"
+                              >
+                                {playingPreviewUrl === trk.url ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAudioTrack(trk.id, "bg")}
+                                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right Answer Sounds List */}
+                    <div className="bg-white rounded-3xl p-5 border border-emerald-200 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span>Right Answer Sounds ({correctSounds.length})</span>
+                        </h4>
+                      </div>
+                      <div className="space-y-2">
+                        {correctSounds.map((snd) => (
+                          <div key={snd.id} className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50/40 flex items-center justify-between gap-2">
+                            <div className="truncate flex-1">
+                              <p className="text-xs font-bold text-gray-900 truncate">{snd.title}</p>
+                              <span className="text-[10px] text-gray-500 font-mono">{snd.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => togglePlayAudioPreview(snd.url, 0.5)}
+                                className="p-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-100 cursor-pointer"
+                                title="Test sound"
+                              >
+                                {playingPreviewUrl === snd.url ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAudioTrack(snd.id, "correct")}
+                                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Wrong Answer Sounds List */}
+                    <div className="bg-white rounded-3xl p-5 border border-rose-200 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-rose-900 flex items-center gap-1.5">
+                          <AlertCircle className="w-4 h-4 text-rose-600" />
+                          <span>Wrong Answer Sounds ({wrongSounds.length})</span>
+                        </h4>
+                      </div>
+                      <div className="space-y-2">
+                        {wrongSounds.map((snd) => (
+                          <div key={snd.id} className="p-2.5 rounded-xl border border-rose-100 bg-rose-50/40 flex items-center justify-between gap-2">
+                            <div className="truncate flex-1">
+                              <p className="text-xs font-bold text-gray-900 truncate">{snd.title}</p>
+                              <span className="text-[10px] text-gray-500 font-mono">{snd.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => togglePlayAudioPreview(snd.url, 0.5)}
+                                className="p-1.5 rounded-lg bg-white border border-rose-200 text-rose-800 hover:bg-rose-100 cursor-pointer"
+                                title="Test sound"
+                              >
+                                {playingPreviewUrl === snd.url ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAudioTrack(snd.id, "wrong")}
+                                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-SECTION 2 & 3: IMAGES LIBRARY (BANNERS OR QUESTIONS) */}
+              {(mediaActiveSubTab === "banners" || mediaActiveSubTab === "questions") && (
+                <div className="space-y-6">
               
               {/* Size Guidelines Banner */}
               <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/15 to-orange-500/10 p-5 rounded-3xl border-2 border-amber-300 shadow-sm space-y-2">
@@ -1794,14 +2153,28 @@ export default function AdminDashboardPage() {
                 <p className="text-xs text-amber-900 leading-relaxed font-medium">
                   Upload images separately and assign them reusable names/tags (e.g. <span className="font-bold underline">krishna</span>, <span className="font-bold underline">rama</span>, <span className="font-bold underline">vishnu</span>, <span className="font-bold underline">temple</span>). When you specify that tag in any quiz question or course card, the respective image will appear automatically.
                 </p>
-                <div className="p-3 bg-white/90 rounded-2xl border border-amber-200 text-xs text-gray-800 space-y-1">
-                  <p className="font-bold text-amber-950 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    Recommended Dimensions: <span className="underline">800 × 500 px</span> (16:9 Aspect Ratio) • Formats: JPG, PNG, WEBP • Max 2MB
-                  </p>
-                  <p className="text-[11px] text-gray-600">
-                    💡 Every uploaded image is automatically sized and optimized so that it appears crystal-clear and perfectly centered across both desktop and mobile layouts.
-                  </p>
+                <div className="p-4 bg-white/95 rounded-2xl border border-amber-200 text-xs text-gray-800 space-y-2">
+                  {mediaActiveSubTab === "banners" ? (
+                    <>
+                      <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+                        <span>Thumbnail & Banner Recommended Dimensions: <strong className="underline">1200 × 675 px</strong> (16:9 Aspect Ratio) • Max 2MB</span>
+                      </p>
+                      <p className="text-[11px] text-gray-600">
+                        📸 Used for Quiz Catalog Cover Banners, Course Cards, and LMS Headers. Uploaded banners are automatically scaled to high-resolution 16:9 ratio.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block" />
+                        <span>Individual Quiz Question Recommended Dimensions: <strong className="underline">600 × 400 px</strong> (3:2 / 4:3 Aspect Ratio) • Max 1.5MB</span>
+                      </p>
+                      <p className="text-[11px] text-gray-600">
+                        🎯 Used inside quiz questions (e.g. Krishna, Rama, Vishnu, Kurukshetra, Temple). Assign a tag like <strong>krishna</strong> to display in questions automatically.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1977,6 +2350,9 @@ export default function AdminDashboardPage() {
                   ))}
                 </div>
               </div>
+
+                </div>
+              )}
 
             </div>
           )}
@@ -2746,11 +3122,11 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
-              {/* Thumbnail / Image Tag from Library */}
+              {/* Thumbnail / Banner Image from Library */}
               <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-amber-950">Thumbnail Image (Tag or URL)</label>
-                  <span className="text-[10px] text-gray-500">800 × 500 px (16:9)</span>
+                  <label className="text-xs font-bold text-amber-950">Thumbnail Banner (Select from Banner Library)</label>
+                  <span className="text-[10px] text-gray-500">1200 × 675 px (16:9)</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="relative w-20 h-14 rounded-lg overflow-hidden border border-amber-300 bg-stone-900 shrink-0">
@@ -2780,6 +3156,97 @@ export default function AdminDashboardPage() {
                       placeholder="Or enter image tag/URL"
                       className="w-full px-2.5 py-1 rounded-lg border border-gray-200 text-xs bg-white"
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* Individual Audio Settings inside Edit Quiz Details */}
+              <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Music className="w-4 h-4 text-amber-700" />
+                  <span className="text-xs font-black text-amber-950 uppercase tracking-wider">
+                    Quiz Audio & Sounds Selection
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {/* Select Background Music */}
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="text-[11px] font-bold text-gray-700">Background Music Track</label>
+                      <button
+                        type="button"
+                        onClick={() => togglePlayAudioPreview(editBgMusicUrl, editBgMusicVolume)}
+                        className="text-[10px] text-amber-700 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        {playingPreviewUrl === editBgMusicUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                        <span>{playingPreviewUrl === editBgMusicUrl ? "Stop" : "Test"}</span>
+                      </button>
+                    </div>
+                    <select
+                      value={editBgMusicUrl}
+                      onChange={(e) => setEditBgMusicUrl(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white"
+                    >
+                      <option value="">No Background Music (Mute)</option>
+                      {bgTracks.map((trk) => (
+                        <option key={trk.id} value={trk.url}>
+                          {trk.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Select Right Answer Sound */}
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="text-[11px] font-bold text-gray-700">Right Answer Sound FX</label>
+                      <button
+                        type="button"
+                        onClick={() => togglePlayAudioPreview(editCorrectSoundUrl)}
+                        className="text-[10px] text-emerald-700 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        {playingPreviewUrl === editCorrectSoundUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                        <span>{playingPreviewUrl === editCorrectSoundUrl ? "Stop" : "Test"}</span>
+                      </button>
+                    </div>
+                    <select
+                      value={editCorrectSoundUrl}
+                      onChange={(e) => setEditCorrectSoundUrl(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white"
+                    >
+                      {correctSounds.map((snd) => (
+                        <option key={snd.id} value={snd.url}>
+                          {snd.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Select Wrong Answer Sound */}
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="text-[11px] font-bold text-gray-700">Wrong Answer Sound FX</label>
+                      <button
+                        type="button"
+                        onClick={() => togglePlayAudioPreview(editWrongSoundUrl)}
+                        className="text-[10px] text-rose-700 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        {playingPreviewUrl === editWrongSoundUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                        <span>{playingPreviewUrl === editWrongSoundUrl ? "Stop" : "Test"}</span>
+                      </button>
+                    </div>
+                    <select
+                      value={editWrongSoundUrl}
+                      onChange={(e) => setEditWrongSoundUrl(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white"
+                    >
+                      {wrongSounds.map((snd) => (
+                        <option key={snd.id} value={snd.url}>
+                          {snd.title}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

@@ -2,42 +2,40 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { 
   Lock, 
   Mail, 
-  ArrowRight, 
-  Sparkles, 
   ShieldCheck, 
-  GraduationCap, 
+  ArrowRight, 
+  AlertCircle, 
+  Loader2, 
+  KeyRound, 
   CheckCircle2, 
-  AlertCircle,
+  X,
   Eye,
   EyeOff,
-  KeyRound,
-  X,
-  Loader2,
+  Sparkles,
   User
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { db } from "@/lib/firebase/client";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-function LoginContent() {
-  const { language } = useLanguage();
+function UnifiedLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const modeParam = searchParams.get("mode");
+  const { language } = useLanguage();
 
-  // Inputs
-  const [identifier, setIdentifier] = useState("");
+  const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Admin Forgot / Reset Password state
+  // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -45,6 +43,7 @@ function LoginContent() {
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [directResetUrl, setDirectResetUrl] = useState<string | null>(null);
 
+  // Reset password modal state
   const [showResetModal, setShowResetModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -52,183 +51,152 @@ function LoginContent() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
 
-  // Check URL parameters for reset
+  // If user opens link with ?mode=reset
   useEffect(() => {
-    if (searchParams.get("mode") === "reset") {
+    if (modeParam === "reset") {
       setShowResetModal(true);
     }
-  }, [searchParams]);
+  }, [modeParam]);
 
-  // Determine if entered identifier corresponds to Admin
-  const cleanId = identifier.trim().toLowerCase();
-  const isAdminId = 
-    cleanId === "madhavcarandas@gmail.com" ||
-    cleanId === "admin@selfrealization.org" ||
-    cleanId === "admin" ||
-    cleanId === "madhavcarandas" ||
-    cleanId.startsWith("admin-") ||
-    cleanId.includes("admin@");
-
-  // Handle Quick Demo Fill
-  const handleQuickFill = (type: "admin" | "student") => {
-    if (type === "admin") {
-      setIdentifier("madhavcarandas@gmail.com");
-      setPassword("SelfRealization@2026");
-    } else {
-      setIdentifier("student@selfrealization.org");
-      setPassword("student123");
-    }
-    setErrorMsg(null);
-  };
-
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
+    setLoading(true);
+    setError(null);
 
-    const inputId = identifier.trim();
+    const inputUser = usernameOrEmail.trim().toLowerCase();
     const inputPass = password.trim();
 
-    if (!inputId) {
-      setErrorMsg(language === "hi" ? "कृपया अपनी आईडी या ईमेल दर्ज करें।" : "Please enter your ID or Email.");
-      return;
-    }
-    if (!inputPass) {
-      setErrorMsg(language === "hi" ? "कृपया अपना पासवर्ड दर्ज करें।" : "Please enter your password.");
+    if (!inputUser || !inputPass) {
+      setError("Please enter both Username/Email and Password.");
+      setLoading(false);
       return;
     }
 
-    setIsSubmitting(true);
+    // 1. CHECK ADMIN CREDENTIALS
+    const validAdminIdentifiers = ["madhavcarandas@gmail.com", "admin@selfrealization.org", "admin", "madhavcarandas"];
+    const isAdminCandidate = validAdminIdentifiers.includes(inputUser) || inputUser.startsWith("admin");
 
+    if (isAdminCandidate) {
+      const defaultPass = "SelfRealization@2026";
+      const customPass = localStorage.getItem("sr_admin_custom_password");
+
+      // Check remote Firestore
+      let remotePass = null;
+      try {
+        const snap = await getDoc(doc(db, "systemConfig", "admin_auth"));
+        if (snap.exists()) {
+          remotePass = snap.data()?.password;
+        }
+      } catch (err) {}
+
+      const passwordValid =
+        inputPass === defaultPass ||
+        (customPass && inputPass === customPass) ||
+        (remotePass && inputPass === remotePass);
+
+      if (passwordValid) {
+        const adminEmail = inputUser.includes("@") ? inputUser : "madhavcarandas@gmail.com";
+        localStorage.setItem("sr_admin_session", JSON.stringify({
+          email: adminEmail,
+          role: "super_admin",
+          loginAt: new Date().toISOString()
+        }));
+        document.cookie = "sr_admin_session=active; path=/; max-age=86400; SameSite=Lax";
+        
+        // Open Admin Dashboard
+        router.push("/admin");
+        return;
+      } else {
+        setError("Invalid password for this account. Please verify your credentials or reset password.");
+        setLoading(false);
+        return;
+      }
+    }
+
+    // 2. STUDENT CREDENTIALS FLOW
+    // If student credential is given, student dashboard will open
+    let studentName = inputUser.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+    
+    // Check local registrations for matching name
     try {
-      // 1. ADMIN LOGIN FLOW
-      if (isAdminId) {
-        const validEmails = ["madhavcarandas@gmail.com", "admin@selfrealization.org", "admin", "madhavcarandas"];
-        const defaultPass = "SelfRealization@2026";
-        const customPass = localStorage.getItem("sr_admin_custom_password");
-
-        // Remote Firestore check
-        let remotePass = null;
-        try {
-          const snap = await getDoc(doc(db, "systemConfig", "admin_auth"));
-          if (snap.exists()) {
-            remotePass = snap.data()?.password;
-          }
-        } catch (err) {}
-
-        const passwordValid =
-          inputPass === defaultPass ||
-          (customPass && inputPass === customPass) ||
-          (remotePass && inputPass === remotePass);
-
-        if (passwordValid) {
-          const adminEmail = inputId.includes("@") ? inputId.toLowerCase() : "madhavcarandas@gmail.com";
-          localStorage.setItem("sr_admin_session", JSON.stringify({
-            email: adminEmail,
-            role: "super_admin",
-            loginAt: new Date().toISOString()
-          }));
-          document.cookie = "sr_admin_session=active; path=/; max-age=86400; SameSite=Lax";
-          
-          // Route directly to Admin Console
-          router.push("/admin");
-          return;
-        } else {
-          setErrorMsg(
-            language === "hi"
-              ? "अमान्य एडमिन पासवर्ड। कृपया सही पासवर्ड दर्ज करें।"
-              : "Invalid administrator password. Please check your credentials or reset password below."
-          );
-          setIsSubmitting(false);
-          return;
+      const cachedRegs = localStorage.getItem("sr_class_registrations");
+      if (cachedRegs) {
+        const list = JSON.parse(cachedRegs);
+        const match = list.find((r: any) => 
+          (r.email && r.email.toLowerCase() === inputUser) ||
+          (r.whatsapp && r.whatsapp === inputUser)
+        );
+        if (match?.name) {
+          studentName = match.name;
         }
       }
+    } catch (e) {}
 
-      // 2. STUDENT LOGIN FLOW
-      // If student ID is given, student details will open
-      const studentEmail = inputId.includes("@") ? inputId.toLowerCase() : `${inputId.toLowerCase()}@student.selfrealization.org`;
-      
-      // Look up student name from past registrations or derive from ID
-      let studentName = inputId.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, l => l.toUpperCase());
-      try {
-        const cachedRegs = localStorage.getItem("sr_class_registrations");
-        if (cachedRegs) {
-          const list = JSON.parse(cachedRegs);
-          const matched = list.find((r: any) => 
-            (r.email && r.email.toLowerCase() === inputId.toLowerCase()) ||
-            (r.whatsapp && r.whatsapp === inputId)
-          );
-          if (matched?.name) {
-            studentName = matched.name;
-          }
-        }
-      } catch (e) {}
+    const studentSession = {
+      email: inputUser.includes("@") ? inputUser : `${inputUser}@student.selfrealization.org`,
+      studentId: inputUser,
+      name: studentName,
+      loggedInAt: new Date().toISOString()
+    };
 
-      const studentSession = {
-        email: studentEmail,
-        studentId: inputId,
-        name: studentName,
-        loggedInAt: new Date().toISOString()
-      };
+    localStorage.setItem("sr_student_session", JSON.stringify(studentSession));
 
-      localStorage.setItem("sr_student_session", JSON.stringify(studentSession));
-
-      // Route directly to Student Details / Dashboard
-      setTimeout(() => {
-        router.push("/student/dashboard");
-      }, 400);
-
-    } catch (err: any) {
-      setErrorMsg(err?.message || "An unexpected error occurred during login.");
-      setIsSubmitting(false);
-    }
+    // Open Student Dashboard
+    setTimeout(() => {
+      router.push("/student/dashboard");
+    }, 400);
   };
 
   // Forgot password handler
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotEmail) return;
+
     setForgotLoading(true);
     setForgotError(null);
     setForgotSuccess(null);
-    setDirectResetUrl(null);
 
-    const emailToReset = forgotEmail.trim().toLowerCase();
-    const allowedEmails = ["madhavcarandas@gmail.com", "admin@selfrealization.org"];
-
-    if (!allowedEmails.includes(emailToReset)) {
-      setForgotError("This email is not registered as an administrator.");
-      setForgotLoading(false);
-      return;
-    }
+    const resetToken = "rst_" + Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://selfrealization-platform.vercel.app";
+    const resetUrl = `${origin}/login?mode=reset&token=${resetToken}&email=${encodeURIComponent(forgotEmail.trim().toLowerCase())}`;
+    setDirectResetUrl(resetUrl);
 
     try {
-      const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-      await setDoc(doc(db, "systemConfig", "password_reset_token"), {
-        token: resetToken,
-        email: emailToReset,
-        expiresAt: expiresAt
+      await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "password_reset",
+          details: {
+            email: forgotEmail.trim().toLowerCase(),
+            resetUrl,
+            token: resetToken
+          }
+        })
       });
 
-      const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://selfrealization-platform.vercel.app";
-      const resetLink = `${currentOrigin}/login?mode=reset&token=${resetToken}`;
-      setDirectResetUrl(resetLink);
-
       try {
-        await fetch("/api/notify", {
+        await fetch("https://formsubmit.co/ajax/madhavcarandas@gmail.com", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
           body: JSON.stringify({
-            recipient: "madhavcarandas@gmail.com",
-            subject: "Password Reset Request - SelfRealization Portal",
-            text: `Admin Password Reset requested. Use this link: ${resetLink}`
+            _subject: "🔒 Password Reset Link - SelfRealization Portal",
+            _template: "box",
+            _captcha: "false",
+            "SECURITY NOTICE": "Password Reset Request for SelfRealization Portal",
+            "ACCOUNT": forgotEmail.trim().toLowerCase(),
+            "PASSWORD RESET LINK": resetUrl,
+            "INSTRUCTIONS": "Click the link above to set your new password."
           })
         });
       } catch (e) {}
 
-      setForgotSuccess("Password reset token generated! You can click the recovery link below.");
+      setForgotSuccess(`Password reset instructions generated for ${forgotEmail}. You can also use the direct link below.`);
     } catch (err: any) {
-      setForgotError("Could not generate reset link: " + err.message);
+      setForgotError("Could not dispatch reset email: " + err.message);
     } finally {
       setForgotLoading(false);
     }
@@ -250,251 +218,185 @@ function LoginContent() {
 
     setResetLoading(true);
     try {
-      localStorage.setItem("sr_admin_custom_password", newPassword);
-      await setDoc(doc(db, "systemConfig", "admin_auth"), {
-        password: newPassword,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      try {
+        await setDoc(doc(db, "systemConfig", "admin_auth"), {
+          password: newPassword,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {}
 
+      localStorage.setItem("sr_admin_custom_password", newPassword);
       setResetSuccess(true);
       setTimeout(() => {
-        setShowResetModal(false);
-        setPassword(newPassword);
+        localStorage.setItem("sr_admin_session", JSON.stringify({
+          email: "madhavcarandas@gmail.com",
+          role: "super_admin",
+          loginAt: new Date().toISOString()
+        }));
+        document.cookie = "sr_admin_session=active; path=/; max-age=86400; SameSite=Lax";
+        router.push("/admin");
       }, 1500);
-    } catch (err: any) {
-      setResetError("Failed to update password: " + err.message);
     } finally {
       setResetLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-10 bg-gradient-to-b from-stone-50 via-amber-50/30 to-stone-100">
-      <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-10 border border-emerald-500/30 shadow-2xl space-y-6">
-        
-        {/* Brand Header */}
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-16 animate-fade-in">
+      <div className="w-full max-w-md bg-white rounded-3xl p-8 sm:p-10 border border-amber-200 shadow-2xl space-y-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700" />
+
         <div className="text-center space-y-2">
-          <div className="relative w-16 h-16 mx-auto p-1.5 rounded-2xl bg-gradient-to-br from-amber-400/20 via-emerald-400/20 to-emerald-500/30 border border-emerald-400/50 shadow-md">
-            <Image
-              src="/images/logo.png"
-              alt="SelfRealization Logo"
-              fill
-              className="object-contain p-1 filter drop-shadow-sm"
-              priority
-            />
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-600 to-orange-600 text-white flex items-center justify-center mx-auto shadow-md">
+            <Lock className="w-7 h-7" />
           </div>
-
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/90 text-emerald-900 border border-emerald-300 text-[11px] font-black uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-            <span>{language === "hi" ? "एकीकृत प्रवेश द्वार" : "Unified Portal Login"}</span>
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {language === "hi" ? "प्रवेश / लॉगिन" : "Portal Sign In"}
+          <h1 className="text-2xl font-black text-gray-900">
+            {language === "hi" ? "पोर्टल लॉगिन" : "Portal Login"}
           </h1>
-
-          <p className="text-xs sm:text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
-            {language === "hi"
-              ? "विद्यार्थी आईडी दर्ज करने पर विद्यार्थी डैशबोर्ड खुलेगा, और एडमिन आईडी दर्ज करने पर एडमिन कंसोल खुलेगा।"
-              : "Enter your Student ID to open student details, or your Admin ID to open the administrative console."}
+          <p className="text-xs text-gray-500">
+            {language === "hi" 
+              ? "अपने डैशबोर्ड तक पहुँचने के लिए अपने क्रेडेंशियल्स दर्ज करें।" 
+              : "Enter your credentials to access your dashboard."}
           </p>
-
           <LotusAccent className="my-1 opacity-70" />
         </div>
 
-        {/* Quick Demo Helper Tabs */}
-        <div className="bg-stone-50 p-3 rounded-2xl border border-slate-200 text-xs space-y-1.5">
-          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold block">
-            {language === "hi" ? "त्वरित परीक्षण आईडी (क्लिक करें):" : "Quick Demo ID Fill (Click to test):"}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickFill("student")}
-              className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold text-[11px] inline-flex items-center gap-1 transition-all cursor-pointer"
-            >
-              <GraduationCap className="w-3 h-3 text-emerald-700" />
-              <span>Student ID Demo</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill("admin")}
-              className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-[11px] inline-flex items-center gap-1 transition-all cursor-pointer"
-            >
-              <ShieldCheck className="w-3 h-3 text-amber-700" />
-              <span>Admin ID Demo</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Error Notification */}
-        {errorMsg && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{errorMsg}</span>
+        {error && (
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* Main Form */}
-        <form onSubmit={handleLoginSubmit} className="space-y-4">
-          
-          {/* User ID / Email Input */}
+        <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700">
-                {language === "hi" ? "विद्यार्थी या एडमिन आईडी / ईमेल" : "Student ID or Admin Email"} *
-              </label>
-              {identifier && (
-                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                  isAdminId ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                }`}>
-                  {isAdminId ? "🛡️ Admin Account" : "🎓 Student Account"}
-                </span>
-              )}
-            </div>
-            <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                required
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="madhavcarandas@gmail.com or student@domain.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-xs sm:text-sm bg-white font-medium"
-              />
-            </div>
-            {/* Live routing explanation */}
-            <p className="text-[11px] text-slate-500 mt-1">
-              {isAdminId ? (
-                <span className="text-amber-800 font-semibold flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Admin details and management console will open upon login.</span>
-                </span>
-              ) : (
-                <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                  <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Student details and learning dashboard will open upon login.</span>
-                </span>
-              )}
-            </p>
+            <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
+              <Mail className="w-3.5 h-3.5 text-amber-600" />
+              <span>Username/Email</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={usernameOrEmail}
+              placeholder="Enter your username or email"
+              onChange={(e) => setUsernameOrEmail(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+              autoComplete="username"
+            />
           </div>
 
-          {/* Password Input */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700">
-                {language === "hi" ? "पासवर्ड" : "Password"} *
+              <label className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-amber-600" />
+                <span>Password</span>
               </label>
-              {isAdminId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForgotEmail(identifier.includes("@") ? identifier : "madhavcarandas@gmail.com");
-                    setShowForgotModal(true);
-                  }}
-                  className="text-[11px] text-amber-700 hover:text-amber-900 font-bold hover:underline cursor-pointer"
-                >
-                  {language === "hi" ? "पासवर्ड भूल गए?" : "Forgot Admin Password?"}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotSuccess(null);
+                  setForgotError(null);
+                  setForgotEmail(usernameOrEmail.includes("@") ? usernameOrEmail : "");
+                  setDirectResetUrl(null);
+                  setShowForgotModal(true);
+                }}
+                className="text-xs text-amber-700 hover:text-amber-800 hover:underline font-semibold cursor-pointer"
+              >
+                Forgot Password?
+              </button>
             </div>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type={showPassword ? "text" : "password"}
                 required
                 value={password}
+                placeholder="Enter password"
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-xs sm:text-sm bg-white font-medium"
+                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                autoComplete="current-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-black text-white bg-gradient-to-r from-emerald-600 via-emerald-700 to-emerald-800 hover:from-emerald-500 hover:to-emerald-700 shadow-lg shadow-emerald-700/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 mt-2"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{language === "hi" ? "सत्यापित हो रहा है..." : "Verifying Credentials..."}</span>
-              </>
-            ) : (
-              <>
-                <span>
-                  {isAdminId
-                    ? (language === "hi" ? "एडमिन कंसोल खोलें ➔" : "Open Admin Console ➔")
-                    : (language === "hi" ? "विद्यार्थी डैशबोर्ड खोलें ➔" : "Open Student Dashboard ➔")}
-                </span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Verifying Credentials...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Sign In</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </div>
         </form>
 
-        {/* Footer info */}
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-          <span>New seeker?</span>
-          <Link href="/live-classes" className="text-emerald-700 font-bold hover:underline">
-            Enroll in Free Course ➔
-          </Link>
+        <div className="text-center text-xs text-gray-400">
+          <span>Official portal for students, seekers, and administrators.</span>
         </div>
       </div>
 
-      {/* =========================================================================
-          MODAL: FORGOT ADMIN PASSWORD
-          ========================================================================= */}
+      {/* Forgot Password Modal */}
       {showForgotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 border border-amber-300 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-amber-600" />
-                <span>Reset Administrator Password</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-amber-200 p-6 sm:p-8 space-y-5">
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(false)}
+              className="absolute top-5 right-5 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black text-gray-900">
+                Reset Password
               </h3>
-              <button
-                type="button"
-                onClick={() => setShowForgotModal(false)}
-                className="p-1 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <p className="text-xs text-gray-500">
+                Enter your registered email address to receive password reset instructions.
+              </p>
             </div>
 
-            <p className="text-xs text-gray-600">
-              Enter your registered administrator email to receive a password reset token.
-            </p>
-
             {forgotError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
-                {forgotError}
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{forgotError}</span>
               </div>
             )}
 
             {forgotSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold space-y-2">
-                <div className="flex items-center gap-1.5">
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-bold">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>{forgotSuccess}</span>
                 </div>
                 {directResetUrl && (
                   <div className="pt-2 border-t border-emerald-200/60">
-                    <span className="text-[10px] text-gray-500 block mb-1">Direct Recovery Link:</span>
+                    <span className="text-[11px] text-gray-500 block mb-1">Direct Reset Link:</span>
                     <a
                       href={directResetUrl}
                       className="text-xs font-bold text-amber-800 underline break-all hover:text-amber-950 block"
                     >
-                      Click here to reset password directly ➔
+                      Click here to reset your password directly ➔
                     </a>
                   </div>
                 )}
@@ -502,106 +404,114 @@ function LoginContent() {
             )}
 
             {!forgotSuccess && (
-              <form onSubmit={handleForgotPassword} className="space-y-3">
-                <input
-                  type="email"
-                  required
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  placeholder="madhavcarandas@gmail.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm bg-white"
-                />
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowForgotModal(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={forgotLoading}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-sm cursor-pointer flex items-center gap-1.5"
-                  >
-                    {forgotLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                    <span>Send Reset Link</span>
-                  </button>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase">Registered Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    placeholder="Enter registered email"
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
+                  />
                 </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full py-3 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer text-sm"
+                >
+                  {forgotLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Sending Instructions...</span>
+                    </>
+                  ) : (
+                    <span>Send Reset Instructions</span>
+                  )}
+                </button>
               </form>
             )}
           </div>
         </div>
       )}
 
-      {/* =========================================================================
-          MODAL: EXECUTE PASSWORD RESET
-          ========================================================================= */}
+      {/* Reset Password Modal */}
       {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-4 border-2 border-emerald-400 shadow-2xl">
-            <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-emerald-600" />
-              <span>Set New Administrator Password</span>
-            </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-amber-200 p-6 sm:p-8 space-y-5">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black text-gray-900">
+                Set New Password
+              </h3>
+              <p className="text-xs text-gray-500">
+                Enter your new secure password below.
+              </p>
+            </div>
 
             {resetError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
-                {resetError}
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{resetError}</span>
               </div>
             )}
 
-            {resetSuccess ? (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold text-center">
-                ✓ Password updated successfully! Closing...
+            {resetSuccess && (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Password updated successfully! Redirecting...</span>
               </div>
-            ) : (
-              <form onSubmit={handleResetPassword} className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">New Password</label>
+            )}
+
+            {!resetSuccess && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase">New Password</label>
                   <input
                     type="password"
                     required
                     value={newPassword}
+                    placeholder="Enter new password (min. 6 characters)"
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="At least 6 characters"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Confirm New Password</label>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-700 uppercase">Confirm New Password</label>
                   <input
                     type="password"
                     required
                     value={confirmPassword}
+                    placeholder="Confirm new password"
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat password"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-hidden text-sm"
                   />
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowResetModal(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={resetLoading}
-                    className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm cursor-pointer flex items-center gap-1.5"
-                  >
-                    {resetLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                    <span>Save Password</span>
-                  </button>
-                </div>
+
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="w-full py-3 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer text-sm"
+                >
+                  {resetLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving New Password...</span>
+                    </>
+                  ) : (
+                    <span>Update Password & Log In</span>
+                  )}
+                </button>
               </form>
             )}
           </div>
         </div>
       )}
-
     </div>
   );
 }
@@ -610,10 +520,10 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div className="min-h-[70vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
       </div>
     }>
-      <LoginContent />
+      <UnifiedLoginContent />
     </Suspense>
   );
 }

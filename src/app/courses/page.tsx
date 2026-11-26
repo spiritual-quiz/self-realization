@@ -15,7 +15,10 @@ import {
   Sparkles,
   FileText,
   Lock,
-  ArrowRight
+  ArrowRight,
+  Globe,
+  MapPin,
+  MessageCircle
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
@@ -33,11 +36,18 @@ const DEFAULT_COURSES = [
       en: "A structured 6-session foundation journey exploring soul, mind, reincarnation, karma, and supreme identity.",
       hi: "आत्मा, मन, पुनर्जन्म, कर्म और परम सत्य के रहस्यों को उद्घाटित करने वाली 6 सत्रों की व्यवस्थित यात्रा।"
     },
+    thumbnail: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png",
     level: "Beginner",
     lessons: "6 Lessons",
     duration: "3.5 Hours",
     price: "Free Access",
     isPaid: false,
+    instructor: "H.G. Gauranga Das & Scholars",
+    mode: "Online & Offline (Hybrid)",
+    timing: "Every Sunday: 10:00 AM – 11:30 AM IST",
+    venue: "Sri Sri Radha Vrindavanchandra Mandir",
+    roomNumber: "Room 108 (Ground Floor)",
+    whatsappGroupUrl: "https://chat.whatsapp.com/SelfRealizationGita",
     modules: [
       { title: { en: "Session 1: Can a Scientist Believe in God?", hi: "सत्र 1: क्या वैज्ञानिक ईश्वर में विश्वास कर सकता है?" }, length: "35 mins" },
       { title: { en: "Session 2: Getting the Eyes of Knowledge (Veda)", hi: "सत्र 2: ज्ञान चक्षु की प्राप्ति (वेद क्या हैं?)" }, length: "30 mins" },
@@ -57,11 +67,18 @@ const DEFAULT_COURSES = [
       en: "Mastering practical devotion in day-to-day work, balancing modern career stress, and developing inner consciousness.",
       hi: "दैनिक कार्यस्थल में भक्तिमय संतुलन साधने, कार्य-तनाव से मुक्ति पाने और कर्म को योग बनाने का प्रामाणिक मार्ग।"
     },
+    thumbnail: "https://www.iskconpune.com/wp-content/uploads/2023/02/radha-vrindavanchandra-1024x683.jpeg",
     level: "Intermediate",
     lessons: "12 Lessons",
     duration: "8 Hours",
     price: "Free Access",
     isPaid: false,
+    instructor: "H.G. Radheshyam Das & Mentors",
+    mode: "Online (Live Zoom) & Offline (Temple Classroom)",
+    timing: "Wednesday & Friday: 07:00 PM – 08:30 PM IST",
+    venue: "ISKCON NVCC Vedic Cultural Centre",
+    roomNumber: "Hall 204 (First Floor)",
+    whatsappGroupUrl: "https://chat.whatsapp.com/ScienceOfSelfRealization",
     modules: [
       { title: { en: "Module 1: Defining the Living Entity & Mind", hi: "मॉड्यूल 1: जीवात्मा एवं मन की संरचना" }, length: "45 mins" },
       { title: { en: "Module 2: The Three Modes of Material Nature (Gunas)", hi: "मॉड्यूल 2: प्रकृति के तीन गुण (सत्व, रज, तम)" }, length: "50 mins" },
@@ -79,11 +96,18 @@ const DEFAULT_COURSES = [
       en: "In-depth verse-by-verse commentary analysis, philosophical assessments, Sanskrit pronunciation, and certificate.",
       hi: "श्लोक दर श्लोक प्रामाणिक भाष्य विश्लेषण, दार्शनिक प्रश्नों के उत्तर, संस्कृत उच्चारण एवं प्रमाणित प्रमाण-पत्र।"
     },
+    thumbnail: "https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=1200&q=80",
     level: "Advanced",
     lessons: "18 Chapters",
     duration: "24 Hours",
     price: "₹999",
     isPaid: true,
+    instructor: "Bhakti Shastri Scholars",
+    mode: "Online & Offline (Hybrid Classroom)",
+    timing: "Saturday & Sunday: 04:00 PM – 06:00 PM IST",
+    venue: "Satsang Bhavan, ISKCON NVCC",
+    roomNumber: "Room 302 (Auditorium)",
+    whatsappGroupUrl: "https://chat.whatsapp.com/BhagavadGitaDeepStudy",
     modules: [
       { title: { en: "Part 1: Karma Yoga (Chapters 1 to 6)", hi: "भाग 1: कर्म योग (अध्याय 1 से 6)" }, length: "8 Hours" },
       { title: { en: "Part 2: Bhakti Yoga (Chapters 7 to 12)", hi: "भाग 2: भक्ति योग (अध्याय 7 से 12)" }, length: "8 Hours" },
@@ -257,7 +281,7 @@ export default function CoursesCataloguePage() {
                     {getLocalized(c.title)}
                   </h3>
 
-                  {/* Short Description */}
+                  {/* Short Description (small explanation) */}
                   <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                     {getLocalized(c.desc)}
                   </p>
@@ -278,10 +302,28 @@ export default function CoursesCataloguePage() {
                     </span>
                   </div>
 
+                  {/* Mode: Online, Offline, or Both */}
+                  <div className="flex items-center gap-1.5 text-xs text-sky-800 font-bold bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-200">
+                    <Globe className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                    <span className="truncate"><strong>Mode:</strong> {c.mode || "Online & Offline (Hybrid)"}</span>
+                  </div>
+
+                  {/* Timing & Venue / Room Number Details */}
+                  <div className="space-y-1 text-xs text-slate-700 bg-amber-50/40 p-2.5 rounded-xl border border-amber-200/70">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span className="truncate"><strong>Timing:</strong> {c.timing || "Every Sunday: 10:00 AM – 11:30 AM IST"}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <MapPin className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                      <span className="truncate"><strong>Venue:</strong> {c.venue || "ISKCON Mandir"}, <strong className="text-amber-900">{c.roomNumber || "Room 108"}</strong></span>
+                    </div>
+                  </div>
+
                   {/* Hours & Self-Paced Access Row */}
                   <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
                     <span className="text-slate-500 font-semibold">{c.duration || "4 Hours"}</span>
-                    <span className="text-sky-600 font-bold">Access - Immediate</span>
+                    <span className="text-sky-600 font-bold">Start: Immediate / Dec 17</span>
                   </div>
 
                   {/* Certificate Badge */}
@@ -290,8 +332,8 @@ export default function CoursesCataloguePage() {
                     <span>Certificate Course</span>
                   </div>
 
-                  {/* Module Count & Mode Details */}
-                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/70 text-[11px] text-slate-700 flex items-center justify-between">
+                  {/* Module Count */}
+                  <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/70 text-[11px] text-slate-700 flex items-center justify-between">
                     <span className="flex items-center gap-1 font-bold text-emerald-800">
                       <PlayCircle className="w-3.5 h-3.5 text-emerald-600" />
                       <span>{c.lessons || (c.modules ? `${c.modules.length} Lessons` : "6 Lessons")}</span>
@@ -304,14 +346,27 @@ export default function CoursesCataloguePage() {
                 </div>
               </div>
 
-              {/* 3. Action Buttons Row: Enroll Now & Syllabus */}
+              {/* 3. Action Buttons Row: Enroll Now, WhatsApp & Syllabus */}
               <div className="p-5 sm:p-6 pt-0 space-y-2">
-                <Link
-                  href={`/courses/${c.id}`}
-                  className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-sky-600 hover:text-white bg-white hover:bg-sky-600 border-2 border-sky-500 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span>Enroll Now</span>
-                </Link>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Link
+                    href={`/courses/${c.id}`}
+                    className="w-full py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black text-sky-600 hover:text-white bg-white hover:bg-sky-600 border-2 border-sky-500 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                  >
+                    <span>Enroll Now</span>
+                  </Link>
+
+                  <a
+                    href={c.whatsappGroupUrl || "https://chat.whatsapp.com/SelfRealizationGita"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 border-2 border-emerald-500 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                    title="Directly join our WhatsApp group"
+                  >
+                    <MessageCircle className="w-4 h-4 text-emerald-600 group-hover:text-white shrink-0" />
+                    <span>WhatsApp</span>
+                  </a>
+                </div>
 
                 <button
                   type="button"
