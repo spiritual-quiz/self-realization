@@ -151,6 +151,16 @@ export default function Header() {
                 </button>
               </div>
 
+              {/* Student Portal Quick Access */}
+              <Link
+                href="/student/dashboard"
+                className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-200 hover:text-white bg-[#0B1320] border border-emerald-500/40 hover:border-emerald-400 transition-colors"
+                title="Student Dashboard / विद्यार्थी पोर्टल"
+              >
+                <span>🎓</span>
+                <span>{language === "hi" ? "विद्यार्थी पोर्टल" : "Student LMS"}</span>
+              </Link>
+
               {/* Join Free Class CTA */}
               <Link
                 href="/live-classes"

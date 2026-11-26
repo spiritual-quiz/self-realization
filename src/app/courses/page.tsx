@@ -102,29 +102,43 @@ export default function CoursesCataloguePage() {
 
   useEffect(() => {
     const fetchCourses = async () => {
+      const deletedList: string[] = JSON.parse(localStorage.getItem("sr_deleted_courses") || "[]");
+
+      // 1. Try Firestore First
       try {
         const snap = await getDocs(query(collection(db, "courses"), limit(50)));
         const list: any[] = [];
-        snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+        snap.forEach((d) => {
+          if (!deletedList.includes(d.id)) {
+            list.push({ id: d.id, ...d.data() });
+          }
+        });
         if (list.length > 0) {
           setCourses(list);
           localStorage.setItem("sr_custom_courses", JSON.stringify(list));
+          localStorage.setItem("sr_lms_courses", JSON.stringify(list));
           return;
         }
       } catch (err) {
         console.warn("Firestore courses fetch error, checking localStorage", err);
       }
 
-      const localC = localStorage.getItem("sr_custom_courses");
+      // 2. Try Admin local cache
+      const localC = localStorage.getItem("sr_custom_courses") || localStorage.getItem("sr_lms_courses");
       if (localC) {
         try {
           const parsed = JSON.parse(localC);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setCourses(parsed);
+            const sanitized = parsed.filter((c: any) => !deletedList.includes(c.id));
+            setCourses(sanitized);
             return;
           }
         } catch (e) {}
       }
+
+      // 3. Fallback to default minus any deleted IDs
+      const remainingDefaults = DEFAULT_COURSES.filter((c) => !deletedList.includes(c.id));
+      setCourses(remainingDefaults);
     };
     fetchCourses();
   }, []);

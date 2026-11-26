@@ -368,10 +368,26 @@ export default function AdminDashboardPage() {
         setCustomQuizzes(localQ);
       }
 
-      // 4. Fetch LMS Courses
-      const cachedLms = localStorage.getItem("sr_lms_courses");
-      if (cachedLms) {
-        setLmsCoursesList(JSON.parse(cachedLms));
+      // 4. Fetch LMS Courses from Firestore with Local fallback
+      try {
+        const courseSnap = await getDocs(collection(db, "courses"));
+        if (!courseSnap.empty) {
+          const list: any[] = [];
+          courseSnap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+          setLmsCoursesList(list);
+          localStorage.setItem("sr_lms_courses", JSON.stringify(list));
+        } else {
+          const cachedLms = localStorage.getItem("sr_lms_courses");
+          if (cachedLms) {
+            setLmsCoursesList(JSON.parse(cachedLms));
+          } else {
+            setLmsCoursesList(INITIAL_LMS_COURSES);
+            localStorage.setItem("sr_lms_courses", JSON.stringify(INITIAL_LMS_COURSES));
+          }
+        }
+      } catch (e) {
+        const cachedLms = localStorage.getItem("sr_lms_courses");
+        if (cachedLms) setLmsCoursesList(JSON.parse(cachedLms));
       }
 
       // 5. Fetch Ongoing Courses / Live Classes (Requirement 4)
@@ -434,7 +450,7 @@ export default function AdminDashboardPage() {
     setShowLmsModal(true);
   };
 
-  const handleSaveLmsCourse = () => {
+  const handleSaveLmsCourse = async () => {
     if (!lmsTitleEn.trim()) return;
     const courseObj = {
       id: editingLmsId || `lms-${Date.now()}`,
@@ -459,14 +475,34 @@ export default function AdminDashboardPage() {
     }
     setLmsCoursesList(updated);
     localStorage.setItem("sr_lms_courses", JSON.stringify(updated));
+    localStorage.setItem("sr_custom_courses", JSON.stringify(updated));
+
+    try {
+      await setDoc(doc(db, "courses", courseObj.id), courseObj);
+    } catch (e) {
+      console.warn("Could not save LMS course to Firestore:", e);
+    }
     setShowLmsModal(false);
   };
 
-  const handleDeleteLmsCourse = (courseId: string) => {
+  const handleDeleteLmsCourse = async (courseId: string) => {
     if (!confirm("Are you sure you want to delete this LMS course?")) return;
     const updated = lmsCoursesList.filter(c => c.id !== courseId);
     setLmsCoursesList(updated);
     localStorage.setItem("sr_lms_courses", JSON.stringify(updated));
+    localStorage.setItem("sr_custom_courses", JSON.stringify(updated));
+
+    // Also mark in deletion blacklist for instant cross-tab sync
+    try {
+      const deletedList = JSON.parse(localStorage.getItem("sr_deleted_courses") || "[]");
+      if (!deletedList.includes(courseId)) {
+        deletedList.push(courseId);
+        localStorage.setItem("sr_deleted_courses", JSON.stringify(deletedList));
+      }
+      await deleteDoc(doc(db, "courses", courseId));
+    } catch (e) {
+      console.warn("Could not delete LMS course from Firestore:", e);
+    }
   };
 
   // --- ONGOING COURSES HANDLERS (Requirement 4) ---
