@@ -2841,24 +2841,32 @@ export default function AdminDashboardPage() {
       )}
 
       {/* =========================================================================
-          MODAL 1: EDIT QUIZ AUDIO SETTINGS (Requirement 2)
+          MODAL 1: EDIT QUIZ AUDIO SETTINGS (Requirement 2: Responsive Modal with Pinned Header & Footer)
           ========================================================================= */}
       {editingQuizAudio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 border-2 border-amber-400 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full max-h-[92dvh] sm:max-h-[85vh] flex flex-col border-2 border-amber-400 shadow-2xl relative my-auto overflow-hidden">
+            
+            {/* Sticky Pinned Header */}
+            <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
               <div>
-                <h3 className="text-base font-black text-gray-900">Custom Audio Settings</h3>
-                <p className="text-xs text-amber-800 font-semibold">{editingQuizAudio.title?.en}</p>
+                <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+                  <Music className="w-4 h-4 text-amber-600" />
+                  <span>Custom Audio Settings</span>
+                </h3>
+                <p className="text-xs text-amber-800 font-semibold truncate max-w-xs">{editingQuizAudio.title?.en}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingQuizAudio(null)}
-                className="p-1 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Scrollable Modal Content */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
 
             {/* Background Music */}
             <div className="space-y-1 bg-amber-50/60 p-3 rounded-2xl border border-amber-200">
@@ -3009,20 +3017,24 @@ export default function AdminDashboardPage() {
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+            </div>
+
+            {/* Sticky Pinned Footer (Always visible on mobile & desktop) */}
+            <div className="p-3 sm:p-4 border-t border-gray-100 bg-stone-50/90 flex items-center justify-end gap-2.5 shrink-0 shadow-xs">
               <button
                 type="button"
                 onClick={() => setEditingQuizAudio(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-gray-700 hover:bg-gray-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveQuizAudio}
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-sm cursor-pointer"
+                className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black text-white bg-amber-600 hover:bg-amber-700 shadow-md cursor-pointer flex items-center gap-1.5"
               >
-                Save Audio for this Quiz
+                <Check className="w-4 h-4" />
+                <span>Save Audio for this Quiz</span>
               </button>
             </div>
           </div>
@@ -3030,29 +3042,32 @@ export default function AdminDashboardPage() {
       )}
 
       {/* =========================================================================
-          MODAL: EDIT QUIZ NAME & DETAILS (Requirement: Edit quiz name, details, description, image tag)
+          MODAL: EDIT QUIZ NAME & DETAILS (Requirement 1: Responsive Modal with Pinned Header, Scrolling Body & Pinned Submit Button)
           ========================================================================= */}
       {editingQuizDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-4 border-2 border-amber-400 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full max-h-[92dvh] sm:max-h-[88vh] flex flex-col border-2 border-amber-400 shadow-2xl relative my-auto overflow-hidden">
+            
+            {/* Sticky Pinned Header */}
+            <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
               <div>
-                <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
                   <Edit className="w-4 h-4 text-amber-600" />
                   <span>Edit Quiz Name & Details</span>
                 </h3>
-                <p className="text-xs text-amber-800 font-medium">Update title, description, category, and thumbnail</p>
+                <p className="text-xs text-amber-800 font-medium">Update title, description, category, banner, and sounds</p>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingQuizDetails(null)}
-                className="p-1 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3">
+            {/* Scrollable Modal Content (Touch-friendly scrolling for mobile and desktop) */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Quiz Title (English) *</label>
                 <input
@@ -3252,20 +3267,22 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+            {/* Sticky Pinned Footer (Always 100% visible on mobile and desktop, never cut off) */}
+            <div className="p-3 sm:p-4 border-t border-gray-100 bg-stone-50/90 flex items-center justify-end gap-2.5 shrink-0 shadow-xs">
               <button
                 type="button"
                 onClick={() => setEditingQuizDetails(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-gray-700 hover:bg-gray-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveQuizDetails}
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-sm cursor-pointer"
+                className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black text-white bg-amber-600 hover:bg-amber-700 shadow-md cursor-pointer flex items-center gap-1.5"
               >
-                Save Quiz Details
+                <Check className="w-4 h-4" />
+                <span>Save Quiz Details</span>
               </button>
             </div>
           </div>
@@ -3273,24 +3290,29 @@ export default function AdminDashboardPage() {
       )}
 
       {/* =========================================================================
-          MODAL 2: ADD/EDIT ONGOING COURSE (Requirement 4)
+          MODAL 2: ADD/EDIT ONGOING COURSE (Responsive Modal with Pinned Header & Sticky Footer)
           ========================================================================= */}
       {showOngoingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full max-h-[90vh] overflow-y-auto space-y-4 border-2 border-amber-400 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full max-h-[92dvh] sm:max-h-[88vh] flex flex-col border-2 border-amber-400 shadow-2xl relative my-auto overflow-hidden">
+            
+            {/* Sticky Pinned Header */}
+            <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+              <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-amber-600" />
                 <span>{editingOngoingId ? "Edit Ongoing Course" : "Add New Ongoing Course"}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setShowOngoingModal(false)}
-                className="p-1 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Scrollable Modal Content */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -3486,20 +3508,24 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+            </div>
+
+            {/* Sticky Pinned Footer */}
+            <div className="p-3 sm:p-4 border-t border-gray-100 bg-stone-50/90 flex items-center justify-end gap-2.5 shrink-0 shadow-xs">
               <button
                 type="button"
                 onClick={() => setShowOngoingModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-gray-700 hover:bg-gray-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveOngoingCourse}
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-sm cursor-pointer"
+                className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black text-white bg-amber-600 hover:bg-amber-700 shadow-md cursor-pointer flex items-center gap-1.5"
               >
-                Save Ongoing Course
+                <Check className="w-4 h-4" />
+                <span>Save Ongoing Course</span>
               </button>
             </div>
           </div>
@@ -3507,24 +3533,29 @@ export default function AdminDashboardPage() {
       )}
 
       {/* =========================================================================
-          MODAL 3: ADD/EDIT LMS COURSE
+          MODAL 3: ADD/EDIT LMS COURSE (Responsive Modal with Pinned Header & Sticky Footer)
           ========================================================================= */}
       {showLmsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full max-h-[90vh] overflow-y-auto space-y-4 border-2 border-amber-400 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full max-h-[92dvh] sm:max-h-[88vh] flex flex-col border-2 border-amber-400 shadow-2xl relative my-auto overflow-hidden">
+            
+            {/* Sticky Pinned Header */}
+            <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+              <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
                 <GraduationCap className="w-5 h-5 text-orange-600" />
                 <span>{editingLmsId ? "Edit LMS Video Course" : "Add New LMS Video Course"}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setShowLmsModal(false)}
-                className="p-1 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Scrollable Modal Content */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -3632,20 +3663,24 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+            </div>
+
+            {/* Sticky Pinned Footer */}
+            <div className="p-3 sm:p-4 border-t border-gray-100 bg-stone-50/90 flex items-center justify-end gap-2.5 shrink-0 shadow-xs">
               <button
                 type="button"
                 onClick={() => setShowLmsModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-gray-700 hover:bg-gray-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveLmsCourse}
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-sm cursor-pointer"
+                className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black text-white bg-amber-600 hover:bg-amber-700 shadow-md cursor-pointer flex items-center gap-1.5"
               >
-                Save LMS Course
+                <Check className="w-4 h-4" />
+                <span>Save LMS Course</span>
               </button>
             </div>
           </div>
