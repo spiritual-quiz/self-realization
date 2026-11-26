@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -11,14 +11,43 @@ import {
   GraduationCap, 
   Award, 
   Compass, 
-  Sparkles,
-  BookOpen,
-  User 
+  Sparkles, 
+  BookOpen, 
+  User, 
+  LogOut 
 } from "lucide-react";
 
 export default function Header() {
   const { language, setLanguage, t } = useLanguage();
   const pathname = usePathname();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      if (typeof window !== "undefined") {
+        const adminSession = localStorage.getItem("sr_admin_session");
+        const studentSession = localStorage.getItem("sr_student_session");
+        setIsLoggedIn(!!(adminSession || studentSession));
+      }
+    };
+    checkAuth();
+    window.addEventListener("storage", checkAuth);
+    const interval = setInterval(checkAuth, 1000);
+    return () => {
+      window.removeEventListener("storage", checkAuth);
+      clearInterval(interval);
+    };
+  }, [pathname]);
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("sr_admin_session");
+      localStorage.removeItem("sr_student_session");
+      document.cookie = "sr_admin_session=; path=/; max-age=0; SameSite=Lax";
+      setIsLoggedIn(false);
+      window.location.href = "/login";
+    }
+  };
 
   // Exactly the 5 items requested by the user
   const navigationItems = [
@@ -153,15 +182,27 @@ export default function Header() {
                 </button>
               </div>
 
-              {/* Unified Login Portal (Admin & Student) */}
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-emerald-200 hover:text-white bg-[#0B1320] border border-emerald-500/50 hover:border-emerald-400 hover:bg-emerald-950/40 transition-all shadow-xs"
-                title="Login / लॉगिन (Admin & Student)"
-              >
-                <User className="w-3.5 h-3.5 text-emerald-300" />
-                <span>{language === "hi" ? "लॉगिन" : "Login"}</span>
-              </Link>
+              {/* Unified Login / Logout Action */}
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-rose-300 hover:text-white bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/50 hover:border-rose-400 transition-all shadow-xs cursor-pointer"
+                  title="Logout / लॉगआउट"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                  <span>{language === "hi" ? "लॉगआउट" : "Logout"}</span>
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-emerald-200 hover:text-white bg-[#0B1320] border border-emerald-500/50 hover:border-emerald-400 hover:bg-emerald-950/40 transition-all shadow-xs"
+                  title="Login / लॉगिन (Admin & Student)"
+                >
+                  <User className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>{language === "hi" ? "लॉगिन" : "Login"}</span>
+                </Link>
+              )}
 
               {/* Join Free Class CTA */}
               <Link
@@ -173,16 +214,28 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* Mobile Header Right: Language Switcher & Login */}
+            {/* Mobile Header Right: Language Switcher & Login/Logout */}
             <div className="flex items-center gap-1.5 lg:hidden">
-              <Link
-                href="/login"
-                className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-200 bg-[#0B1320] border border-emerald-500/40 hover:text-white flex items-center gap-1 shadow-xs"
-                title="Login / लॉगिन"
-              >
-                <User className="w-3 h-3 text-emerald-400" />
-                <span>{language === "hi" ? "लॉगिन" : "Login"}</span>
-              </Link>
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-rose-300 bg-rose-950/40 border border-rose-500/40 hover:text-white flex items-center gap-1 shadow-xs cursor-pointer"
+                  title="Logout / लॉगआउट"
+                >
+                  <LogOut className="w-3 h-3 text-rose-400" />
+                  <span>{language === "hi" ? "लॉगआउट" : "Logout"}</span>
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-200 bg-[#0B1320] border border-emerald-500/40 hover:text-white flex items-center gap-1 shadow-xs"
+                  title="Login / लॉगिन"
+                >
+                  <User className="w-3 h-3 text-emerald-400" />
+                  <span>{language === "hi" ? "लॉगिन" : "Login"}</span>
+                </Link>
+              )}
 
               <div className="flex items-center bg-[#0B1320] border border-emerald-500/40 rounded-lg p-0.5 shadow-xs">
                 <button

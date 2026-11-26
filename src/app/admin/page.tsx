@@ -1283,7 +1283,7 @@ export default function AdminDashboardPage() {
     { id: "overview", label: "Console Overview", icon: BarChart3, count: null },
     { id: "courses", label: "Manage Course LMS", icon: GraduationCap, count: lmsCoursesList.length },
     { id: "ongoing-courses", label: "Courses & Live Classes", icon: BookOpen, count: ongoingCoursesList.length },
-    { id: "quizzes", label: "Quizzes & Audio", icon: Award, count: customQuizzes.length + 3 },
+    { id: "quizzes", label: "Quizzes & Audio", icon: Award, count: customQuizzes.length },
     { id: "media-library", label: "🎵 Media & Asset Library", icon: Music, count: bgTracks.length + correctSounds.length + wrongSounds.length + imageAssets.length },
     { id: "classes", label: "Seeker Registrations", icon: Calendar, count: registrations.length },
     { id: "inquiries", label: "Contact Enquiries", icon: Mail, count: inquiries.length },
@@ -1454,9 +1454,9 @@ export default function AdminDashboardPage() {
                 >
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Live Quizzes</p>
-                    <p className="text-3xl font-black text-gray-900 mt-1">{customQuizzes.length + 3}</p>
+                    <p className="text-3xl font-black text-gray-900 mt-1">{customQuizzes.length}</p>
                     <p className="text-[11px] text-amber-800 font-semibold mt-1">
-                      {customQuizzes.length} Custom • 3 Standard
+                      {customQuizzes.length === 0 ? "0 Active Quizzes" : `${customQuizzes.length} Active Quizzes`}
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
