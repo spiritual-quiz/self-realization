@@ -40,6 +40,7 @@ import { parseCSVToQuestions, SAMPLE_CSV_CONTENT, ParsedQuizQuestion } from "@/l
 import { generateQuizCertificatePdf } from "@/lib/pdf/certificateGenerator";
 import { db } from "@/lib/firebase/client";
 import { doc, getDoc, collection, addDoc } from "firebase/firestore";
+import { resolveImageUrlByTag } from "@/lib/imageLibrary";
 
 function QuizPlayInner() {
   const { language } = useLanguage();
@@ -1789,7 +1790,7 @@ function QuizPlayInner() {
               <div className="relative w-full h-44 sm:h-52 lg:h-[270px] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg bg-stone-900 flex items-center justify-center ring-1 ring-amber-300/40">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={currentQ.imageUrl || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"}
+                  src={resolveImageUrlByTag(currentQ.imageUrl, "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png")}
                   alt="Question illustration"
                   className="w-full h-full object-contain"
                 />

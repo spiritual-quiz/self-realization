@@ -225,111 +225,123 @@ export default function CoursesCataloguePage() {
         </div>
       </div>
 
-      {/* Courses Detailed List with Syllabus Accordions */}
-      <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Courses Cards Grid (Matching Exact Uploaded Reference Design) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto">
         {filteredCourses.map((c) => {
           const isExpanded = expandedCourse === c.id;
 
           return (
             <div
               key={c.id}
-              className="bg-white rounded-3xl border border-amber-200/80 shadow-sm hover:shadow-md transition-all overflow-hidden"
+              className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:border-emerald-400"
             >
-              <div className="p-6 sm:p-8 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                      {c.price}
-                    </span>
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-700">
-                      {c.level}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <PlayCircle className="w-4 h-4 text-amber-600" />
-                      {c.lessons}
-                    </span>
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <Clock className="w-4 h-4 text-amber-600" />
-                      {c.duration}
-                    </span>
-                    <span className="flex items-center gap-1.5 font-medium text-emerald-700">
-                      <Award className="w-4 h-4" />
-                      Certificate
-                    </span>
+              <div>
+                {/* 1. Header Image Banner (Aspect 16:9 like reference) */}
+                <div className="relative w-full h-44 sm:h-48 bg-stone-900 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={c.thumbnail || c.image || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png"}
+                    alt={getLocalized(c.title)}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-white border border-white/20 uppercase tracking-wider">
+                    E-Learning LMS
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-bold text-gray-900 leading-snug">
-                  {getLocalized(c.title)}
-                </h3>
+                {/* 2. Card Content Body */}
+                <div className="p-5 sm:p-6 space-y-3">
+                  
+                  {/* Course Title */}
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2">
+                    {getLocalized(c.title)}
+                  </h3>
 
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  {getLocalized(c.desc)}
-                </p>
+                  {/* Short Description */}
+                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                    {getLocalized(c.desc)}
+                  </p>
 
-                {/* Actions Bar */}
-                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedCourse(isExpanded ? null : c.id)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 hover:text-amber-900"
-                  >
-                    <span>{isExpanded ? (language === "hi" ? "पाठ्यक्रम छिपाएं" : "Hide Syllabus") : (language === "hi" ? "पाठ्यक्रम विवरण देखें" : "View Syllabus & Lessons")}</span>
-                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-
-                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                    <Link
-                      href={`/courses/${c.id}`}
-                      className="grow sm:grow-0 px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                  {/* Speaker & Paid/Free Badge */}
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <p className="text-xs font-bold text-slate-800 truncate">
+                      By {c.instructor || "ISKCON NVCC Scholars"}
+                    </p>
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                        c.isPaid
+                          ? "bg-amber-500 text-white"
+                          : "bg-emerald-600 text-white"
+                      }`}
                     >
-                      <PlayCircle className="w-4 h-4 text-emerald-200" />
-                      <span>{language === "hi" ? "अध्ययन प्रारंभ करें ▶" : "Start Learning Now ▶"}</span>
-                    </Link>
-
-                    <button
-                      type="button"
-                      onClick={() => setEnrollingCourse({
-                        id: c.id,
-                        title: c.title,
-                        isPaid: c.isPaid,
-                        date: "Self-Paced / Immediate Access",
-                        time: c.duration,
-                        mode: "Online Video Lessons (LMS)",
-                        instructor: "ISKCON NVCC Scholars"
-                      })}
-                      className="px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-emerald-900 bg-emerald-100/70 hover:bg-emerald-100 transition-all border border-emerald-300 flex items-center justify-center gap-1.5 cursor-pointer"
-                      title={language === "hi" ? "पंजीकरण करें" : "Register"}
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{language === "hi" ? "पंजीकरण" : "Enroll"}</span>
-                    </button>
+                      {c.isPaid ? "PAID" : "FREE"}
+                    </span>
                   </div>
+
+                  {/* Hours & Self-Paced Access Row */}
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                    <span className="text-slate-500 font-semibold">{c.duration || "4 Hours"}</span>
+                    <span className="text-sky-600 font-bold">Access - Immediate</span>
+                  </div>
+
+                  {/* Certificate Badge */}
+                  <div className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold">
+                    <Award className="w-4 h-4 text-amber-500" />
+                    <span>Certificate Course</span>
+                  </div>
+
+                  {/* Module Count & Mode Details */}
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/70 text-[11px] text-slate-700 flex items-center justify-between">
+                    <span className="flex items-center gap-1 font-bold text-emerald-800">
+                      <PlayCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{c.lessons || (c.modules ? `${c.modules.length} Lessons` : "6 Lessons")}</span>
+                    </span>
+                    <span className="text-slate-500">
+                      Level: <strong>{c.level || "Beginner"}</strong>
+                    </span>
+                  </div>
+
                 </div>
+              </div>
+
+              {/* 3. Action Buttons Row: Enroll Now & Syllabus */}
+              <div className="p-5 sm:p-6 pt-0 space-y-2">
+                <Link
+                  href={`/courses/${c.id}`}
+                  className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-sky-600 hover:text-white bg-white hover:bg-sky-600 border-2 border-sky-500 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Enroll Now</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setExpandedCourse(isExpanded ? null : c.id)}
+                  className="w-full py-1 text-center text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span>{isExpanded ? "Hide Syllabus ▲" : "View Curriculum ▼"}</span>
+                </button>
               </div>
 
               {/* Collapsible Syllabus Breakdown */}
               {isExpanded && (
-                <div className="bg-amber-50/50 p-6 sm:p-8 border-t border-amber-200/60 space-y-3 animate-fade-in">
+                <div className="bg-amber-50/50 p-4 border-t border-amber-200/60 space-y-2 animate-fade-in">
                   <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
                     <FileText className="w-4 h-4" />
-                    <span>{language === "hi" ? "पाठ्यक्रम की रूपरेखा (Syllabus)" : "Course Curriculum & Lessons"}</span>
+                    <span>{language === "hi" ? "पाठ्यक्रम की रूपरेखा" : "Curriculum Modules"}</span>
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                     {(c.modules || []).map((m: any, idx: number) => (
                       <div
                         key={idx}
-                        className="bg-white p-3.5 rounded-xl border border-amber-200/70 flex items-center justify-between text-xs sm:text-sm"
+                        className="bg-white p-2.5 rounded-xl border border-amber-200/70 flex items-center justify-between text-xs"
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-bold shrink-0">
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-bold shrink-0">
                             {idx + 1}
                           </span>
-                          <span className="font-medium text-gray-800">{getLocalized(m.title)}</span>
+                          <span className="font-medium text-gray-800 truncate">{getLocalized(m.title)}</span>
                         </div>
-                        <span className="text-gray-400 font-mono text-xs shrink-0">{m.length}</span>
+                        <span className="text-gray-400 font-mono text-[11px] shrink-0">{m.length}</span>
                       </div>
                     ))}
                   </div>

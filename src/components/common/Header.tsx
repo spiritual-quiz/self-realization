@@ -11,7 +11,8 @@ import {
   GraduationCap, 
   Award, 
   Compass, 
-  Sparkles 
+  Sparkles,
+  BookOpen 
 } from "lucide-react";
 
 export default function Header() {
@@ -30,9 +31,9 @@ export default function Header() {
     },
     {
       href: "/live-classes",
-      label: language === "hi" ? "कक्षाएं" : "Classes",
-      fullLabel: "📅 Classes",
-      icon: Calendar,
+      label: language === "hi" ? "पाठ्यक्रम" : "Courses",
+      fullLabel: "📖 Courses",
+      icon: BookOpen,
       exact: false,
       color: "text-amber-600",
     },
@@ -221,7 +222,7 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* 2. 📅 Classes */}
+        {/* 2. 📖 Courses */}
         <Link
           href="/live-classes"
           className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
@@ -230,9 +231,9 @@ export default function Header() {
               : "text-slate-300 hover:text-white font-medium"
           }`}
         >
-          <Calendar className={`w-5 h-5 ${pathname.startsWith("/live-classes") ? "text-emerald-400 stroke-[2.5]" : "text-slate-300"}`} />
+          <BookOpen className={`w-5 h-5 ${pathname.startsWith("/live-classes") ? "text-emerald-400 stroke-[2.5]" : "text-slate-300"}`} />
           <span className="text-[10px] mt-0.5 leading-tight truncate">
-            {language === "hi" ? "कक्षाएं" : "Classes"}
+            {language === "hi" ? "पाठ्यक्रम" : "Courses"}
           </span>
         </Link>
 

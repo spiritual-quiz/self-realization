@@ -87,77 +87,104 @@ export default function QuizOverviewPage() {
         <LotusAccent className="my-2" />
       </div>
 
-      {/* Custom Admin Quizzes if any */}
-      {customQuizzes.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+      {/* Quizzes Grid (Matching Exact Uploaded Reference Design) */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-600" />
-            <span>Recently Uploaded Quizzes</span>
+            <span>{language === "hi" ? "उपलब्ध वैदिक प्रश्नोत्तरी" : "Featured Spiritual Quizzes"}</span>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {customQuizzes.map((q) => (
+          <span className="text-xs font-bold text-gray-500">
+            {customQuizzes.length > 0 ? customQuizzes.length : defaultQuizzes.length} {language === "hi" ? "क्विज़ उपलब्ध" : "Quizzes Available"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          {(customQuizzes.length > 0 ? customQuizzes : defaultQuizzes).map((q: any) => {
+            const titleStr = typeof q.title === "object" ? (q.title[language] || q.title.en || q.title.hi) : q.title;
+            const descStr = q.description ? (typeof q.description === "object" ? (q.description[language] || q.description.en) : q.description) : "Test your spiritual intellect, earn marks, and receive an official verifiable devotional certificate.";
+            const questionsCount = q.questionCount || q.questions?.length || q.questions || 10;
+            const imgUrl = q.image || q.imageUrl || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png";
+
+            return (
               <div
                 key={q.id}
-                className="bg-white rounded-3xl p-6 border-2 border-amber-300 shadow-md flex flex-col justify-between space-y-4"
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:border-amber-400"
               >
-                <div className="space-y-2">
-                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                    Uploaded via CSV
-                  </span>
-                  <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                    {q.title.en}
-                  </h3>
-                  <div className="flex items-center gap-3 text-xs text-gray-500 pt-1">
-                    <span>{q.questionCount} Questions</span>
-                    <span>{q.totalMarks} Marks</span>
+                <div>
+                  {/* 1. Header Image Banner (Aspect 16:9 like reference) */}
+                  <div className="relative w-full h-44 sm:h-48 bg-stone-900 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imgUrl}
+                      alt={titleStr}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-bold text-white border border-white/20 uppercase tracking-wider">
+                      Vedic Quiz Arena
+                    </div>
+                  </div>
+
+                  {/* 2. Card Content Body */}
+                  <div className="p-5 sm:p-6 space-y-3">
+                    
+                    {/* Quiz Title */}
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug group-hover:text-amber-700 transition-colors line-clamp-2">
+                      {titleStr}
+                    </h3>
+
+                    {/* Short Description */}
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                      {descStr}
+                    </p>
+
+                    {/* Category & Badge */}
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <p className="text-xs font-bold text-slate-800 truncate">
+                        By SelfRealization Outreach
+                      </p>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider bg-emerald-600 text-white shrink-0">
+                        FREE
+                      </span>
+                    </div>
+
+                    {/* Questions & Duration Row */}
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                      <span className="text-slate-500 font-semibold">{questionsCount} Questions</span>
+                      <span className="text-sky-600 font-bold">10s per Question</span>
+                    </div>
+
+                    {/* Certificate Course Badge */}
+                    <div className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold">
+                      <Award className="w-4 h-4 text-amber-500" />
+                      <span>Official Certificate Included</span>
+                    </div>
+
+                    {/* Details Box */}
+                    <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/70 text-[11px] text-slate-700 flex items-center justify-between">
+                      <span className="font-bold text-emerald-800">
+                        Total Marks: {q.totalMarks || (questionsCount * 10)}
+                      </span>
+                      <span className="text-slate-500">
+                        Format: <strong>Instant Sound & Emoticons</strong>
+                      </span>
+                    </div>
+
                   </div>
                 </div>
 
-                <Link
-                  href={`/quiz/play?id=${q.id}`}
-                  className="w-full py-3 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-200" />
-                  <span>Start Quiz</span>
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Featured Standard Quizzes */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold text-gray-900">Featured Devotional Quizzes</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {defaultQuizzes.map((q) => (
-            <div
-              key={q.id}
-              className="bg-white rounded-3xl p-6 sm:p-7 border border-amber-200 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between space-y-4 group hover:border-amber-300"
-            >
-              <div className="space-y-3">
-                <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-amber-100 text-amber-900">
-                  {q.category}
-                </span>
-                <h3 className="text-xl font-bold text-gray-900 leading-snug group-hover:text-amber-700 transition-colors">
-                  {q.title[language]}
-                </h3>
-                <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
-                  <span>{q.questions} Questions</span>
-                  <span>{q.marks} Points</span>
-                  <span>{q.time}</span>
+                {/* 3. Action Button (Enroll Now / Play Now) */}
+                <div className="p-5 sm:p-6 pt-0">
+                  <Link
+                    href={`/quiz/play?id=${q.id}`}
+                    className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-sky-600 hover:text-white bg-white hover:bg-sky-600 border-2 border-sky-500 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Play Quiz Now</span>
+                  </Link>
                 </div>
               </div>
-
-              <Link
-                href={`/quiz/play?id=${q.id}`}
-                className="w-full py-3.5 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md flex items-center justify-center gap-2 transform active:scale-95 transition-all cursor-pointer"
-              >
-                <HelpCircle className="w-4 h-4 text-amber-200" />
-                <span>Start Quiz</span>
-              </Link>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

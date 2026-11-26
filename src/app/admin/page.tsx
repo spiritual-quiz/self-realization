@@ -35,8 +35,20 @@ import {
   Radio,
   ExternalLink,
   ChevronRight,
-  Menu
+  Menu,
+  Copy,
+  Check,
+  Image as ImageIcon
 } from "lucide-react";
+import { 
+  ImageAsset, 
+  DEFAULT_IMAGE_LIBRARY, 
+  getStoredImageLibrary, 
+  saveImageToLibrary, 
+  deleteImageFromLibrary, 
+  resolveImageUrlByTag, 
+  scaleAndOptimizeImageFile 
+} from "@/lib/imageLibrary";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { SAMPLE_CSV_CONTENT, parseCSVToQuestions, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
 import { DEFAULT_SYSTEM_QUIZZES, SystemQuiz } from "@/lib/defaultQuizzes";
@@ -193,9 +205,18 @@ export default function AdminDashboardPage() {
   
   // Left Sidebar Tabs strictly matching user requests
   const [activeTab, setActiveTab] = useState<
-    "overview" | "courses" | "ongoing-courses" | "quizzes" | "classes" | "inquiries"
+    "overview" | "courses" | "ongoing-courses" | "quizzes" | "image-library" | "classes" | "inquiries"
   >("overview");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Devotional Image Library State (Shared tags: krishna, rama, vishnu, temple, etc.)
+  const [imageAssets, setImageAssets] = useState<ImageAsset[]>(DEFAULT_IMAGE_LIBRARY);
+  const [newImageTag, setNewImageTag] = useState("");
+  const [newImageTitle, setNewImageTitle] = useState("");
+  const [newImageCategory, setNewImageCategory] = useState<"Deity" | "Philosophy" | "Temple" | "Course">("Deity");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
+  const [copiedTag, setCopiedTag] = useState<string | null>(null);
 
   // Analytics & Collections State
   const [registrations, setRegistrations] = useState<any[]>([]);
@@ -216,6 +237,8 @@ export default function AdminDashboardPage() {
   const [lmsDuration, setLmsDuration] = useState("4 Hours");
   const [lmsLessons, setLmsLessons] = useState("6 Lessons");
   const [lmsPrice, setLmsPrice] = useState("Free Access");
+  const [lmsImage, setLmsImage] = useState("bhakti-vaibhava");
+  const [lmsWhatsappUrl, setLmsWhatsappUrl] = useState("https://chat.whatsapp.com/SelfRealizationLMS");
   const [lmsModules, setLmsModules] = useState<{ titleEn: string; titleHi: string; length: string }[]>([
     { titleEn: "Introduction & Overview", titleHi: "प्रस्तावना एवं परिचय", length: "30 mins" }
   ]);
@@ -236,6 +259,9 @@ export default function AdminDashboardPage() {
   const [ongoingPrice, setOngoingPrice] = useState("Free Access");
   const [ongoingDescEn, setOngoingDescEn] = useState("");
   const [ongoingDescHi, setOngoingDescHi] = useState("");
+  const [ongoingVenue, setOngoingVenue] = useState("Main Temple Hall");
+  const [ongoingRoomNumber, setOngoingRoomNumber] = useState("Hall 204");
+  const [ongoingWhatsappUrl, setOngoingWhatsappUrl] = useState("https://chat.whatsapp.com/SelfRealizationGita");
   const [ongoingImage, setOngoingImage] = useState("https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png");
 
   // CSV Quiz Upload & Audio Settings State (Requirement 2)
@@ -252,6 +278,16 @@ export default function AdminDashboardPage() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+
+  // Quiz Name & Details Edit Modal (Requirement: Admin can edit quiz name, details, description, image tag)
+  const [editingQuizDetails, setEditingQuizDetails] = useState<any | null>(null);
+  const [editQuizTitleEn, setEditQuizTitleEn] = useState("");
+  const [editQuizTitleHi, setEditQuizTitleHi] = useState("");
+  const [editQuizCategory, setEditQuizCategory] = useState("Bhagavad-gītā");
+  const [editQuizDescEn, setEditQuizDescEn] = useState("");
+  const [editQuizDescHi, setEditQuizDescHi] = useState("");
+  const [editQuizTimerSeconds, setEditQuizTimerSeconds] = useState(10);
+  const [editQuizImage, setEditQuizImage] = useState("krishna");
 
   // Audio Edit Modal for Published Quizzes
   const [editingQuizAudio, setEditingQuizAudio] = useState<any | null>(null);
@@ -436,6 +472,10 @@ export default function AdminDashboardPage() {
           localStorage.setItem("sr_ongoing_classes", JSON.stringify(list));
         }
       }
+
+      // 6. Fetch Central Devotional Image Library
+      const library = getStoredImageLibrary();
+      setImageAssets(library);
     } catch (error) {
       console.warn("Could not fetch Firestore collections:", error);
       const localQ = JSON.parse(localStorage.getItem("sr_custom_quizzes") || "[]");
@@ -450,6 +490,137 @@ export default function AdminDashboardPage() {
     router.push("/admin/login");
   };
 
+  // --- AUDIO CLEAR / RESET HANDLERS ---
+  const handleClearAudio = (target: "bg" | "correct" | "wrong" | "edit-bg" | "edit-correct" | "edit-wrong") => {
+    if (target === "bg") setBgMusicUrl("");
+    else if (target === "correct") setCorrectSoundUrl("");
+    else if (target === "wrong") setWrongSoundUrl("");
+    else if (target === "edit-bg") setEditBgMusicUrl("");
+    else if (target === "edit-correct") setEditCorrectSoundUrl("");
+    else if (target === "edit-wrong") setEditWrongSoundUrl("");
+  };
+
+  // --- IMAGE LIBRARY HANDLERS ---
+  const handleUploadImageFile = async (file: File) => {
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const dataUrl = await scaleAndOptimizeImageFile(file, 800, 500);
+      setNewImageUrl(dataUrl);
+      if (!newImageTag) {
+        const cleanTag = file.name.replace(/\.[^/.]+$/, "").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+        setNewImageTag(cleanTag);
+      }
+      if (!newImageTitle) {
+        setNewImageTitle(file.name.replace(/\.[^/.]+$/, ""));
+      }
+    } catch (err) {
+      alert("Could not process image file: " + err);
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleSaveNewImage = () => {
+    if (!newImageTag.trim()) {
+      alert("Please provide an image name/tag (e.g. krishna, rama, vishnu).");
+      return;
+    }
+    if (!newImageUrl.trim()) {
+      alert("Please upload an image or provide an image URL.");
+      return;
+    }
+    const asset: ImageAsset = {
+      id: `img-${Date.now()}`,
+      name: newImageTag.trim().toLowerCase(),
+      title: newImageTitle.trim() || newImageTag.trim(),
+      url: newImageUrl.trim(),
+      category: newImageCategory,
+    };
+    const updated = saveImageToLibrary(asset);
+    setImageAssets(updated);
+    setNewImageTag("");
+    setNewImageTitle("");
+    setNewImageUrl("");
+  };
+
+  const handleDeleteImage = (idOrName: string) => {
+    if (!confirm(`Are you sure you want to remove image '${idOrName}' from library?`)) return;
+    const updated = deleteImageFromLibrary(idOrName);
+    setImageAssets(updated);
+  };
+
+  const handleCopyTag = (tag: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(tag);
+      setCopiedTag(tag);
+      setTimeout(() => setCopiedTag(null), 2000);
+    }
+  };
+
+  // Quick question image auto-scale & upload
+  const handleQuestionImageUpload = async (file: File) => {
+    if (!file) return;
+    try {
+      const dataUrl = await scaleAndOptimizeImageFile(file, 800, 500);
+      const tag = file.name.replace(/\.[^/.]+$/, "").toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+      const asset: ImageAsset = {
+        id: `img-${Date.now()}`,
+        name: tag,
+        title: file.name,
+        url: dataUrl,
+        category: "Philosophy"
+      };
+      saveImageToLibrary(asset);
+      setImageAssets(getStoredImageLibrary());
+      setQuestionFormData(prev => ({ ...prev, imageUrl: tag }));
+    } catch (e) {
+      console.error("Could not upload question image:", e);
+    }
+  };
+
+  // --- QUIZ DETAILS EDIT HANDLERS (Requirement: Edit quiz name, details, image) ---
+  const handleOpenEditQuizDetails = (quiz: any) => {
+    setEditingQuizDetails(quiz);
+    setEditQuizTitleEn(quiz.title?.en || (typeof quiz.title === "string" ? quiz.title : ""));
+    setEditQuizTitleHi(quiz.title?.hi || "");
+    setEditQuizCategory(quiz.category || "Bhagavad-gītā");
+    setEditQuizDescEn(quiz.description?.en || (typeof quiz.description === "string" ? quiz.description : ""));
+    setEditQuizDescHi(quiz.description?.hi || "");
+    setEditQuizTimerSeconds(Number(quiz.timerSeconds) || 10);
+    setEditQuizImage(quiz.image || quiz.thumbnail || "krishna");
+  };
+
+  const handleSaveQuizDetails = async () => {
+    if (!editingQuizDetails) return;
+    const updatedQuiz = {
+      ...editingQuizDetails,
+      title: {
+        en: editQuizTitleEn.trim() || editingQuizDetails.title?.en || "Quiz",
+        hi: editQuizTitleHi.trim() || editingQuizDetails.title?.hi || editQuizTitleEn.trim()
+      },
+      description: {
+        en: editQuizDescEn.trim(),
+        hi: editQuizDescHi.trim() || editQuizDescEn.trim()
+      },
+      category: editQuizCategory,
+      timerSeconds: editQuizTimerSeconds,
+      image: editQuizImage,
+      thumbnail: editQuizImage
+    };
+
+    const updatedQuizzes = customQuizzes.map(q => q.id === editingQuizDetails.id ? updatedQuiz : q);
+    setCustomQuizzes(updatedQuizzes);
+    localStorage.setItem("sr_custom_quizzes", JSON.stringify(updatedQuizzes));
+
+    try {
+      await setDoc(doc(db, "quizzes", editingQuizDetails.id), updatedQuiz, { merge: true });
+    } catch (e) {
+      console.warn("Could not save quiz details to Firestore:", e);
+    }
+    setEditingQuizDetails(null);
+  };
+
   // --- LMS COURSES HANDLERS ---
   const handleOpenAddLms = () => {
     setEditingLmsId(null);
@@ -461,6 +632,8 @@ export default function AdminDashboardPage() {
     setLmsDuration("4 Hours");
     setLmsLessons("6 Lessons");
     setLmsPrice("Free Access");
+    setLmsImage("bhakti-vaibhava");
+    setLmsWhatsappUrl("https://chat.whatsapp.com/SelfRealizationLMS");
     setLmsModules([{ titleEn: "Session 1: Introduction", titleHi: "सत्र 1: प्रस्तावना", length: "30 mins" }]);
     setShowLmsModal(true);
   };
@@ -475,6 +648,8 @@ export default function AdminDashboardPage() {
     setLmsDuration(c.duration || "4 Hours");
     setLmsLessons(c.lessons || "6 Lessons");
     setLmsPrice(c.price || "Free Access");
+    setLmsImage(c.image || "bhakti-vaibhava");
+    setLmsWhatsappUrl(c.whatsappGroupUrl || "https://chat.whatsapp.com/SelfRealizationLMS");
     setLmsModules(c.modules ? c.modules.map((m: any) => ({
       titleEn: m.title?.en || m.titleEn || "",
       titleHi: m.title?.hi || m.titleHi || "",
@@ -494,6 +669,8 @@ export default function AdminDashboardPage() {
       lessons: lmsLessons,
       price: lmsPrice,
       isPaid: lmsPrice.toLowerCase().includes("free") ? false : true,
+      image: lmsImage,
+      whatsappGroupUrl: lmsWhatsappUrl,
       modules: lmsModules.map(m => ({
         title: { en: m.titleEn, hi: m.titleHi || m.titleEn },
         length: m.length
@@ -554,6 +731,9 @@ export default function AdminDashboardPage() {
     setOngoingPrice("Free Access");
     setOngoingDescEn("");
     setOngoingDescHi("");
+    setOngoingVenue("Main Temple Hall");
+    setOngoingRoomNumber("Hall 204");
+    setOngoingWhatsappUrl("https://chat.whatsapp.com/SelfRealizationGita");
     setOngoingImage("https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png");
     setShowOngoingModal(true);
   };
@@ -573,6 +753,9 @@ export default function AdminDashboardPage() {
     setOngoingPrice(c.price || "Free Access");
     setOngoingDescEn(c.description?.en || "");
     setOngoingDescHi(c.description?.hi || "");
+    setOngoingVenue(c.venue || "Main Temple Hall");
+    setOngoingRoomNumber(c.roomNumber || "Hall 204");
+    setOngoingWhatsappUrl(c.whatsappGroupUrl || "https://chat.whatsapp.com/SelfRealizationGita");
     setOngoingImage(c.image || "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png");
     setShowOngoingModal(true);
   };
@@ -591,6 +774,9 @@ export default function AdminDashboardPage() {
       isPaid: ongoingIsPaid,
       price: ongoingIsPaid ? ongoingPrice : "Free Access",
       description: { en: ongoingDescEn, hi: ongoingDescHi || ongoingDescEn },
+      venue: ongoingVenue,
+      roomNumber: ongoingRoomNumber,
+      whatsappGroupUrl: ongoingWhatsappUrl,
       image: ongoingImage,
       registrationOpen: true
     };
@@ -895,14 +1081,15 @@ export default function AdminDashboardPage() {
     );
   }
 
-  // Strictly the 6 Left-Side Vertical Menu Tabs requested by user
+  // Sidebar Vertical Navigation Tabs
   const sidebarNavItems = [
     { id: "overview", label: "Console Overview", icon: BarChart3, count: null },
     { id: "courses", label: "Manage Course LMS", icon: GraduationCap, count: lmsCoursesList.length },
-    { id: "ongoing-courses", label: "Manage Ongoing Courses", icon: BookOpen, count: ongoingCoursesList.length },
-    { id: "quizzes", label: "Quizzes", icon: Award, count: customQuizzes.length + 3 },
-    { id: "classes", label: "Registration", icon: Calendar, count: registrations.length },
-    { id: "inquiries", label: "Enquiries", icon: Mail, count: inquiries.length },
+    { id: "ongoing-courses", label: "Courses & Live Classes", icon: BookOpen, count: ongoingCoursesList.length },
+    { id: "quizzes", label: "Quizzes & Audio", icon: Award, count: customQuizzes.length + 3 },
+    { id: "image-library", label: "Devotional Image Library", icon: ImageIcon, count: imageAssets.length },
+    { id: "classes", label: "Seeker Registrations", icon: Calendar, count: registrations.length },
+    { id: "inquiries", label: "Contact Enquiries", icon: Mail, count: inquiries.length },
   ] as const;
 
   return (
@@ -1020,6 +1207,7 @@ export default function AdminDashboardPage() {
                 {activeTab === "courses" && "🎓 Manage Course LMS"}
                 {activeTab === "ongoing-courses" && "📅 Manage Ongoing Courses & Live Classes"}
                 {activeTab === "quizzes" && "🏆 Vedic Quizzes & Audio Settings"}
+                {activeTab === "image-library" && "🖼️ Devotional Image Library"}
                 {activeTab === "classes" && "📋 Seeker Registrations"}
                 {activeTab === "inquiries" && "✉️ Contact Enquiries"}
               </h1>
@@ -1278,6 +1466,16 @@ export default function AdminDashboardPage() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          {/* Edit Quiz Details Button (Name, Hindi Name, Description, Image, Timer) */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditQuizDetails(q)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold text-sky-900 bg-sky-100 hover:bg-sky-200 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <Edit className="w-3.5 h-3.5 text-sky-700" />
+                            <span>Edit Details</span>
+                          </button>
+
                           {/* Manage Individual Questions Button */}
                           <button
                             type="button"
@@ -1347,14 +1545,26 @@ export default function AdminDashboardPage() {
                     <div className="space-y-1.5 bg-white/80 p-3 rounded-xl border border-amber-200">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-bold text-gray-700">Background Music</label>
-                        <button
-                          type="button"
-                          onClick={() => togglePlayAudioPreview(bgMusicUrl, bgMusicVolume)}
-                          className="text-[11px] font-bold text-amber-700 flex items-center gap-1 hover:underline cursor-pointer"
-                        >
-                          {playingPreviewUrl === bgMusicUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                          <span>{playingPreviewUrl === bgMusicUrl ? "Stop" : "Test"}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => togglePlayAudioPreview(bgMusicUrl, bgMusicVolume)}
+                            className="text-[11px] font-bold text-amber-700 flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            {playingPreviewUrl === bgMusicUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                            <span>{playingPreviewUrl === bgMusicUrl ? "Stop" : "Test"}</span>
+                          </button>
+                          {bgMusicUrl && (
+                            <button
+                              type="button"
+                              onClick={() => handleClearAudio("bg")}
+                              className="text-[10px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                              title="Clear background music"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <select
                         value={bgMusicUrl}
@@ -1380,14 +1590,26 @@ export default function AdminDashboardPage() {
                     <div className="space-y-1.5 bg-white/80 p-3 rounded-xl border border-amber-200">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-bold text-gray-700">Right Answer Sound</label>
-                        <button
-                          type="button"
-                          onClick={() => togglePlayAudioPreview(correctSoundUrl)}
-                          className="text-[11px] font-bold text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer"
-                        >
-                          {playingPreviewUrl === correctSoundUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                          <span>{playingPreviewUrl === correctSoundUrl ? "Stop" : "Test"}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => togglePlayAudioPreview(correctSoundUrl)}
+                            className="text-[11px] font-bold text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            {playingPreviewUrl === correctSoundUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                            <span>{playingPreviewUrl === correctSoundUrl ? "Stop" : "Test"}</span>
+                          </button>
+                          {correctSoundUrl && (
+                            <button
+                              type="button"
+                              onClick={() => handleClearAudio("correct")}
+                              className="text-[10px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                              title="Clear sound"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <select
                         value={correctSoundUrl}
@@ -1413,14 +1635,26 @@ export default function AdminDashboardPage() {
                     <div className="space-y-1.5 bg-white/80 p-3 rounded-xl border border-amber-200">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-bold text-gray-700">Wrong Answer Sound</label>
-                        <button
-                          type="button"
-                          onClick={() => togglePlayAudioPreview(wrongSoundUrl)}
-                          className="text-[11px] font-bold text-rose-700 flex items-center gap-1 hover:underline cursor-pointer"
-                        >
-                          {playingPreviewUrl === wrongSoundUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                          <span>{playingPreviewUrl === wrongSoundUrl ? "Stop" : "Test"}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => togglePlayAudioPreview(wrongSoundUrl)}
+                            className="text-[11px] font-bold text-rose-700 flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            {playingPreviewUrl === wrongSoundUrl ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                            <span>{playingPreviewUrl === wrongSoundUrl ? "Stop" : "Test"}</span>
+                          </button>
+                          {wrongSoundUrl && (
+                            <button
+                              type="button"
+                              onClick={() => handleClearAudio("wrong")}
+                              className="text-[10px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                              title="Clear sound"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <select
                         value={wrongSoundUrl}
@@ -1538,6 +1772,212 @@ export default function AdminDashboardPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* =========================================================================
+              TAB: DEVOTIONAL IMAGE LIBRARY (Requirement: Upload images separately,
+              auto-convert to proper size or mention proper size below upload,
+              tag by image name like Krishna, Rama, Vishnu, Temple to reuse across quizzes)
+              ========================================================================= */}
+          {activeTab === "image-library" && (
+            <div className="space-y-6">
+              
+              {/* Size Guidelines Banner */}
+              <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/15 to-orange-500/10 p-5 rounded-3xl border-2 border-amber-300 shadow-sm space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-700" />
+                  <h3 className="text-base font-black text-amber-950">
+                    Central Devotional Image Library & Automatic 16:9 Resizer
+                  </h3>
+                </div>
+                <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                  Upload images separately and assign them reusable names/tags (e.g. <span className="font-bold underline">krishna</span>, <span className="font-bold underline">rama</span>, <span className="font-bold underline">vishnu</span>, <span className="font-bold underline">temple</span>). When you specify that tag in any quiz question or course card, the respective image will appear automatically.
+                </p>
+                <div className="p-3 bg-white/90 rounded-2xl border border-amber-200 text-xs text-gray-800 space-y-1">
+                  <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    Recommended Dimensions: <span className="underline">800 × 500 px</span> (16:9 Aspect Ratio) • Formats: JPG, PNG, WEBP • Max 2MB
+                  </p>
+                  <p className="text-[11px] text-gray-600">
+                    💡 Every uploaded image is automatically sized and optimized so that it appears crystal-clear and perfectly centered across both desktop and mobile layouts.
+                  </p>
+                </div>
+              </div>
+
+              {/* Upload New Image to Library */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-sm space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-amber-600" />
+                    <span>Upload Image to Library</span>
+                  </h3>
+                  <span className="text-xs text-gray-500">Auto-scales to 800 × 500 px</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Image Name / Tag * (e.g. krishna, rama, vishnu, temple)
+                    </label>
+                    <input
+                      type="text"
+                      value={newImageTag}
+                      onChange={(e) => setNewImageTag(e.target.value)}
+                      placeholder="e.g. krishna"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-mono bg-stone-50"
+                    />
+                    <span className="text-[10px] text-gray-500 mt-0.5 block">Use this tag in quiz questions to show this image</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Image Title / Description</label>
+                    <input
+                      type="text"
+                      value={newImageTitle}
+                      onChange={(e) => setNewImageTitle(e.target.value)}
+                      placeholder="e.g. Lord Sri Krishna with flute"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Category</label>
+                    <select
+                      value={newImageCategory}
+                      onChange={(e) => setNewImageCategory(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-white"
+                    >
+                      <option value="Deity">Deity (Krishna, Rama, Vishnu)</option>
+                      <option value="Philosophy">Philosophy (Bhagavad-gita, Prabhupada)</option>
+                      <option value="Temple">Temple & Holy Places</option>
+                      <option value="Course">Course & LMS</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Upload or Direct URL */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="p-4 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/40 text-center space-y-2">
+                    <label className="cursor-pointer block">
+                      <ImageIcon className="w-8 h-8 text-amber-600 mx-auto mb-1" />
+                      <span className="text-xs font-bold text-amber-900 block">Choose Image File from Computer</span>
+                      <span className="text-[10px] text-gray-500 block mt-0.5">Auto-converts to 800 × 500 px (16:9)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => e.target.files?.[0] && handleUploadImageFile(e.target.files[0])}
+                        className="hidden"
+                      />
+                    </label>
+                    {imageUploading && (
+                      <p className="text-xs font-bold text-amber-700 flex items-center justify-center gap-1">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Scaling & Optimizing...</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-gray-700">Or Paste Image URL directly:</label>
+                    <input
+                      type="text"
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                    />
+                    {newImageUrl && (
+                      <div className="relative w-full h-24 rounded-xl overflow-hidden border border-amber-200 mt-2 bg-stone-900">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={newImageUrl} alt="Preview" className="w-full h-full object-contain" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={handleSaveNewImage}
+                    disabled={imageUploading}
+                    className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs cursor-pointer shadow-md flex items-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Save to Image Library</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Gallery of Available Tagged Images */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-sm space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      <span>Available Tagged Images ({imageAssets.length})</span>
+                    </h3>
+                    <p className="text-xs text-gray-500">Click any tag to copy it. Use in quiz questions, course thumbnails, or LMS.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {imageAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      className="group rounded-2xl border border-amber-200 overflow-hidden bg-white shadow-xs hover:shadow-md transition-all flex flex-col"
+                    >
+                      <div className="relative w-full h-36 bg-stone-900 overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={asset.url}
+                          alt={asset.title}
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <span className="absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-full bg-black/75 text-amber-300 border border-amber-400/40">
+                          {asset.category}
+                        </span>
+                      </div>
+
+                      <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
+                        <div>
+                          <p className="text-xs font-bold text-gray-900 line-clamp-1">{asset.title}</p>
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleCopyTag(asset.name)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-950 font-mono text-[11px] font-bold cursor-pointer"
+                              title="Click to copy tag"
+                            >
+                              <Copy className="w-3 h-3 text-amber-700" />
+                              <span>{asset.name}</span>
+                            </button>
+                            {copiedTag === asset.name && (
+                              <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                                <Check className="w-3 h-3" /> Copied!
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-[10px] text-gray-500">
+                          <span>800 × 500 px</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteImage(asset.id)}
+                            className="text-rose-600 hover:text-rose-800 font-bold flex items-center gap-0.5 cursor-pointer"
+                            title="Remove from library"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
           )}
 
@@ -1831,6 +2271,70 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
 
+                  {/* Question Image (Image Name Tag e.g. Krishna, Rama, Vishnu, Temple or Direct Upload) */}
+                  <div className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50/40 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Question Illustration Image (Select Tag or Upload)</span>
+                      </label>
+                      <span className="text-[10px] text-amber-800 font-semibold">Recommended: 800 × 500 px (16:9)</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                      <div className="sm:col-span-3">
+                        <div className="relative w-full h-20 rounded-xl overflow-hidden border border-amber-300 bg-stone-900 flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={resolveImageUrlByTag(questionFormData.imageUrl)}
+                            alt="Question preview"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="sm:col-span-9 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-gray-700 font-semibold">Pick Image Tag:</span>
+                          <select
+                            value={questionFormData.imageUrl || "krishna"}
+                            onChange={(e) => setQuestionFormData({ ...questionFormData, imageUrl: e.target.value })}
+                            className="px-2.5 py-1 rounded-lg border border-amber-300 text-xs font-mono bg-white text-amber-950"
+                          >
+                            {imageAssets.map((asset) => (
+                              <option key={asset.id} value={asset.name}>
+                                {asset.name} ({asset.title.slice(0, 22)})
+                              </option>
+                            ))}
+                          </select>
+
+                          <span className="text-xs text-gray-400">or type tag/URL:</span>
+                          <input
+                            type="text"
+                            value={questionFormData.imageUrl || ""}
+                            onChange={(e) => setQuestionFormData({ ...questionFormData, imageUrl: e.target.value })}
+                            placeholder="e.g. krishna, rama, or URL"
+                            className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs flex-1 min-w-[120px] bg-white"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="px-3 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold cursor-pointer inline-flex items-center gap-1">
+                            <Upload className="w-3 h-3 text-amber-700" />
+                            <span>Upload & Auto-resize for this Question</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => e.target.files?.[0] && handleQuestionImageUpload(e.target.files[0])}
+                              className="hidden"
+                            />
+                          </label>
+                          <span className="text-[10px] text-gray-500">Auto-scales to 800 × 500 px and saves to library</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Explanation & Points */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="sm:col-span-2 space-y-1">
@@ -1984,14 +2488,26 @@ export default function AdminDashboardPage() {
             <div className="space-y-1 bg-amber-50/60 p-3 rounded-2xl border border-amber-200">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-gray-800">Background Music</label>
-                <button
-                  type="button"
-                  onClick={() => togglePlayAudioPreview(editBgMusicUrl, editBgMusicVolume)}
-                  className="text-xs font-bold text-amber-700 flex items-center gap-1 hover:underline cursor-pointer"
-                >
-                  {playingPreviewUrl === editBgMusicUrl ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                  <span>{playingPreviewUrl === editBgMusicUrl ? "Stop" : "Test Audio"}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => togglePlayAudioPreview(editBgMusicUrl, editBgMusicVolume)}
+                    className="text-xs font-bold text-amber-700 flex items-center gap-1 hover:underline cursor-pointer"
+                  >
+                    {playingPreviewUrl === editBgMusicUrl ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    <span>{playingPreviewUrl === editBgMusicUrl ? "Stop" : "Test Audio"}</span>
+                  </button>
+                  {editBgMusicUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearAudio("edit-bg")}
+                      className="text-[10px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                      title="Clear/delete music"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
               <select
                 value={editBgMusicUrl}
@@ -2017,14 +2533,26 @@ export default function AdminDashboardPage() {
             <div className="space-y-1 bg-emerald-50/60 p-3 rounded-2xl border border-emerald-200">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-emerald-900">Right Answer Sound</label>
-                <button
-                  type="button"
-                  onClick={() => togglePlayAudioPreview(editCorrectSoundUrl)}
-                  className="text-xs font-bold text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer"
-                >
-                  {playingPreviewUrl === editCorrectSoundUrl ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                  <span>{playingPreviewUrl === editCorrectSoundUrl ? "Stop" : "Test Sound"}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => togglePlayAudioPreview(editCorrectSoundUrl)}
+                    className="text-xs font-bold text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer"
+                  >
+                    {playingPreviewUrl === editCorrectSoundUrl ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    <span>{playingPreviewUrl === editCorrectSoundUrl ? "Stop" : "Test Sound"}</span>
+                  </button>
+                  {editCorrectSoundUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearAudio("edit-correct")}
+                      className="text-[10px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                      title="Clear sound"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
               <select
                 value={editCorrectSoundUrl}
@@ -2050,14 +2578,26 @@ export default function AdminDashboardPage() {
             <div className="space-y-1 bg-rose-50/60 p-3 rounded-2xl border border-rose-200">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-rose-900">Wrong Answer Sound</label>
-                <button
-                  type="button"
-                  onClick={() => togglePlayAudioPreview(editWrongSoundUrl)}
-                  className="text-xs font-bold text-rose-700 flex items-center gap-1 hover:underline cursor-pointer"
-                >
-                  {playingPreviewUrl === editWrongSoundUrl ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                  <span>{playingPreviewUrl === editWrongSoundUrl ? "Stop" : "Test Sound"}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => togglePlayAudioPreview(editWrongSoundUrl)}
+                    className="text-xs font-bold text-rose-700 flex items-center gap-1 hover:underline cursor-pointer"
+                  >
+                    {playingPreviewUrl === editWrongSoundUrl ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    <span>{playingPreviewUrl === editWrongSoundUrl ? "Stop" : "Test Sound"}</span>
+                  </button>
+                  {editWrongSoundUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearAudio("edit-wrong")}
+                      className="text-[10px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                      title="Clear sound"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
               <select
                 value={editWrongSoundUrl}
@@ -2114,7 +2654,159 @@ export default function AdminDashboardPage() {
       )}
 
       {/* =========================================================================
-          MODAL 2: ADD/EDIT ONGOING COURSE & LIVE CLASS (Requirement 4)
+          MODAL: EDIT QUIZ NAME & DETAILS (Requirement: Edit quiz name, details, description, image tag)
+          ========================================================================= */}
+      {editingQuizDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-4 border-2 border-amber-400 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+                  <Edit className="w-4 h-4 text-amber-600" />
+                  <span>Edit Quiz Name & Details</span>
+                </h3>
+                <p className="text-xs text-amber-800 font-medium">Update title, description, category, and thumbnail</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingQuizDetails(null)}
+                className="p-1 rounded-full text-gray-500 hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Quiz Title (English) *</label>
+                <input
+                  type="text"
+                  value={editQuizTitleEn}
+                  onChange={(e) => setEditQuizTitleEn(e.target.value)}
+                  placeholder="e.g. Bhagavad-gita Wisdom Challenge"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Quiz Title (Hindi)</label>
+                <input
+                  type="text"
+                  value={editQuizTitleHi}
+                  onChange={(e) => setEditQuizTitleHi(e.target.value)}
+                  placeholder="उदा. श्रीमद्भगवद्गीता ज्ञान प्रश्नोत्तरी"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Category</label>
+                  <input
+                    type="text"
+                    value={editQuizCategory}
+                    onChange={(e) => setEditQuizCategory(e.target.value)}
+                    placeholder="e.g. Bhagavad-gita"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Timer per Question (Seconds)</label>
+                  <select
+                    value={editQuizTimerSeconds}
+                    onChange={(e) => setEditQuizTimerSeconds(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-white"
+                  >
+                    <option value={10}>10 Seconds (Standard)</option>
+                    <option value={15}>15 Seconds (Relaxed)</option>
+                    <option value={20}>20 Seconds (Deep Study)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Short Description (English)</label>
+                <textarea
+                  rows={2}
+                  value={editQuizDescEn}
+                  onChange={(e) => setEditQuizDescEn(e.target.value)}
+                  placeholder="Brief description for catalog card..."
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Short Description (Hindi)</label>
+                <textarea
+                  rows={2}
+                  value={editQuizDescHi}
+                  onChange={(e) => setEditQuizDescHi(e.target.value)}
+                  placeholder="संक्षिप्त विवरण..."
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                />
+              </div>
+
+              {/* Thumbnail / Image Tag from Library */}
+              <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-950">Thumbnail Image (Tag or URL)</label>
+                  <span className="text-[10px] text-gray-500">800 × 500 px (16:9)</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-20 h-14 rounded-lg overflow-hidden border border-amber-300 bg-stone-900 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={resolveImageUrlByTag(editQuizImage)}
+                      alt="Thumbnail"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <select
+                      value={editQuizImage}
+                      onChange={(e) => setEditQuizImage(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white font-mono"
+                    >
+                      {imageAssets.map((asset) => (
+                        <option key={asset.id} value={asset.name}>
+                          {asset.name} ({asset.title.slice(0, 25)})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={editQuizImage}
+                      onChange={(e) => setEditQuizImage(e.target.value)}
+                      placeholder="Or enter image tag/URL"
+                      className="w-full px-2.5 py-1 rounded-lg border border-gray-200 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setEditingQuizDetails(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveQuizDetails}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-sm cursor-pointer"
+              >
+                Save Quiz Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 2: ADD/EDIT ONGOING COURSE (Requirement 4)
           ========================================================================= */}
       {showOngoingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
@@ -2265,15 +2957,66 @@ export default function AdminDashboardPage() {
               />
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Conducting Venue</label>
+                <input
+                  type="text"
+                  value={ongoingVenue}
+                  onChange={(e) => setOngoingVenue(e.target.value)}
+                  placeholder="e.g. Main Temple Hall / Online Zoom"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Room Number Details</label>
+                <input
+                  type="text"
+                  value={ongoingRoomNumber}
+                  onChange={(e) => setOngoingRoomNumber(e.target.value)}
+                  placeholder="e.g. Hall 204"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Banner Image URL</label>
+              <label className="block text-xs font-bold text-emerald-800 mb-1">Course WhatsApp Group Link 💬</label>
               <input
                 type="text"
-                value={ongoingImage}
-                onChange={(e) => setOngoingImage(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                value={ongoingWhatsappUrl}
+                onChange={(e) => setOngoingWhatsappUrl(e.target.value)}
+                placeholder="https://chat.whatsapp.com/..."
+                className="w-full px-3 py-2 rounded-xl border border-emerald-300 text-xs bg-emerald-50/30"
               />
+              <span className="text-[10px] text-gray-500 mt-0.5 block">Seekers can directly join this WhatsApp group upon registration</span>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-gray-700">Course Card Banner Image (Tag or URL)</label>
+                <span className="text-[10px] text-gray-500">800 × 500 px (16:9)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={ongoingImage}
+                  onChange={(e) => setOngoingImage(resolveImageUrlByTag(e.target.value))}
+                  className="px-2.5 py-2 rounded-xl border border-gray-200 text-xs bg-white font-mono"
+                >
+                  {imageAssets.map((asset) => (
+                    <option key={asset.id} value={asset.name}>
+                      {asset.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={ongoingImage}
+                  onChange={(e) => setOngoingImage(e.target.value)}
+                  placeholder="https://... or image tag"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
@@ -2383,6 +3126,43 @@ export default function AdminDashboardPage() {
                 placeholder="Course summary and learning outcomes..."
                 className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">LMS Thumbnail Image (Tag or URL)</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={lmsImage}
+                    onChange={(e) => setLmsImage(e.target.value)}
+                    className="px-2.5 py-2 rounded-xl border border-gray-200 text-xs bg-white font-mono"
+                  >
+                    {imageAssets.map((asset) => (
+                      <option key={asset.id} value={asset.name}>
+                        {asset.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={lmsImage}
+                    onChange={(e) => setLmsImage(e.target.value)}
+                    placeholder="e.g. bhakti-vaibhava"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-emerald-800 mb-1">LMS WhatsApp Community Link 💬</label>
+                <input
+                  type="text"
+                  value={lmsWhatsappUrl}
+                  onChange={(e) => setLmsWhatsappUrl(e.target.value)}
+                  placeholder="https://chat.whatsapp.com/..."
+                  className="w-full px-3 py-2 rounded-xl border border-emerald-300 text-xs bg-emerald-50/30"
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">

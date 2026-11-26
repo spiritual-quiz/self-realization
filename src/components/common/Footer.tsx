@@ -71,7 +71,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/live-classes" className="hover:text-amber-400 transition-colors">
-                  {language === "hi" ? "कक्षाएं (Classes)" : "Classes"}
+                  {language === "hi" ? "पाठ्यक्रम (Courses)" : "Courses"}
                 </Link>
               </li>
               <li>

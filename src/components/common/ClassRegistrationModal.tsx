@@ -23,12 +23,18 @@ import {
 export interface ClassItem {
   id: string;
   title: { en: string; hi: string };
+  description?: { en: string; hi: string };
+  image?: string;
   isPaid: boolean;
   price?: string;
   date: string;
   time: string;
   mode: string;
+  venue?: string;
+  roomNumber?: string;
+  whatsappGroupUrl?: string;
   instructor: string;
+  hours?: string;
 }
 
 interface ModalProps {
@@ -192,6 +198,12 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
                   <span className="font-semibold">{language === "hi" ? "प्रारूप:" : "Mode:"}</span>
                   <span className="capitalize">{preferredMode.replace("_", " ")}</span>
                 </div>
+                {classItem.venue && (
+                  <div className="flex justify-between">
+                    <span className="font-semibold">{language === "hi" ? "स्थान / कक्ष:" : "Venue / Room:"}</span>
+                    <span>{classItem.venue} {classItem.roomNumber ? `(${classItem.roomNumber})` : ""}</span>
+                  </div>
+                )}
                 {classItem.isPaid && (
                   <div className="flex justify-between text-emerald-700 font-bold">
                     <span>{language === "hi" ? "भुगतान स्थिति:" : "Payment Status:"}</span>
@@ -200,10 +212,28 @@ export default function ClassRegistrationModal({ classItem, onClose }: ModalProp
                 )}
               </div>
 
+              {/* Direct WhatsApp Group Invite Button */}
+              {classItem.whatsappGroupUrl && (
+                <div className="pt-1">
+                  <a
+                    href={classItem.whatsappGroupUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-4 rounded-xl font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition-all shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm"
+                  >
+                    <span>💬</span>
+                    <span>{language === "hi" ? "व्हाट्सएप ग्रुप से जुड़ें (Join WhatsApp Group)" : "Join Course WhatsApp Group"}</span>
+                  </a>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    {language === "hi" ? "सत्र लिंक एवं अध्ययन सामग्री हेतु ग्रुप जॉइन करें।" : "Join to receive zoom links, study notes & daily announcements."}
+                  </p>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-2.5 px-4 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all shadow-md text-xs sm:text-sm cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-all text-xs sm:text-sm cursor-pointer"
               >
                 {language === "hi" ? "पूर्ण (Close Window)" : "Done (Close Window)"}
               </button>
