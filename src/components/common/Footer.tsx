@@ -12,8 +12,8 @@ export default function Footer() {
   const { t, language } = useLanguage();
   const pathname = usePathname();
 
-  // Hide footer on Live Like a Monk page (or quiz play) if needed
-  if (pathname === "/live-like-a-monk") {
+  // Hide footer on full-screen quiz play only
+  if (pathname === "/quiz/play") {
     return null;
   }
 

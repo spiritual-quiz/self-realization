@@ -56,23 +56,23 @@ export async function POST(req: NextRequest) {
     let messageBody = "";
 
     if (type === "free_class_registration") {
-      subject = `🎓 [Free Class Registration] ${details.name} - ${details.occupation}`;
+      subject = `[Free Class Registration] ${details.name} - ${details.occupation}`;
       messageBody = `
 New Free Class Registration (Post-Quiz Vedic Outreach):
 -----------------------------------------------------------
-Name / नाम:               ${details.name}
-Email / ईमेल:             ${details.email}
-WhatsApp / व्हाट्सएप:       ${details.whatsapp}
-Gender / लिंग:            ${details.gender}
-Age / आयु:               ${details.age}
-Language / भाषा:          ${details.language}
-Class Mode / माध्यम:      ${details.classMode}
-Occupation / व्यवसाय:     ${details.occupation}
-Currently Staying / निवास: ${details.currentLocation}
-Native Place / मूल स्थान:  ${details.nativePlace}
-Quiz Challenge:           ${details.quizTitle || "Vedic Quiz"}
-Score Secured:            ${details.score ?? "N/A"}
-Timestamp:                ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST
+Participant Name:   ${details.name}
+Email Address:      ${details.email}
+WhatsApp Mobile:    ${details.whatsapp}
+Gender:             ${details.gender}
+Age:                ${details.age}
+Preferred Language: ${details.language}
+Class Mode:         ${details.classMode}
+Occupation:         ${details.occupation}
+Current Residence:  ${details.currentLocation}
+Native Hometown:    ${details.nativePlace}
+Quiz Challenge:     ${details.quizTitle || "Vedic Quiz"}
+Score Secured:      ${details.score ?? "N/A"}
+Timestamp:          ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST
 -----------------------------------------------------------
       `.trim();
     } else if (type === "class_registration") {
@@ -135,7 +135,7 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
                 ✦ SELFREALIZATION PLATFORM ✦
               </div>
               <h1 style="margin:0;font-size:24px;font-weight:900;color:#FFFFFF;letter-spacing:-0.5px;">
-                नया वैदिक छात्र पंजीकरण • New Registration
+                New Student Registration
               </h1>
               <p style="margin:8px 0 0;font-size:14px;color:#FEF3C7;font-weight:600;">
                 Vedic Quiz Challenge &amp; Free Devotional Classes
@@ -148,7 +148,7 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
             <td style="padding:20px 28px 10px;">
               <div style="background:#FEF3C7;border-left:4px solid #D97706;padding:12px 16px;border-radius:8px;">
                 <p style="margin:0;font-size:13px;color:#92400E;font-weight:700;">
-                  🎉 Seeker <strong>${details.name || "Student"}</strong> has completed the Vedic Quiz Challenge and requested enrollment in Free Spiritual Classes (${details.classMode || "Online Zoom"}).
+                  Seeker <strong>${details.name || "Student"}</strong> has completed the Vedic Quiz Challenge and requested enrollment in Free Spiritual Classes (${details.classMode || "Online Zoom"}).
                 </p>
               </div>
             </td>
@@ -158,7 +158,7 @@ Timestamp:     ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }
           <tr>
             <td style="padding:15px 28px 25px;">
               <h2 style="font-size:15px;color:#78350F;border-bottom:2px solid #FDE68A;padding-bottom:8px;margin:0 0 16px;text-transform:uppercase;letter-spacing:1px;font-weight:800;">
-                Candidate Information / अभ्यर्थी विवरण
+                Candidate Information
               </h2>
 
               <table width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;line-height:1.6;">
