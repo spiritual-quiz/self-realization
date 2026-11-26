@@ -7,7 +7,8 @@ import { HelpCircle, Award, Sparkles, Volume2, ShieldCheck, ArrowRight, Upload, 
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { resolveImageUrlByTag } from "@/lib/imageLibrary";
 import { db } from "@/lib/firebase/client";
-import { collection, getDocs, query, limit } from "firebase/firestore";
+import { collection, getDocs, query, limit, onSnapshot } from "firebase/firestore";
+import { subscribeToCatalogSync, getDeletedQuizIds } from "@/lib/catalogSync";
 
 export default function QuizOverviewPage() {
   const { t, language } = useLanguage();
@@ -28,11 +29,13 @@ export default function QuizOverviewPage() {
   });
 
   useEffect(() => {
-    const fetchQuizzes = async () => {
-      const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
-      let list: any[] = [];
-      try {
-        const snap = await getDocs(query(collection(db, "quizzes"), limit(50)));
+    let unsubSnapshot: (() => void) | null = null;
+
+    try {
+      const q = query(collection(db, "quizzes"), limit(50));
+      unsubSnapshot = onSnapshot(q, (snap) => {
+        const deletedQuizIds = getDeletedQuizIds();
+        let list: any[] = [];
         snap.forEach((d) => {
           const data = d.data();
           const docId = d.id;
@@ -40,33 +43,52 @@ export default function QuizOverviewPage() {
             list.push({ ...data, id: docId });
           }
         });
-      } catch (e) {
-        console.warn("Firestore quiz fetch failed, checking local cache", e);
-      }
 
-      const rawSaved = localStorage.getItem("sr_custom_quizzes");
-      if (rawSaved !== null) {
-        try {
+        const rawSaved = localStorage.getItem("sr_custom_quizzes");
+        if (rawSaved !== null) {
+          try {
+            const parsed = JSON.parse(rawSaved);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((localQ: any) => {
+                if (
+                  !deletedQuizIds.includes(localQ.id) &&
+                  !list.some((q) => q.id === localQ.id)
+                ) {
+                  list.push(localQ);
+                }
+              });
+            }
+          } catch (e) {}
+        } else if (list.length === 0 && deletedQuizIds.length === 0 && rawSaved === null) {
+          list = defaultQuizzes;
+        }
+
+        const finalList = list.filter((q) => !deletedQuizIds.includes(q.id));
+        setCustomQuizzes(finalList);
+      }, (err) => {
+        console.warn("Firestore quiz onSnapshot notice:", err);
+      });
+    } catch (e) {
+      console.warn("Quiz onSnapshot error:", e);
+    }
+
+    const unsubSync = subscribeToCatalogSync(() => {
+      try {
+        const deletedQuizIds = getDeletedQuizIds();
+        const rawSaved = localStorage.getItem("sr_custom_quizzes");
+        if (rawSaved !== null) {
           const parsed = JSON.parse(rawSaved);
           if (Array.isArray(parsed)) {
-            parsed.forEach((localQ: any) => {
-              if (
-                !deletedQuizIds.includes(localQ.id) &&
-                !list.some((q) => q.id === localQ.id)
-              ) {
-                list.push(localQ);
-              }
-            });
+            setCustomQuizzes(parsed.filter((q: any) => !deletedQuizIds.includes(q.id)));
           }
-        } catch (e) {}
-      } else if (list.length === 0 && deletedQuizIds.length === 0 && rawSaved === null) {
-        list = defaultQuizzes;
-      }
+        }
+      } catch (e) {}
+    });
 
-      const finalList = list.filter((q) => !deletedQuizIds.includes(q.id));
-      setCustomQuizzes(finalList);
+    return () => {
+      if (unsubSnapshot) unsubSnapshot();
+      unsubSync();
     };
-    fetchQuizzes();
   }, []);
 
   const defaultQuizzes = [

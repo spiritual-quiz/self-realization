@@ -28,7 +28,8 @@ import {
 import LotusAccent from "@/components/devotional/LotusAccent";
 import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
 import { db } from "@/lib/firebase/client";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, onSnapshot, query, limit } from "firebase/firestore";
+import { subscribeToCatalogSync, getDeletedCourseIds, getDeletedQuizIds } from "@/lib/catalogSync";
 import confetti from "canvas-confetti";
 
 export default function HomePage() {
@@ -101,8 +102,8 @@ export default function HomePage() {
     }
   };
 
-  // Mock featured data for Phase 1 presentation
-  const upcomingClasses = [
+  // Initial fallback classes if none created yet
+  const INITIAL_UPCOMING_CLASSES = [
     {
       id: "class-1",
       title: {
@@ -148,93 +149,161 @@ export default function HomePage() {
     }
   ];
 
-  const featuredCourses = [
-    {
-      id: "course-1",
-      title: {
-        en: "Discover Yourself: Fundamentals of Bhagavad-gītā",
-        hi: "स्वयं को जानें: भगवद्गीता के मूलभूत सिद्धांत"
-      },
-      desc: {
-        en: "A structured 6-session foundation journey exploring soul, mind, reincarnation, and destiny.",
-        hi: "आत्मा, मन, पुनर्जन्म और कर्म के रहस्यों को उद्घाटित करने वाली 6 सत्रों की यात्रा।"
-      },
-      level: language === "hi" ? "प्रारंभिक" : "Beginner",
-      lessons: "6 Lessons",
-      duration: "3.5 Hours",
-      isPaid: false,
-      badge: language === "hi" ? "निःशुल्क" : "Free Access",
-    },
-    {
-      id: "course-2",
-      title: {
-        en: "Science of Self-Realization & Karma Yoga",
-        hi: "आत्म-साक्षात्कार का विज्ञान एवं कर्म योग"
-      },
-      desc: {
-        en: "Mastering practical devotion in day-to-day work, balancing modern career and spiritual consciousness.",
-        hi: "दैनिक कार्यस्थल में भक्तिमय संतुलन साधने और कर्म को योग बनाने का प्रामाणिक मार्ग।"
-      },
-      level: language === "hi" ? "मध्यम" : "Intermediate",
-      lessons: "12 Lessons",
-      duration: "8 Hours",
-      isPaid: false,
-      badge: language === "hi" ? "निःशुल्क" : "Free Access",
-    },
-    {
-      id: "course-3",
-      title: {
-        en: "Bhagavad-gītā Chapter-by-Chapter Comprehensive Study",
-        hi: "श्रीमद्भगवद्गीता सम्पूर्ण अध्यायवार गहन अध्ययन"
-      },
-      desc: {
-        en: "In-depth verse-by-verse commentary analysis, philosophical questions, and chapter assessments.",
-        hi: "श्लोक दर श्लोक प्रामाणिक भाष्य विश्लेषण, दार्शनिक प्रश्नों के उत्तर एवं अध्यायवार मूल्यांकन।"
-      },
-      level: language === "hi" ? "उन्नत" : "Advanced",
-      lessons: "18 Chapters",
-      duration: "24 Hours",
-      isPaid: true,
-      price: "₹999",
-      badge: language === "hi" ? "सर्टिफाइड" : "Certified",
+  // Dynamic LMS Courses State (Synchronously initialized to eliminate flicker)
+  const [lmsCourses, setLmsCourses] = React.useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const deleted = getDeletedCourseIds();
+        const cached = localStorage.getItem("sr_lms_courses") || localStorage.getItem("sr_custom_courses");
+        if (cached !== null) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            return parsed.filter((c: any) => !deleted.includes(c.id));
+          }
+        }
+      } catch (e) {}
     }
-  ];
+    return [];
+  });
 
-  const featuredQuizzes = [
-    {
-      id: "quiz-bg-ch1",
-      title: {
-        en: "Bhagavad-gītā Chapter 1 & 2 Challenge",
-        hi: "भगवद्गीता अध्याय 1 एवं 2 प्रश्नोत्तरी"
-      },
-      category: { en: "Bhagavad-gītā", hi: "भगवद्गीता" },
-      questions: 10,
-      points: 100,
-      badge: language === "hi" ? "सर्वाधिक लोकप्रिय" : "Most Popular",
-    },
-    {
-      id: "quiz-krishna-lila",
-      title: {
-        en: "Pastimes of Śrī Kṛṣṇa in Vṛndāvana",
-        hi: "वृन्दावन में श्री कृष्ण की मधुर बाल-लीलाएं"
-      },
-      category: { en: "Kṛṣṇa Conscious Philosophy", hi: "कृष्ण दर्शन" },
-      questions: 10,
-      points: 100,
-      badge: language === "hi" ? "भक्ति रस" : "Devotional Joy",
-    },
-    {
-      id: "quiz-reincarnation",
-      title: {
-        en: "The Mystery of Soul, Karma & Reincarnation",
-        hi: "आत्मा, कर्म और पुनर्जन्म का रहस्य"
-      },
-      category: { en: "Spiritual Science", hi: "आध्यात्मिक विज्ञान" },
-      questions: 10,
-      points: 100,
-      badge: language === "hi" ? "विचारोत्तेजक" : "Mind Expanding",
+  // Dynamic Quizzes State
+  const [quizzesList, setQuizzesList] = React.useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const deleted = getDeletedQuizIds();
+        const cached = localStorage.getItem("sr_custom_quizzes");
+        if (cached !== null) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            return parsed.filter((q: any) => !deleted.includes(q.id));
+          }
+        }
+      } catch (e) {}
     }
-  ];
+    return [];
+  });
+
+  // Dynamic Ongoing Classes State
+  const [upcomingClassesList, setUpcomingClassesList] = React.useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("sr_ongoing_classes");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_UPCOMING_CLASSES;
+  });
+
+  // Real-Time Listeners & Instant Synchronization (Changes reflect without refresh)
+  React.useEffect(() => {
+    let unsubCourses: (() => void) | null = null;
+    let unsubQuizzes: (() => void) | null = null;
+    let unsubClasses: (() => void) | null = null;
+
+    try {
+      // 1. Real-time Courses Listener
+      unsubCourses = onSnapshot(collection(db, "courses"), (snap) => {
+        const deleted = getDeletedCourseIds();
+        const list: any[] = [];
+        snap.forEach((d) => {
+          if (!deleted.includes(d.id)) {
+            list.push({ id: d.id, ...d.data() });
+          }
+        });
+        if (list.length > 0) {
+          setLmsCourses(list);
+          localStorage.setItem("sr_lms_courses", JSON.stringify(list));
+        } else {
+          // If Firestore collection has 0 documents, respect empty state if customized/deleted
+          const cached = localStorage.getItem("sr_lms_courses") || localStorage.getItem("sr_custom_courses");
+          if (cached !== null || deleted.length > 0) {
+            setLmsCourses([]);
+          }
+        }
+      }, (err) => console.warn("Firestore courses snapshot notice:", err));
+
+      // 2. Real-time Quizzes Listener
+      unsubQuizzes = onSnapshot(collection(db, "quizzes"), (snap) => {
+        const deleted = getDeletedQuizIds();
+        const list: any[] = [];
+        snap.forEach((d) => {
+          const data = d.data();
+          if (!deleted.includes(d.id) && !deleted.includes(data.id)) {
+            list.push({ id: d.id, ...data });
+          }
+        });
+        if (list.length > 0) {
+          setQuizzesList(list);
+          localStorage.setItem("sr_custom_quizzes", JSON.stringify(list));
+        } else {
+          const cached = localStorage.getItem("sr_custom_quizzes");
+          if (cached !== null || deleted.length > 0) {
+            setQuizzesList([]);
+          }
+        }
+      }, (err) => console.warn("Firestore quizzes snapshot notice:", err));
+
+      // 3. Real-time Classes Listener
+      unsubClasses = onSnapshot(collection(db, "classes"), (snap) => {
+        if (!snap.empty) {
+          const list: any[] = [];
+          snap.forEach((d) => {
+            const data = d.data();
+            list.push({
+              id: d.id,
+              title: typeof data.title === "object" ? data.title : { en: data.title || "Course", hi: data.title || "Course" },
+              tag: data.isPaid ? t.upcomingClasses.paidTag : t.upcomingClasses.freeTag,
+              isPaid: Boolean(data.isPaid),
+              price: data.price || (data.isPaid ? "₹499" : undefined),
+              date: data.date || "Upcoming",
+              time: data.time || "06:00 PM IST",
+              mode: data.mode || "Online / Temple Hall",
+              instructor: data.instructor || "Vedic Faculty",
+              seats: data.seats || (data.isPaid ? "Limited Seats" : "Free Open Entry"),
+            });
+          });
+          setUpcomingClassesList(list);
+        }
+      }, (err) => console.warn("Firestore classes snapshot notice:", err));
+    } catch (e) {
+      console.warn("Real-time snapshot error:", e);
+    }
+
+    // Zero-latency cross-tab & local events sync
+    const unsubSync = subscribeToCatalogSync(() => {
+      try {
+        const deletedC = getDeletedCourseIds();
+        const cachedC = localStorage.getItem("sr_lms_courses") || localStorage.getItem("sr_custom_courses");
+        if (cachedC !== null) {
+          const parsed = JSON.parse(cachedC);
+          if (Array.isArray(parsed)) setLmsCourses(parsed.filter((c: any) => !deletedC.includes(c.id)));
+        }
+
+        const deletedQ = getDeletedQuizIds();
+        const cachedQ = localStorage.getItem("sr_custom_quizzes");
+        if (cachedQ !== null) {
+          const parsed = JSON.parse(cachedQ);
+          if (Array.isArray(parsed)) setQuizzesList(parsed.filter((q: any) => !deletedQ.includes(q.id)));
+        }
+
+        const cachedCl = localStorage.getItem("sr_ongoing_classes");
+        if (cachedCl) {
+          const parsed = JSON.parse(cachedCl);
+          if (Array.isArray(parsed) && parsed.length > 0) setUpcomingClassesList(parsed);
+        }
+      } catch (e) {}
+    });
+
+    return () => {
+      if (unsubCourses) unsubCourses();
+      if (unsubQuizzes) unsubQuizzes();
+      if (unsubClasses) unsubClasses();
+      unsubSync();
+    };
+  }, [t.upcomingClasses.freeTag, t.upcomingClasses.paidTag]);
 
   return (
     <div className="space-y-16 sm:space-y-24 pb-20 overflow-hidden">
@@ -400,7 +469,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {upcomingClasses.map((item) => (
+          {upcomingClassesList.map((item) => (
             <div
               key={item.id}
               className="bg-white rounded-2xl p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
@@ -422,7 +491,7 @@ export default function HomePage() {
                 </div>
 
                 <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                  {item.title[language]}
+                  {typeof item.title === "object" ? (item.title[language] || item.title.en || item.title.hi) : item.title}
                 </h3>
 
                 <div className="space-y-1.5 text-xs text-gray-600 pt-2 border-t border-gray-100">
@@ -493,49 +562,78 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {featuredCourses.map((c) => (
-              <div
-                key={c.id}
-                className="bg-white rounded-2xl overflow-hidden border border-amber-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-              >
-                <div className="p-6 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900">
-                      {c.badge}
-                    </span>
-                    <span className="text-xs text-gray-500 font-medium">{c.level}</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                    {c.title[language]}
-                  </h3>
-                  <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
-                    {c.desc[language]}
-                  </p>
-                  <div className="flex items-center gap-4 text-xs text-gray-500 pt-3 border-t border-gray-100">
-                    <span className="flex items-center gap-1">
-                      <PlayCircle className="w-3.5 h-3.5 text-amber-600" />
-                      {c.lessons}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-amber-600" />
-                      {c.duration}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-6 pt-0">
-                  <Link
-                    href={`/courses`}
-                    className="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold border border-amber-300 text-amber-800 hover:bg-amber-50 flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <span>{t.featuredCourses.startCourseBtn}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
+          {lmsCourses.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 border border-amber-200/70 text-center max-w-xl mx-auto shadow-sm space-y-4">
+              <BookOpen className="w-12 h-12 text-amber-600 mx-auto opacity-70" />
+              <h3 className="text-xl font-bold text-gray-900">
+                {language === "hi" ? "कोई पाठ्यक्रम उपलब्ध नहीं है" : "No Courses Available"}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {language === "hi"
+                  ? "वर्तमान में कोई ई-लर्निंग पाठ्यक्रम सक्रिय नहीं है। नए पाठ्यक्रम शीघ्र जोड़े जाएंगे।"
+                  : "No e-learning courses are currently active. Please check back soon or explore our live ongoing classes."}
+              </p>
+              <div className="pt-2">
+                <Link
+                  href="/live-classes"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>{language === "hi" ? "लाइव कक्षाएं देखें" : "Explore Live Classes"}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {lmsCourses.slice(0, 6).map((c) => {
+                const titleStr = typeof c.title === "object" ? (c.title[language] || c.title.en || c.title.hi) : c.title;
+                const descStr = typeof c.desc === "object" ? (c.desc[language] || c.desc.en || c.desc.hi) : c.desc;
+                const badgeStr = c.price && !c.isPaid ? (language === "hi" ? "निःशुल्क" : "Free Access") : (c.price || (language === "hi" ? "सर्टिफाइड" : "Certified"));
+                return (
+                  <div
+                    key={c.id}
+                    className="bg-white rounded-2xl overflow-hidden border border-amber-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                  >
+                    <div className="p-6 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900">
+                          {badgeStr}
+                        </span>
+                        <span className="text-xs text-gray-500 font-medium">{c.level || "Beginner"}</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 leading-snug">
+                        {titleStr}
+                      </h3>
+                      <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                        {descStr}
+                      </p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500 pt-3 border-t border-gray-100">
+                        <span className="flex items-center gap-1">
+                          <PlayCircle className="w-3.5 h-3.5 text-amber-600" />
+                          {c.lessons || (c.modules ? `${c.modules.length} Lessons` : "6 Lessons")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          {c.duration || "4 Hours"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-6 pt-0">
+                      <Link
+                        href={`/courses`}
+                        className="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold border border-amber-300 text-amber-800 hover:bg-amber-50 flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <span>{t.featuredCourses.startCourseBtn}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -581,6 +679,40 @@ export default function HomePage() {
                 <span>{t.quizSection.tryQuizBtn}</span>
               </Link>
             </div>
+
+            {quizzesList.length > 0 && (
+              <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {quizzesList.slice(0, 3).map((q: any) => {
+                  const titleStr = typeof q.title === "object" ? (q.title[language] || q.title.en || q.title.hi) : q.title;
+                  const qCount = q.questions ? q.questions.length : (q.questionCount || 10);
+                  return (
+                    <div
+                      key={q.id}
+                      className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 text-white flex flex-col justify-between"
+                    >
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 text-amber-100">
+                          {q.category || "Vedic Quiz"}
+                        </span>
+                        <h4 className="font-bold text-base mt-2 line-clamp-1">
+                          {titleStr}
+                        </h4>
+                        <p className="text-xs text-amber-100/80 mt-1">
+                          {qCount} {language === "hi" ? "प्रश्न" : "Questions"} • {q.marks || 100} {language === "hi" ? "अंक" : "Marks"}
+                        </p>
+                      </div>
+                      <Link
+                        href={`/quiz/play?id=${q.id}`}
+                        className="mt-4 w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-white text-amber-900 hover:bg-amber-50 flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                      >
+                        <span>{language === "hi" ? "क्विज़ खेलें" : "Play Quiz"}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </section>

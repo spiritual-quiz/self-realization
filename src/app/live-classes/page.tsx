@@ -6,7 +6,8 @@ import { Calendar, Clock, MapPin, Sparkles, User, Users, Award, ArrowRight } fro
 import LotusAccent from "@/components/devotional/LotusAccent";
 import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
 import { db } from "@/lib/firebase/client";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, onSnapshot } from "firebase/firestore";
+import { subscribeToCatalogSync } from "@/lib/catalogSync";
 
 const INITIAL_CLASSES: ClassItem[] = [
   {
@@ -148,10 +149,10 @@ export default function LiveClassesPage() {
       }
     }
 
-    // 2. Fetch from Firestore
-    async function fetchClasses() {
-      try {
-        const snap = await getDocs(collection(db, "classes"));
+    // 2. Real-time Subscription to Firestore
+    let unsubSnapshot: (() => void) | null = null;
+    try {
+      unsubSnapshot = onSnapshot(collection(db, "classes"), (snap) => {
         if (!snap.empty) {
           const list: ClassItem[] = [];
           snap.forEach((d) => {
@@ -170,11 +171,25 @@ export default function LiveClassesPage() {
           setClassList(list);
           localStorage.setItem("sr_ongoing_classes", JSON.stringify(list));
         }
-      } catch (e) {
-        // Fallback to local cache or INITIAL_CLASSES
-      }
+      }, (err) => console.warn("Live classes onSnapshot notice:", err));
+    } catch (e) {
+      console.warn("Live classes onSnapshot error:", e);
     }
-    fetchClasses();
+
+    const unsubSync = subscribeToCatalogSync(() => {
+      try {
+        const cached = localStorage.getItem("sr_ongoing_classes");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) setClassList(parsed);
+        }
+      } catch (e) {}
+    });
+
+    return () => {
+      if (unsubSnapshot) unsubSnapshot();
+      unsubSync();
+    };
   }, []);
 
   const filteredClasses = classList.filter((c) => {

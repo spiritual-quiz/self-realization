@@ -65,6 +65,7 @@ import { SAMPLE_CSV_CONTENT, parseCSVToQuestions, ParsedQuizQuestion, downloadSa
 import { DEFAULT_SYSTEM_QUIZZES, SystemQuiz } from "@/lib/defaultQuizzes";
 import { db } from "@/lib/firebase/client";
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, query, limit } from "firebase/firestore";
+import { broadcastCatalogChange, markCourseDeleted, markQuizDeleted, getDeletedCourseIds, getDeletedQuizIds } from "@/lib/catalogSync";
 
 const INITIAL_LMS_COURSES = [
   {
@@ -578,24 +579,27 @@ export default function AdminDashboardPage() {
 
       // 4. Fetch LMS Courses from Firestore with Local fallback
       try {
+        const deletedCourses = getDeletedCourseIds();
         const courseSnap = await getDocs(collection(db, "courses"));
         if (!courseSnap.empty) {
           const list: any[] = [];
           courseSnap.forEach((d) => list.push({ id: d.id, ...d.data() }));
-          setLmsCoursesList(list);
-          localStorage.setItem("sr_lms_courses", JSON.stringify(list));
+          const sanitized = list.filter(c => !deletedCourses.includes(c.id));
+          setLmsCoursesList(sanitized);
+          localStorage.setItem("sr_lms_courses", JSON.stringify(sanitized));
         } else {
           const cachedLms = localStorage.getItem("sr_lms_courses");
-          if (cachedLms) {
-            setLmsCoursesList(JSON.parse(cachedLms));
+          if (cachedLms !== null || deletedCourses.length > 0) {
+            setLmsCoursesList(cachedLms ? JSON.parse(cachedLms).filter((c: any) => !deletedCourses.includes(c.id)) : []);
           } else {
             setLmsCoursesList(INITIAL_LMS_COURSES);
             localStorage.setItem("sr_lms_courses", JSON.stringify(INITIAL_LMS_COURSES));
           }
         }
       } catch (e) {
+        const deletedCourses = getDeletedCourseIds();
         const cachedLms = localStorage.getItem("sr_lms_courses");
-        if (cachedLms) setLmsCoursesList(JSON.parse(cachedLms));
+        if (cachedLms) setLmsCoursesList(JSON.parse(cachedLms).filter((c: any) => !deletedCourses.includes(c.id)));
       }
 
       // 5. Fetch Ongoing Courses / Live Classes (Requirement 4)
@@ -851,6 +855,7 @@ export default function AdminDashboardPage() {
     } catch (e) {
       console.warn("Could not save quiz details to Firestore:", e);
     }
+    broadcastCatalogChange("quizzes", "save", editingQuizDetails.id);
     setEditingQuizDetails(null);
   };
 
@@ -925,6 +930,7 @@ export default function AdminDashboardPage() {
     } catch (e) {
       console.warn("Could not save LMS course to Firestore:", e);
     }
+    broadcastCatalogChange("courses", "save", courseObj.id);
     setShowLmsModal(false);
   };
 
@@ -935,13 +941,9 @@ export default function AdminDashboardPage() {
     localStorage.setItem("sr_lms_courses", JSON.stringify(updated));
     localStorage.setItem("sr_custom_courses", JSON.stringify(updated));
 
-    // Also mark in deletion blacklist for instant cross-tab sync
+    // Also mark in deletion blacklist for instant cross-tab and cross-device sync
     try {
-      const deletedList = JSON.parse(localStorage.getItem("sr_deleted_courses") || "[]");
-      if (!deletedList.includes(courseId)) {
-        deletedList.push(courseId);
-        localStorage.setItem("sr_deleted_courses", JSON.stringify(deletedList));
-      }
+      await markCourseDeleted(courseId);
       await deleteDoc(doc(db, "courses", courseId));
     } catch (e) {
       console.warn("Could not delete LMS course from Firestore:", e);
@@ -1028,6 +1030,7 @@ export default function AdminDashboardPage() {
     } catch (e) {
       console.warn("Could not save to Firestore:", e);
     }
+    broadcastCatalogChange("classes", "save", item.id);
     setShowOngoingModal(false);
   };
 
@@ -1039,6 +1042,7 @@ export default function AdminDashboardPage() {
     try {
       await deleteDoc(doc(db, "classes", courseId));
     } catch (e) {}
+    broadcastCatalogChange("classes", "delete", courseId);
   };
 
   // --- QUIZZES & AUDIO HANDLERS (Requirement 2) ---
@@ -1100,6 +1104,7 @@ export default function AdminDashboardPage() {
       setCustomQuizzes(updated);
       localStorage.setItem("sr_custom_quizzes", JSON.stringify(updated));
       setUploadSuccess(true);
+      broadcastCatalogChange("quizzes", "save", docRef.id);
     } catch (error) {
       const mockId = `quiz-${Date.now()}`;
       const newQuiz = { id: mockId, ...quizData };
@@ -1107,6 +1112,7 @@ export default function AdminDashboardPage() {
       setCustomQuizzes(updated);
       localStorage.setItem("sr_custom_quizzes", JSON.stringify(updated));
       setUploadSuccess(true);
+      broadcastCatalogChange("quizzes", "save", mockId);
     } finally {
       setUploading(false);
     }
@@ -1128,12 +1134,10 @@ export default function AdminDashboardPage() {
       console.warn("Firestore delete notice:", e);
     }
 
-    // 2. Record in permanent deleted blacklist so refresh never restores it
-    const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
-    if (!deletedQuizIds.includes(quizId)) deletedQuizIds.push(quizId);
-    if (targetQuiz?.id && !deletedQuizIds.includes(targetQuiz.id)) deletedQuizIds.push(targetQuiz.id);
-    if ((targetQuiz as any)?._id && !deletedQuizIds.includes((targetQuiz as any)._id)) deletedQuizIds.push((targetQuiz as any)._id);
-    localStorage.setItem("sr_deleted_quizzes", JSON.stringify(deletedQuizIds));
+    // 2. Record in permanent deleted blacklist and sync across devices
+    await markQuizDeleted(quizId);
+    if (targetQuiz?.id) await markQuizDeleted(targetQuiz.id);
+    if ((targetQuiz as any)?._id) await markQuizDeleted((targetQuiz as any)._id);
 
     // 3. Filter custom quizzes and save
     const updated = customQuizzes.filter((q) => q.id !== quizId && (q as any)._id !== quizId);
@@ -1290,7 +1294,7 @@ export default function AdminDashboardPage() {
         bgMusicVolume: editBgMusicVolume,
       }, { merge: true });
     } catch (e) {}
-
+    broadcastCatalogChange("quizzes", "save", editingQuizAudio.id);
     setEditingQuizAudio(null);
   };
 

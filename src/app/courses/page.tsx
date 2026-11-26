@@ -23,7 +23,8 @@ import {
 import LotusAccent from "@/components/devotional/LotusAccent";
 import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
 import { db } from "@/lib/firebase/client";
-import { collection, getDocs, query, limit } from "firebase/firestore";
+import { collection, getDocs, query, limit, onSnapshot } from "firebase/firestore";
+import { subscribeToCatalogSync, getDeletedCourseIds } from "@/lib/catalogSync";
 
 const DEFAULT_COURSES = [
   {
@@ -118,53 +119,81 @@ const DEFAULT_COURSES = [
 
 export default function CoursesCataloguePage() {
   const { t, language } = useLanguage();
-  const [courses, setCourses] = useState<any[]>(DEFAULT_COURSES);
+  const [courses, setCourses] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const deletedList = getDeletedCourseIds();
+        const localC = localStorage.getItem("sr_custom_courses") || localStorage.getItem("sr_lms_courses");
+        if (localC !== null) {
+          const parsed = JSON.parse(localC);
+          if (Array.isArray(parsed)) {
+            return parsed.filter((c: any) => !deletedList.includes(c.id));
+          }
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | "free" | "paid">("all");
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [enrollingCourse, setEnrollingCourse] = useState<ClassItem | null>(null);
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      const deletedList: string[] = JSON.parse(localStorage.getItem("sr_deleted_courses") || "[]");
+    let unsubSnapshot: (() => void) | null = null;
 
-      // 1. Try Firestore First
-      try {
-        const snap = await getDocs(query(collection(db, "courses"), limit(50)));
+    try {
+      const q = query(collection(db, "courses"), limit(50));
+      unsubSnapshot = onSnapshot(q, (snap) => {
+        const deletedList = getDeletedCourseIds();
         const list: any[] = [];
         snap.forEach((d) => {
           if (!deletedList.includes(d.id)) {
             list.push({ id: d.id, ...d.data() });
           }
         });
+
         if (list.length > 0) {
           setCourses(list);
           localStorage.setItem("sr_custom_courses", JSON.stringify(list));
           localStorage.setItem("sr_lms_courses", JSON.stringify(list));
-          return;
-        }
-      } catch (err) {
-        console.warn("Firestore courses fetch error, checking localStorage", err);
-      }
-
-      // 2. Try Admin local cache
-      const localC = localStorage.getItem("sr_custom_courses") || localStorage.getItem("sr_lms_courses");
-      if (localC) {
-        try {
-          const parsed = JSON.parse(localC);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const sanitized = parsed.filter((c: any) => !deletedList.includes(c.id));
-            setCourses(sanitized);
-            return;
+        } else {
+          // If Firestore is empty, respect custom/deleted state
+          const localC = localStorage.getItem("sr_custom_courses") || localStorage.getItem("sr_lms_courses");
+          if (localC !== null || deletedList.length > 0) {
+            setCourses([]);
+            localStorage.setItem("sr_custom_courses", JSON.stringify([]));
+            localStorage.setItem("sr_lms_courses", JSON.stringify([]));
+          } else {
+            const remainingDefaults = DEFAULT_COURSES.filter((c) => !deletedList.includes(c.id));
+            setCourses(remainingDefaults);
           }
-        } catch (e) {}
-      }
+        }
+      }, (err) => {
+        console.warn("Firestore courses onSnapshot notice:", err);
+      });
+    } catch (e) {
+      console.warn("courses onSnapshot error:", e);
+    }
 
-      // 3. Fallback to default minus any deleted IDs
-      const remainingDefaults = DEFAULT_COURSES.filter((c) => !deletedList.includes(c.id));
-      setCourses(remainingDefaults);
+    // Instant cross-tab and intra-window synchronization
+    const unsubSync = subscribeToCatalogSync(() => {
+      try {
+        const deletedList = getDeletedCourseIds();
+        const localC = localStorage.getItem("sr_custom_courses") || localStorage.getItem("sr_lms_courses");
+        if (localC !== null) {
+          const parsed = JSON.parse(localC);
+          if (Array.isArray(parsed)) {
+            setCourses(parsed.filter((c: any) => !deletedList.includes(c.id)));
+          }
+        }
+      } catch (e) {}
+    });
+
+    return () => {
+      if (unsubSnapshot) unsubSnapshot();
+      unsubSync();
     };
-    fetchCourses();
   }, []);
 
   const getLocalized = (val: any) => {
@@ -250,6 +279,29 @@ export default function CoursesCataloguePage() {
       </div>
 
       {/* Courses Cards Grid (Matching Exact Uploaded Reference Design) */}
+      {filteredCourses.length === 0 ? (
+        <div className="bg-white rounded-3xl p-10 border border-amber-200/70 text-center max-w-xl mx-auto shadow-sm space-y-4">
+          <BookOpen className="w-12 h-12 text-amber-600 mx-auto opacity-70" />
+          <h3 className="text-xl font-bold text-gray-900">
+            {language === "hi" ? "कोई पाठ्यक्रम उपलब्ध नहीं है" : "No Courses Available"}
+          </h3>
+          <p className="text-sm text-gray-600">
+            {language === "hi"
+              ? "वर्तमान में कोई ई-लर्निंग पाठ्यक्रम सक्रिय नहीं है। नए पाठ्यक्रम शीघ्र जोड़े जाएंगे।"
+              : "No e-learning courses are currently active. Please check back soon or explore our live ongoing classes."}
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/live-classes"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{language === "hi" ? "लाइव कक्षाएं देखें" : "Explore Live Classes"}</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto">
         {filteredCourses.map((c) => {
           const isExpanded = expandedCourse === c.id;
@@ -416,6 +468,7 @@ export default function CoursesCataloguePage() {
           );
         })}
       </div>
+      )}
 
       {/* Course Enrollment Modal */}
       <ClassRegistrationModal
