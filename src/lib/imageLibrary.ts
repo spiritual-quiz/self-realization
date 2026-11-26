@@ -1,3 +1,6 @@
+import { db } from "./firebase/client";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+
 export interface ImageAsset {
   id: string;
   name: string; // tag e.g. "krishna", "rama", "vishnu", "temple", "gita", "bhakti-vaibhava"
@@ -7,110 +10,42 @@ export interface ImageAsset {
   targetType?: "banner" | "question"; // banner (1200x675) or individual question (600x400)
 }
 
-export const DEFAULT_IMAGE_LIBRARY: ImageAsset[] = [
-  {
-    id: "img-krishna",
-    name: "krishna",
-    title: "Lord Sri Krishna (Partha-sarathi)",
-    url: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png",
-    category: "Deity",
-    targetType: "question"
-  },
-  {
-    id: "img-rama",
-    name: "rama",
-    title: "Lord Ramachandra & Sita Lakshman Hanuman",
-    url: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80",
-    category: "Deity",
-    targetType: "question"
-  },
-  {
-    id: "img-vishnu",
-    name: "vishnu",
-    title: "Lord Vishnu & Vaikuntha Abode",
-    url: "https://images.unsplash.com/photo-1609137144813-7d9921338f24?auto=format&fit=crop&w=800&q=80",
-    category: "Deity",
-    targetType: "question"
-  },
-  {
-    id: "img-temple",
-    name: "temple",
-    title: "Vedic Temple & Lotus Architecture",
-    url: "https://www.iskconpune.com/wp-content/uploads/2023/02/radha-vrindavanchandra-1024x683.jpeg",
-    category: "Temple",
-    targetType: "banner"
-  },
-  {
-    id: "img-gita",
-    name: "gita",
-    title: "Bhagavad-gita As It Is & Kurukshetra",
-    url: "https://images.unsplash.com/photo-1532012164546-f432f2e3edd4?auto=format&fit=crop&w=800&q=80",
-    category: "Philosophy",
-    targetType: "banner"
-  },
-  {
-    id: "img-prabhupada",
-    name: "prabhupada",
-    title: "His Divine Grace A.C. Bhaktivedanta Swami Prabhupada",
-    url: "https://www.iskconpune.com/wp-content/uploads/2023/02/srila-prabhupada.jpg",
-    category: "Philosophy",
-    targetType: "question"
-  },
-  {
-    id: "img-meditation",
-    name: "meditation",
-    title: "Japa Meditation on Tulasi Beads",
-    url: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80",
-    category: "Philosophy",
-    targetType: "question"
-  },
-  {
-    id: "img-bhakti-vaibhava",
-    name: "bhakti-vaibhava",
-    title: "Bhakti Vaibhava Srimad Bhagavatam Study Banner",
-    url: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png",
-    category: "Course",
-    targetType: "banner"
-  }
-];
+// Zero hardcoded images: 100% database-driven from Firestore
+export const DEFAULT_IMAGE_LIBRARY: ImageAsset[] = [];
 
 export function getStoredImageLibrary(): ImageAsset[] {
-  if (typeof window === "undefined") return DEFAULT_IMAGE_LIBRARY;
+  if (typeof window === "undefined") return [];
   try {
-    const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
     const raw = localStorage.getItem("sr_image_library");
-    
-    let baseList: ImageAsset[];
     if (raw !== null) {
-      // If the admin has saved the image library (even if empty []), strictly respect it!
       const parsed: ImageAsset[] = JSON.parse(raw);
-      baseList = Array.isArray(parsed) ? parsed : [];
-    } else {
-      // First-time visit: initialize from defaults
-      baseList = [...DEFAULT_IMAGE_LIBRARY];
-      localStorage.setItem("sr_image_library", JSON.stringify(baseList));
+      return Array.isArray(parsed) ? parsed : [];
     }
-
-    // Filter out ANY deleted image IDs or tag names
-    const filtered = baseList.filter(
-      img => !deletedImageIds.includes(img.id) && !deletedImageIds.includes(img.name.toLowerCase())
-    );
-    return filtered;
+    return [];
   } catch (e) {
-    return DEFAULT_IMAGE_LIBRARY;
+    return [];
   }
 }
 
-export function saveImageToLibrary(asset: ImageAsset): ImageAsset[] {
-  if (typeof window === "undefined") return DEFAULT_IMAGE_LIBRARY;
-  
-  // Un-blacklist if re-uploaded by admin
-  const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
-  const filteredDeleted = deletedImageIds.filter(
-    id => id !== asset.id && id !== asset.name.toLowerCase()
-  );
-  localStorage.setItem("sr_deleted_image_ids", JSON.stringify(filteredDeleted));
+export async function fetchImageLibraryFromFirestore(): Promise<ImageAsset[]> {
+  try {
+    const snap = await getDocs(collection(db, "images"));
+    const list: ImageAsset[] = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      list.push({ id: d.id, ...data } as ImageAsset);
+    });
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sr_image_library", JSON.stringify(list));
+    }
+    return list;
+  } catch (e) {
+    console.warn("Could not fetch image library from Firestore:", e);
+    return getStoredImageLibrary();
+  }
+}
 
+export async function saveImageToLibrary(asset: ImageAsset): Promise<ImageAsset[]> {
   const current = getStoredImageLibrary();
   const existingIdx = current.findIndex(a => a.name.toLowerCase() === asset.name.toLowerCase() || a.id === asset.id);
   let updated: ImageAsset[];
@@ -120,31 +55,49 @@ export function saveImageToLibrary(asset: ImageAsset): ImageAsset[] {
   } else {
     updated = [asset, ...current];
   }
-  localStorage.setItem("sr_image_library", JSON.stringify(updated));
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("sr_image_library", JSON.stringify(updated));
+  }
+
+  // Persist directly to Firestore cloud database
+  try {
+    await setDoc(doc(db, "images", asset.id), asset);
+  } catch (e) {
+    console.warn("Could not save image to Firestore:", e);
+  }
+
   return updated;
 }
 
-export function deleteImageFromLibrary(idOrName: string): ImageAsset[] {
-  if (typeof window === "undefined") return DEFAULT_IMAGE_LIBRARY;
+export async function deleteImageFromLibrary(idOrName: string): Promise<ImageAsset[]> {
   const target = idOrName.trim().toLowerCase();
 
-  // 1. Record in persistent blacklist so page refresh never brings it back
-  const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
-  if (!deletedImageIds.includes(idOrName)) deletedImageIds.push(idOrName);
-  if (!deletedImageIds.includes(target)) deletedImageIds.push(target);
-  localStorage.setItem("sr_deleted_image_ids", JSON.stringify(deletedImageIds));
-
-  // 2. Remove from active library
+  // 1. Remove from active library
   const current = getStoredImageLibrary();
+  const targetAsset = current.find(a => a.id === idOrName || a.name.toLowerCase() === target);
   const updated = current.filter(
     a => a.id !== idOrName && a.name.toLowerCase() !== target
   );
-  localStorage.setItem("sr_image_library", JSON.stringify(updated));
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("sr_image_library", JSON.stringify(updated));
+  }
+
+  // 2. Permanently delete from Firestore database
+  try {
+    const docId = targetAsset?.id || idOrName;
+    await deleteDoc(doc(db, "images", docId));
+  } catch (e) {
+    console.warn("Could not delete image from Firestore:", e);
+  }
+
   return updated;
 }
 
 export function resolveImageUrlByTag(tagName?: string, fallbackUrl?: string): string {
-  if (!tagName) return fallbackUrl || DEFAULT_IMAGE_LIBRARY[0].url;
+  const DEFAULT_FALLBACK = "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png";
+  if (!tagName) return fallbackUrl || DEFAULT_FALLBACK;
   const clean = tagName.trim().toLowerCase();
   
   // Direct URL provided
@@ -152,37 +105,16 @@ export function resolveImageUrlByTag(tagName?: string, fallbackUrl?: string): st
     return tagName.trim();
   }
 
-  // Check if this tag has been permanently deleted
-  if (typeof window !== "undefined") {
-    try {
-      const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
-      if (deletedImageIds.includes(clean)) {
-        return fallbackUrl || "";
-      }
-    } catch (e) {}
-  }
-
-  // Check custom uploaded local images from Admin
+  // Check stored active images from database
   if (typeof window !== "undefined") {
     try {
       const library = getStoredImageLibrary();
-      const match = library.find(img => img.name.toLowerCase() === clean);
+      const match = library.find(img => img.name.toLowerCase() === clean || img.id === clean);
       if (match) return match.url;
     } catch (e) {}
   }
 
-  // Check defaults if not deleted
-  if (typeof window !== "undefined") {
-    try {
-      const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
-      if (deletedImageIds.includes(clean)) return fallbackUrl || "";
-    } catch (e) {}
-  }
-
-  const defMatch = DEFAULT_IMAGE_LIBRARY.find(img => img.name.toLowerCase() === clean);
-  if (defMatch) return defMatch.url;
-
-  return fallbackUrl || DEFAULT_IMAGE_LIBRARY[0].url;
+  return fallbackUrl || DEFAULT_FALLBACK;
 }
 
 /**

@@ -53,6 +53,7 @@ import {
   ImageAsset, 
   DEFAULT_IMAGE_LIBRARY, 
   getStoredImageLibrary, 
+  fetchImageLibraryFromFirestore,
   saveImageToLibrary, 
   deleteImageFromLibrary, 
   resolveImageUrlByTag, 
@@ -67,148 +68,9 @@ import { db } from "@/lib/firebase/client";
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, query, limit } from "firebase/firestore";
 import { broadcastCatalogChange, markCourseDeleted, markQuizDeleted, getDeletedCourseIds, getDeletedQuizIds } from "@/lib/catalogSync";
 
-const INITIAL_LMS_COURSES = [
-  {
-    id: "discover-yourself",
-    title: {
-      en: "Discover Yourself: Fundamentals of Bhagavad-gītā",
-      hi: "स्वयं को जानें: भगवद्गीता के मूलभूत सिद्धांत"
-    },
-    desc: {
-      en: "A structured 6-session foundation journey exploring soul, mind, reincarnation, karma, and supreme identity.",
-      hi: "आत्मा, मन, पुनर्जन्म, कर्म और परम सत्य के रहस्यों को उद्घाटित करने वाली 6 सत्रों की व्यवस्थित यात्रा।"
-    },
-    level: "Beginner",
-    lessons: "6 Lessons",
-    duration: "3.5 Hours",
-    price: "Free Access",
-    isPaid: false,
-    modules: [
-      { title: { en: "Session 1: Can a Scientist Believe in God?", hi: "सत्र 1: क्या वैज्ञानिक ईश्वर में विश्वास कर सकता है?" }, length: "35 mins" },
-      { title: { en: "Session 2: Getting the Eyes of Knowledge (Veda)", hi: "सत्र 2: ज्ञान चक्षु की प्राप्ति (वेद क्या हैं?)" }, length: "30 mins" },
-      { title: { en: "Session 3: Science of Soul & Reincarnation", hi: "सत्र 3: आत्मा का विज्ञान एवं पुनर्जन्म का रहस्य" }, length: "40 mins" },
-      { title: { en: "Session 4: One God or Many Gods?", hi: "सत्र 4: एक ईश्वर अथवा अनेक देव?" }, length: "35 mins" },
-      { title: { en: "Session 5: Why Do Bad Things Happen to Good People? (Karma)", hi: "सत्र 5: अच्छे लोगों के साथ बुरा क्यों होता है? (कर्म का नियम)" }, length: "45 mins" },
-      { title: { en: "Session 6: Topmost Yoga System for Kali Yuga", hi: "सत्र 6: कलियुग हेतु सर्वश्रेष्ठ योग प्रणाली" }, length: "40 mins" },
-    ]
-  },
-  {
-    id: "science-of-self-realization",
-    title: {
-      en: "Science of Self-Realization & Practical Devotion",
-      hi: "आत्म-साक्षात्कार का विज्ञान एवं व्यावहारिक भक्ति"
-    },
-    desc: {
-      en: "Mastering practical devotion in day-to-day work, balancing modern career stress, and developing inner consciousness.",
-      hi: "दैनिक कार्यस्थल में भक्तिमय संतुलन साधने, कार्य-तनाव से मुक्ति पाने और कर्म को योग बनाने का प्रामाणिक मार्ग।"
-    },
-    level: "Intermediate",
-    lessons: "12 Lessons",
-    duration: "8 Hours",
-    price: "Free Access",
-    isPaid: false,
-    modules: [
-      { title: { en: "Module 1: Mind Control & Mental Hygiene", hi: "अध्याय 1: मन नियंत्रण एवं मानसिक शुद्धि" }, length: "45 mins" },
-      { title: { en: "Module 2: Overcoming Stress & Anger through Gita", hi: "अध्याय 2: तनाव एवं क्रोध से मुक्ति" }, length: "50 mins" },
-      { title: { en: "Module 3: Daily Japa & Meditation Routines", hi: "अध्याय 3: दैनिक जप एवं ध्यान दिनचर्या" }, length: "40 mins" }
-    ]
-  }
-];
-
-const INITIAL_ONGOING_CLASSES = [
-  {
-    id: "class-sunday-gita",
-    title: {
-      en: "Bhagavad-gītā Unveiled: The Science of Soul & Karma",
-      hi: "श्रीमद्भगवद्गीता का रहस्य: आत्मा एवं कर्म का विज्ञान"
-    },
-    subtitle: {
-      en: "Every Sunday interactive evening session with kirtan and prasadam",
-      hi: "प्रत्येक रविवार सांध्यकालीन सत्र, संकीर्तन एवं महाप्रसाद"
-    },
-    isPaid: false,
-    price: "Free Access",
-    date: "Every Sunday",
-    time: "06:00 PM – 07:30 PM IST",
-    mode: "Both",
-    instructor: "H.G. Gauranga Das",
-    status: "Ongoing",
-    image: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png",
-    description: {
-      en: "Deep dive into the 18 chapters of Bhagavad-gita As It Is with practical modern life applications.",
-      hi: "यथारूप भगवद्गीता के 18 अध्यायों का व्यावहारिक जीवन में गहरा अनुप्रयोग।"
-    }
-  },
-  {
-    id: "class-wed-meditation",
-    title: {
-      en: "Mantra Meditation & Mind Control Workshop",
-      hi: "मंत्र ध्यान एवं मन-नियंत्रण कार्यशाला"
-    },
-    subtitle: {
-      en: "Mid-week mindfulness, japa technique, and stress release",
-      hi: "सप्ताहिक मानसिक शांति, जप विधि और तनाव मुक्ति"
-    },
-    isPaid: false,
-    price: "Free Access",
-    date: "Every Wednesday",
-    time: "07:30 PM – 08:30 PM IST",
-    mode: "Online",
-    instructor: "H.G. Radheshyam Das",
-    status: "Ongoing",
-    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=600",
-    description: {
-      en: "Learn authentic Vedic mantra meditation techniques to overcome anxiety and build focus.",
-      hi: "चिंता और एकाग्रता की कमी को दूर करने हेतु प्रामाणिक वैदिक जप तकनीक सीखें।"
-    }
-  },
-  {
-    id: "class-sat-youth",
-    title: {
-      en: "VOICE Youth Forum: Focus, Purpose & Spiritual Life",
-      hi: "युवा मंच (VOICE): एकाग्रता, जीवन का उद्देश्य और साधना"
-    },
-    subtitle: {
-      en: "Dynamic interactive session for students & young working professionals",
-      hi: "विद्यार्थियों एवं युवा कामकाजी पेशेवरों के लिए विशेष सत्र"
-    },
-    isPaid: false,
-    price: "Free Access",
-    date: "Every Saturday",
-    time: "06:30 PM – 08:00 PM IST",
-    mode: "Both",
-    instructor: "Resident Monks & Youth Mentors",
-    status: "Ongoing",
-    image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=600",
-    description: {
-      en: "Empowering youth with strong character, moral leadership, clarity of purpose, and life balance.",
-      hi: "सशक्त चरित्र, नैतिक नेतृत्व और जीवन संतुलन के साथ युवाओं को सशक्त बनाना।"
-    }
-  },
-  {
-    id: "class-seminar-leadership",
-    title: {
-      en: "Vedic Wisdom for Modern Professionals (Leadership & Ethics)",
-      hi: "आधुनिक पेशेवरों के लिए वैदिक नेतृत्व एवं कार्यकुशलता सूत्र"
-    },
-    subtitle: {
-      en: "Special 3-Hour Interactive Masterclass for Working Professionals",
-      hi: "विशेष 3-घंटे की गहन कार्यशाला"
-    },
-    isPaid: true,
-    price: "₹499",
-    date: "Dec 12, 2026",
-    time: "05:00 PM – 08:00 PM IST",
-    mode: "Online",
-    instructor: "Dr. Sumit Sharma (IIT-B Alumnus)",
-    status: "Upcoming",
-    image: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=600",
-    description: {
-      en: "Executive masterclass on ethical leadership and mindfulness for managers and engineers.",
-      hi: "आधुनिक प्रबंधन एवं नैतिक नेतृत्व हेतु विशेष कार्यशाला।"
-    }
-  }
-];
+// Zero hardcoded courses or classes: 100% database-driven from Firestore
+const INITIAL_LMS_COURSES: any[] = [];
+const INITIAL_ONGOING_CLASSES: any[] = [];
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -311,14 +173,13 @@ export default function AdminDashboardPage() {
         const cached = localStorage.getItem("sr_lms_courses") || localStorage.getItem("sr_custom_courses");
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             return parsed.filter((c: any) => !deleted.includes(c.id));
           }
         }
-        return INITIAL_LMS_COURSES.filter((c: any) => !deleted.includes(c.id));
       } catch (e) {}
     }
-    return INITIAL_LMS_COURSES;
+    return [];
   });
   const [ongoingCoursesList, setOngoingCoursesList] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
@@ -330,7 +191,7 @@ export default function AdminDashboardPage() {
         }
       } catch (e) {}
     }
-    return INITIAL_ONGOING_CLASSES;
+    return [];
   });
   const [loadingData, setLoadingData] = useState(false);
 
@@ -588,13 +449,8 @@ export default function AdminDashboardPage() {
           setLmsCoursesList(sanitized);
           localStorage.setItem("sr_lms_courses", JSON.stringify(sanitized));
         } else {
-          const cachedLms = localStorage.getItem("sr_lms_courses");
-          if (cachedLms !== null || deletedCourses.length > 0) {
-            setLmsCoursesList(cachedLms ? JSON.parse(cachedLms).filter((c: any) => !deletedCourses.includes(c.id)) : []);
-          } else {
-            setLmsCoursesList(INITIAL_LMS_COURSES);
-            localStorage.setItem("sr_lms_courses", JSON.stringify(INITIAL_LMS_COURSES));
-          }
+          setLmsCoursesList([]);
+          localStorage.setItem("sr_lms_courses", JSON.stringify([]));
         }
       } catch (e) {
         const deletedCourses = getDeletedCourseIds();
@@ -603,21 +459,21 @@ export default function AdminDashboardPage() {
       }
 
       // 5. Fetch Ongoing Courses / Live Classes (Requirement 4)
-      const cachedOngoing = localStorage.getItem("sr_ongoing_classes");
-      if (cachedOngoing) {
-        setOngoingCoursesList(JSON.parse(cachedOngoing));
-      } else {
+      try {
         const classSnap = await getDocs(collection(db, "classes"));
         if (!classSnap.empty) {
           const list: any[] = [];
           classSnap.forEach((d) => list.push({ id: d.id, ...d.data() }));
           setOngoingCoursesList(list);
           localStorage.setItem("sr_ongoing_classes", JSON.stringify(list));
+        } else {
+          setOngoingCoursesList([]);
+          localStorage.setItem("sr_ongoing_classes", JSON.stringify([]));
         }
-      }
+      } catch (e) {}
 
-      // 6. Fetch Central Devotional Image Library & Audio Library
-      const library = getStoredImageLibrary();
+      // 6. Fetch Central Devotional Image Library & Audio Library from Firestore database
+      const library = await fetchImageLibraryFromFirestore();
       setImageAssets(library);
 
       const audioLib = getStoredAudioLibrary();
@@ -749,7 +605,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleSaveNewImage = () => {
+  const handleSaveNewImage = async () => {
     if (!newImageTag.trim()) {
       alert("Please provide an image name/tag (e.g. krishna, rama, vishnu).");
       return;
@@ -766,16 +622,16 @@ export default function AdminDashboardPage() {
       category: newImageCategory,
       targetType: newImageTargetType
     };
-    const updated = saveImageToLibrary(asset);
+    const updated = await saveImageToLibrary(asset);
     setImageAssets(updated);
     setNewImageTag("");
     setNewImageTitle("");
     setNewImageUrl("");
   };
 
-  const handleDeleteImage = (idOrName: string) => {
+  const handleDeleteImage = async (idOrName: string) => {
     if (!confirm(`Are you sure you want to remove image '${idOrName}' from library?`)) return;
-    const updated = deleteImageFromLibrary(idOrName);
+    const updated = await deleteImageFromLibrary(idOrName);
     setImageAssets(updated);
   };
 
@@ -800,7 +656,7 @@ export default function AdminDashboardPage() {
         url: dataUrl,
         category: "Philosophy"
       };
-      saveImageToLibrary(asset);
+      await saveImageToLibrary(asset);
       setImageAssets(getStoredImageLibrary());
       setQuestionFormData(prev => ({ ...prev, imageUrl: tag }));
     } catch (e) {

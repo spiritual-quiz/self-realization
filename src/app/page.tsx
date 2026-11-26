@@ -102,52 +102,8 @@ export default function HomePage() {
     }
   };
 
-  // Initial fallback classes if none created yet
-  const INITIAL_UPCOMING_CLASSES = [
-    {
-      id: "class-1",
-      title: {
-        en: "Bhagavad-gītā Unveiled: The Science of Soul & Karma",
-        hi: "श्रीमद्भगवद्गीता का रहस्य: आत्मा एवं कर्म का विज्ञान"
-      },
-      tag: t.upcomingClasses.freeTag,
-      isPaid: false,
-      date: language === "hi" ? "प्रत्येक रविवार" : "Every Sunday",
-      time: "06:00 PM - 07:30 PM IST",
-      mode: language === "hi" ? "ऑनलाइन एवं मंदिर में" : "Hybrid (Online & Temple)",
-      instructor: "H.G. Gauranga Das",
-      seats: "Free Open Entry",
-    },
-    {
-      id: "class-2",
-      title: {
-        en: "Mantra Meditation & Mind Control Workshop",
-        hi: "मंत्र ध्यान एवं मन-नियंत्रण कार्यशाला"
-      },
-      tag: t.upcomingClasses.freeTag,
-      isPaid: false,
-      date: language === "hi" ? "प्रत्येक बुधवार" : "Every Wednesday",
-      time: "07:30 PM - 08:30 PM IST",
-      mode: language === "hi" ? "ऑनलाइन ज़ूम" : "Online Zoom",
-      instructor: "H.G. Radheshyam Das",
-      seats: "Free Open Entry",
-    },
-    {
-      id: "class-3",
-      title: {
-        en: "Vedic Wisdom for Modern Professionals (Leadership)",
-        hi: "आधुनिक पेशेवरों के लिए वैदिक नेतृत्व सूत्र"
-      },
-      tag: t.upcomingClasses.paidTag,
-      isPaid: true,
-      price: "₹499",
-      date: language === "hi" ? "12 दिसंबर" : "Dec 12, 2026",
-      time: "05:00 PM - 08:00 PM IST",
-      mode: language === "hi" ? "विशिष्ट कार्यशाला" : "Special Interactive Masterclass",
-      instructor: "Visiting Scholars",
-      seats: "Limited 40 Seats",
-    }
-  ];
+  // Zero hardcoded classes: 100% database-driven from Firestore
+  const INITIAL_UPCOMING_CLASSES: any[] = [];
 
   // Dynamic LMS Courses State (Synchronously initialized to eliminate flicker)
   const [lmsCourses, setLmsCourses] = React.useState<any[]>(() => {
@@ -194,7 +150,7 @@ export default function HomePage() {
         }
       } catch (e) {}
     }
-    return INITIAL_UPCOMING_CLASSES;
+    return [];
   });
 
   // Real-Time Listeners & Instant Synchronization (Changes reflect without refresh)
@@ -468,74 +424,88 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {upcomingClassesList.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-2xl p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-            >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full ${
-                      item.isPaid
-                        ? "bg-purple-100 text-purple-800 border border-purple-200"
-                        : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+        {upcomingClassesList.length === 0 ? (
+          <div className="bg-white rounded-3xl p-10 border border-amber-200/70 text-center max-w-xl mx-auto shadow-sm space-y-4">
+            <Calendar className="w-12 h-12 text-amber-600 mx-auto opacity-70" />
+            <h3 className="text-xl font-bold text-gray-900">
+              {language === "hi" ? "कोई लाइव कक्षा उपलब्ध नहीं है" : "No Classes Scheduled"}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {language === "hi"
+                ? "वर्तमान में कोई नई कक्षाएं सक्रिय नहीं हैं। आगामी कार्यक्रम शीघ्र जोड़े जाएंगे।"
+                : "No live classes are currently scheduled. Upcoming temple workshops will be announced soon."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {upcomingClassesList.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white rounded-2xl p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`text-xs font-bold px-3 py-1 rounded-full ${
+                        item.isPaid
+                          ? "bg-purple-100 text-purple-800 border border-purple-200"
+                          : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                      }`}
+                    >
+                      {item.tag} {item.price && `• ${item.price}`}
+                    </span>
+                    <span className="text-xs text-gray-500 font-medium">
+                      {item.seats}
+                    </span>
+                  </div>
+
+                  <h3 className="text-lg font-bold text-gray-900 leading-snug">
+                    {typeof item.title === "object" ? (item.title[language] || item.title.en || item.title.hi) : item.title}
+                  </h3>
+
+                  <div className="space-y-1.5 text-xs text-gray-600 pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>{item.date}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>{item.time}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>{item.mode}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedClass({
+                      id: item.id,
+                      title: item.title,
+                      isPaid: item.isPaid,
+                      price: item.price,
+                      date: item.date,
+                      time: item.time,
+                      mode: item.mode,
+                      instructor: item.instructor,
+                    })}
+                    className={`w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer ${
+                      !item.isPaid
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/20"
+                        : "bg-slate-900 hover:bg-black text-white"
                     }`}
                   >
-                    {item.tag} {item.price && `• ${item.price}`}
-                  </span>
-                  <span className="text-xs text-gray-500 font-medium">
-                    {item.seats}
-                  </span>
-                </div>
-
-                <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                  {typeof item.title === "object" ? (item.title[language] || item.title.en || item.title.hi) : item.title}
-                </h3>
-
-                <div className="space-y-1.5 text-xs text-gray-600 pt-2 border-t border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>{item.date}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>{item.time}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>{item.mode}</span>
-                  </div>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{t.upcomingClasses.registerBtn}</span>
+                  </button>
                 </div>
               </div>
-
-              <div className="pt-6">
-                <button
-                  type="button"
-                  onClick={() => setSelectedClass({
-                    id: item.id,
-                    title: item.title,
-                    isPaid: item.isPaid,
-                    price: item.price,
-                    date: item.date,
-                    time: item.time,
-                    mode: item.mode,
-                    instructor: item.instructor,
-                  })}
-                  className={`w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer ${
-                    !item.isPaid
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/20"
-                      : "bg-slate-900 hover:bg-black text-white"
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{t.upcomingClasses.registerBtn}</span>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 4. FEATURED SELF-PACED LMS COURSES */}

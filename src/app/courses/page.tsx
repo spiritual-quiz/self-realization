@@ -26,96 +26,8 @@ import { db } from "@/lib/firebase/client";
 import { collection, getDocs, query, limit, onSnapshot } from "firebase/firestore";
 import { subscribeToCatalogSync, getDeletedCourseIds } from "@/lib/catalogSync";
 
-const DEFAULT_COURSES = [
-  {
-    id: "discover-yourself",
-    title: {
-      en: "Discover Yourself: Fundamentals of Bhagavad-gītā",
-      hi: "स्वयं को जानें: भगवद्गीता के मूलभूत सिद्धांत"
-    },
-    desc: {
-      en: "A structured 6-session foundation journey exploring soul, mind, reincarnation, karma, and supreme identity.",
-      hi: "आत्मा, मन, पुनर्जन्म, कर्म और परम सत्य के रहस्यों को उद्घाटित करने वाली 6 सत्रों की व्यवस्थित यात्रा।"
-    },
-    thumbnail: "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png",
-    level: "Beginner",
-    lessons: "6 Lessons",
-    duration: "3.5 Hours",
-    price: "Free Access",
-    isPaid: false,
-    instructor: "H.G. Gauranga Das & Scholars",
-    mode: "Online & Offline (Hybrid)",
-    timing: "Every Sunday: 10:00 AM – 11:30 AM IST",
-    venue: "Sri Sri Radha Vrindavanchandra Mandir",
-    roomNumber: "Room 108 (Ground Floor)",
-    whatsappGroupUrl: "https://chat.whatsapp.com/SelfRealizationGita",
-    modules: [
-      { title: { en: "Session 1: Can a Scientist Believe in God?", hi: "सत्र 1: क्या वैज्ञानिक ईश्वर में विश्वास कर सकता है?" }, length: "35 mins" },
-      { title: { en: "Session 2: Getting the Eyes of Knowledge (Veda)", hi: "सत्र 2: ज्ञान चक्षु की प्राप्ति (वेद क्या हैं?)" }, length: "30 mins" },
-      { title: { en: "Session 3: Science of Soul & Reincarnation", hi: "सत्र 3: आत्मा का विज्ञान एवं पुनर्जन्म का रहस्य" }, length: "40 mins" },
-      { title: { en: "Session 4: One God or Many Gods?", hi: "सत्र 4: एक ईश्वर अथवा अनेक देव?" }, length: "35 mins" },
-      { title: { en: "Session 5: Why Do Bad Things Happen to Good People? (Karma)", hi: "सत्र 5: अच्छे लोगों के साथ बुरा क्यों होता है? (कर्म का नियम)" }, length: "45 mins" },
-      { title: { en: "Session 6: Topmost Yoga System for Kali Yuga", hi: "सत्र 6: कलियुग हेतु सर्वश्रेष्ठ योग प्रणाली" }, length: "40 mins" },
-    ]
-  },
-  {
-    id: "science-of-self-realization",
-    title: {
-      en: "Science of Self-Realization & Practical Devotion",
-      hi: "आत्म-साक्षात्कार का विज्ञान एवं व्यावहारिक भक्ति"
-    },
-    desc: {
-      en: "Mastering practical devotion in day-to-day work, balancing modern career stress, and developing inner consciousness.",
-      hi: "दैनिक कार्यस्थल में भक्तिमय संतुलन साधने, कार्य-तनाव से मुक्ति पाने और कर्म को योग बनाने का प्रामाणिक मार्ग।"
-    },
-    thumbnail: "https://www.iskconpune.com/wp-content/uploads/2023/02/radha-vrindavanchandra-1024x683.jpeg",
-    level: "Intermediate",
-    lessons: "12 Lessons",
-    duration: "8 Hours",
-    price: "Free Access",
-    isPaid: false,
-    instructor: "H.G. Radheshyam Das & Mentors",
-    mode: "Online (Live Zoom) & Offline (Temple Classroom)",
-    timing: "Wednesday & Friday: 07:00 PM – 08:30 PM IST",
-    venue: "ISKCON NVCC Vedic Cultural Centre",
-    roomNumber: "Hall 204 (First Floor)",
-    whatsappGroupUrl: "https://chat.whatsapp.com/ScienceOfSelfRealization",
-    modules: [
-      { title: { en: "Module 1: Defining the Living Entity & Mind", hi: "मॉड्यूल 1: जीवात्मा एवं मन की संरचना" }, length: "45 mins" },
-      { title: { en: "Module 2: The Three Modes of Material Nature (Gunas)", hi: "मॉड्यूल 2: प्रकृति के तीन गुण (सत्व, रज, तम)" }, length: "50 mins" },
-      { title: { en: "Module 3: Overcoming Lust, Anger & Greed", hi: "मॉड्यूल 3: काम, क्रोध और लोभ पर विजय" }, length: "45 mins" },
-      { title: { en: "Module 4: Practical Art of Japa Meditation", hi: "मॉड्यूल 4: जप ध्यान की व्यावहारिक कला" }, length: "40 mins" },
-    ]
-  },
-  {
-    id: "comprehensive-gita",
-    title: {
-      en: "Comprehensive Bhagavad-gītā Study with Sanskrit Recitation",
-      hi: "श्रीमद्भगवद्गीता सम्पूर्ण संस्कृत श्लोक एवं भाष्य अध्ययन"
-    },
-    desc: {
-      en: "In-depth verse-by-verse commentary analysis, philosophical assessments, Sanskrit pronunciation, and certificate.",
-      hi: "श्लोक दर श्लोक प्रामाणिक भाष्य विश्लेषण, दार्शनिक प्रश्नों के उत्तर, संस्कृत उच्चारण एवं प्रमाणित प्रमाण-पत्र।"
-    },
-    thumbnail: "https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=1200&q=80",
-    level: "Advanced",
-    lessons: "18 Chapters",
-    duration: "24 Hours",
-    price: "₹999",
-    isPaid: true,
-    instructor: "Bhakti Shastri Scholars",
-    mode: "Online & Offline (Hybrid Classroom)",
-    timing: "Saturday & Sunday: 04:00 PM – 06:00 PM IST",
-    venue: "Satsang Bhavan, ISKCON NVCC",
-    roomNumber: "Room 302 (Auditorium)",
-    whatsappGroupUrl: "https://chat.whatsapp.com/BhagavadGitaDeepStudy",
-    modules: [
-      { title: { en: "Part 1: Karma Yoga (Chapters 1 to 6)", hi: "भाग 1: कर्म योग (अध्याय 1 से 6)" }, length: "8 Hours" },
-      { title: { en: "Part 2: Bhakti Yoga (Chapters 7 to 12)", hi: "भाग 2: भक्ति योग (अध्याय 7 से 12)" }, length: "8 Hours" },
-      { title: { en: "Part 3: Jnana Yoga (Chapters 13 to 18)", hi: "भाग 3: ज्ञान योग (अध्याय 13 से 18)" }, length: "8 Hours" },
-    ]
-  }
-];
+// Zero hardcoded courses: 100% database-driven from Firestore
+const DEFAULT_COURSES: any[] = [];
 
 export default function CoursesCataloguePage() {
   const { t, language } = useLanguage();
@@ -158,16 +70,9 @@ export default function CoursesCataloguePage() {
           localStorage.setItem("sr_custom_courses", JSON.stringify(list));
           localStorage.setItem("sr_lms_courses", JSON.stringify(list));
         } else {
-          // If Firestore is empty, respect custom/deleted state
-          const localC = localStorage.getItem("sr_custom_courses") || localStorage.getItem("sr_lms_courses");
-          if (localC !== null || deletedList.length > 0) {
-            setCourses([]);
-            localStorage.setItem("sr_custom_courses", JSON.stringify([]));
-            localStorage.setItem("sr_lms_courses", JSON.stringify([]));
-          } else {
-            const remainingDefaults = DEFAULT_COURSES.filter((c) => !deletedList.includes(c.id));
-            setCourses(remainingDefaults);
-          }
+          setCourses([]);
+          localStorage.setItem("sr_custom_courses", JSON.stringify([]));
+          localStorage.setItem("sr_lms_courses", JSON.stringify([]));
         }
       }, (err) => {
         console.warn("Firestore courses onSnapshot notice:", err);

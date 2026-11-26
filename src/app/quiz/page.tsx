@@ -59,8 +59,6 @@ export default function QuizOverviewPage() {
               });
             }
           } catch (e) {}
-        } else if (list.length === 0 && deletedQuizIds.length === 0 && rawSaved === null) {
-          list = defaultQuizzes;
         }
 
         const finalList = list.filter((q) => !deletedQuizIds.includes(q.id));
@@ -91,41 +89,8 @@ export default function QuizOverviewPage() {
     };
   }, []);
 
-  const defaultQuizzes = [
-    {
-      id: "bg-overview",
-      title: {
-        en: "Bhagavad-gītā Wisdom Challenge (10 Core Verses)",
-        hi: "श्रीमद्भगवद्गीता ज्ञान प्रश्नोत्तरी (10 प्रमुख श्लोक)"
-      },
-      category: "Bhagavad-gītā",
-      questions: 10,
-      marks: 100,
-      time: "10 Mins"
-    },
-    {
-      id: "krishna-philosophy",
-      title: {
-        en: "Vedic Science of the Soul & Karma",
-        hi: "आत्मा एवं कर्म का वैदिक विज्ञान"
-      },
-      category: "Spiritual Science",
-      questions: 10,
-      marks: 100,
-      time: "10 Mins"
-    },
-    {
-      id: "temple-rituals",
-      title: {
-        en: "Daily Temple Sadhana & Kīrtana Culture",
-        hi: "दैनिक मंदिर साधना एवं संकीर्तन संस्कृति"
-      },
-      category: "Devotional Living",
-      questions: 10,
-      marks: 100,
-      time: "10 Mins"
-    }
-  ];
+  // Zero hardcoded quizzes: 100% database-driven from Firestore
+  const defaultQuizzes: any[] = [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-12">
