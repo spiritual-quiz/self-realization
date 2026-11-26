@@ -77,19 +77,25 @@ export const DEFAULT_IMAGE_LIBRARY: ImageAsset[] = [
 export function getStoredImageLibrary(): ImageAsset[] {
   if (typeof window === "undefined") return DEFAULT_IMAGE_LIBRARY;
   try {
+    const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
     const raw = localStorage.getItem("sr_image_library");
-    if (!raw) return DEFAULT_IMAGE_LIBRARY;
-    const parsed: ImageAsset[] = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_IMAGE_LIBRARY;
     
-    // Merge custom with defaults ensuring unique names
-    const merged = [...parsed];
-    DEFAULT_IMAGE_LIBRARY.forEach(def => {
-      if (!merged.some(m => m.name.toLowerCase() === def.name.toLowerCase())) {
-        merged.push(def);
-      }
-    });
-    return merged;
+    let baseList: ImageAsset[];
+    if (raw !== null) {
+      // If the admin has saved the image library (even if empty []), strictly respect it!
+      const parsed: ImageAsset[] = JSON.parse(raw);
+      baseList = Array.isArray(parsed) ? parsed : [];
+    } else {
+      // First-time visit: initialize from defaults
+      baseList = [...DEFAULT_IMAGE_LIBRARY];
+      localStorage.setItem("sr_image_library", JSON.stringify(baseList));
+    }
+
+    // Filter out ANY deleted image IDs or tag names
+    const filtered = baseList.filter(
+      img => !deletedImageIds.includes(img.id) && !deletedImageIds.includes(img.name.toLowerCase())
+    );
+    return filtered;
   } catch (e) {
     return DEFAULT_IMAGE_LIBRARY;
   }
@@ -97,6 +103,14 @@ export function getStoredImageLibrary(): ImageAsset[] {
 
 export function saveImageToLibrary(asset: ImageAsset): ImageAsset[] {
   if (typeof window === "undefined") return DEFAULT_IMAGE_LIBRARY;
+  
+  // Un-blacklist if re-uploaded by admin
+  const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
+  const filteredDeleted = deletedImageIds.filter(
+    id => id !== asset.id && id !== asset.name.toLowerCase()
+  );
+  localStorage.setItem("sr_deleted_image_ids", JSON.stringify(filteredDeleted));
+
   const current = getStoredImageLibrary();
   const existingIdx = current.findIndex(a => a.name.toLowerCase() === asset.name.toLowerCase() || a.id === asset.id);
   let updated: ImageAsset[];
@@ -112,9 +126,18 @@ export function saveImageToLibrary(asset: ImageAsset): ImageAsset[] {
 
 export function deleteImageFromLibrary(idOrName: string): ImageAsset[] {
   if (typeof window === "undefined") return DEFAULT_IMAGE_LIBRARY;
+  const target = idOrName.trim().toLowerCase();
+
+  // 1. Record in persistent blacklist so page refresh never brings it back
+  const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
+  if (!deletedImageIds.includes(idOrName)) deletedImageIds.push(idOrName);
+  if (!deletedImageIds.includes(target)) deletedImageIds.push(target);
+  localStorage.setItem("sr_deleted_image_ids", JSON.stringify(deletedImageIds));
+
+  // 2. Remove from active library
   const current = getStoredImageLibrary();
   const updated = current.filter(
-    a => a.id !== idOrName && a.name.toLowerCase() !== idOrName.toLowerCase()
+    a => a.id !== idOrName && a.name.toLowerCase() !== target
   );
   localStorage.setItem("sr_image_library", JSON.stringify(updated));
   return updated;
@@ -129,6 +152,16 @@ export function resolveImageUrlByTag(tagName?: string, fallbackUrl?: string): st
     return tagName.trim();
   }
 
+  // Check if this tag has been permanently deleted
+  if (typeof window !== "undefined") {
+    try {
+      const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
+      if (deletedImageIds.includes(clean)) {
+        return fallbackUrl || "";
+      }
+    } catch (e) {}
+  }
+
   // Check custom uploaded local images from Admin
   if (typeof window !== "undefined") {
     try {
@@ -138,7 +171,14 @@ export function resolveImageUrlByTag(tagName?: string, fallbackUrl?: string): st
     } catch (e) {}
   }
 
-  // Check defaults
+  // Check defaults if not deleted
+  if (typeof window !== "undefined") {
+    try {
+      const deletedImageIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_image_ids") || "[]");
+      if (deletedImageIds.includes(clean)) return fallbackUrl || "";
+    } catch (e) {}
+  }
+
   const defMatch = DEFAULT_IMAGE_LIBRARY.find(img => img.name.toLowerCase() === clean);
   if (defMatch) return defMatch.url;
 

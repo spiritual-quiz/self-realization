@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Calendar, Clock, MapPin, Sparkles, User, Users, Award } from "lucide-react";
+import { Calendar, Clock, MapPin, Sparkles, User, Users, Award, ArrowRight } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import ClassRegistrationModal, { ClassItem } from "@/components/common/ClassRegistrationModal";
 import { db } from "@/lib/firebase/client";
@@ -320,15 +320,15 @@ export default function LiveClassesPage() {
               </div>
             </div>
 
-            {/* 3. Enroll Action Button with Color Hover Transition */}
+            {/* 3. Enroll Action Button with Color Hover Transition matching Quiz button */}
             <div className="p-5 sm:p-6 pt-0">
               <button
                 type="button"
                 onClick={() => setSelectedClass(item)}
-                className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-emerald-900 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-400 hover:from-amber-600 hover:to-orange-600 hover:text-white hover:border-amber-600 hover:shadow-lg hover:shadow-amber-600/30 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer text-center"
+                className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-sky-900 bg-gradient-to-r from-sky-50 to-blue-50 border-2 border-sky-400 hover:from-emerald-600 hover:to-teal-600 hover:text-white hover:border-emerald-600 hover:shadow-lg hover:shadow-emerald-600/30 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer text-center"
               >
                 <span>Enroll Now</span>
-                <Sparkles className="w-4 h-4 transition-transform group-hover:rotate-12" />
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
             </div>
           </div>

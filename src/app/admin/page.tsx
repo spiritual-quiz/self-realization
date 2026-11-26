@@ -488,28 +488,46 @@ export default function AdminDashboardPage() {
 
       // 3. Fetch Quizzes (Include System Quizzes + User Custom Quizzes)
       const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
-      const quizSnap = await getDocs(query(collection(db, "quizzes"), limit(100)));
-      const quizList: any[] = [];
-      quizSnap.forEach((doc) => {
-        if (!deletedQuizIds.includes(doc.id)) {
-          quizList.push({ id: doc.id, ...doc.data() });
-        }
-      });
-      if (quizList.length > 0) {
-        setCustomQuizzes(quizList);
-        localStorage.setItem("sr_custom_quizzes", JSON.stringify(quizList));
-      } else {
-        const localQ = JSON.parse(localStorage.getItem("sr_custom_quizzes") || "[]");
-        if (localQ && localQ.length > 0) {
-          const filtered = localQ.filter((q: any) => !deletedQuizIds.includes(q.id));
-          setCustomQuizzes(filtered);
-        } else {
-          // Initialize with Default System Quizzes
-          const initialQuizzes = DEFAULT_SYSTEM_QUIZZES.filter(q => !deletedQuizIds.includes(q.id));
-          setCustomQuizzes(initialQuizzes);
-          localStorage.setItem("sr_custom_quizzes", JSON.stringify(initialQuizzes));
-        }
+      let allQuizzes: any[] = [];
+      try {
+        const quizSnap = await getDocs(query(collection(db, "quizzes"), limit(100)));
+        quizSnap.forEach((doc) => {
+          const data = doc.data();
+          const docId = doc.id;
+          if (!deletedQuizIds.includes(docId) && !deletedQuizIds.includes(data.id)) {
+            allQuizzes.push({ ...data, id: docId });
+          }
+        });
+      } catch (qErr) {
+        console.warn("Could not fetch quizzes from Firestore:", qErr);
       }
+
+      // Check localStorage cached custom quizzes
+      const rawCustom = localStorage.getItem("sr_custom_quizzes");
+      if (rawCustom !== null) {
+        try {
+          const parsed = JSON.parse(rawCustom);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((localQ: any) => {
+              if (
+                !deletedQuizIds.includes(localQ.id) &&
+                !allQuizzes.some((q) => q.id === localQ.id)
+              ) {
+                allQuizzes.push(localQ);
+              }
+            });
+          }
+        } catch (e) {}
+      } else if (allQuizzes.length === 0) {
+        // First visit only: seed with defaults minus any deleted
+        const initialQuizzes = DEFAULT_SYSTEM_QUIZZES.filter(q => !deletedQuizIds.includes(q.id));
+        allQuizzes = initialQuizzes;
+      }
+
+      // Strictly purge any deleted quiz ID
+      const sanitizedQuizzes = allQuizzes.filter(q => !deletedQuizIds.includes(q.id));
+      setCustomQuizzes(sanitizedQuizzes);
+      localStorage.setItem("sr_custom_quizzes", JSON.stringify(sanitizedQuizzes));
 
       // 4. Fetch LMS Courses from Firestore with Local fallback
       try {
@@ -557,8 +575,11 @@ export default function AdminDashboardPage() {
       setWrongSounds(audioLib.wrongSounds);
     } catch (error) {
       console.warn("Could not fetch Firestore collections:", error);
+      const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
       const localQ = JSON.parse(localStorage.getItem("sr_custom_quizzes") || "[]");
-      setCustomQuizzes(localQ);
+      if (Array.isArray(localQ)) {
+        setCustomQuizzes(localQ.filter((q: any) => !deletedQuizIds.includes(q.id)));
+      }
     } finally {
       setLoadingData(false);
     }
@@ -1046,18 +1067,29 @@ export default function AdminDashboardPage() {
 
   const handleDeleteQuiz = async (quizId: string) => {
     if (!confirm("Are you sure you want to delete this quiz?")) return;
+    
+    // Find quiz in local state to retrieve any secondary IDs
+    const targetQuiz = customQuizzes.find((q) => q.id === quizId);
+
+    // 1. Delete from Firestore
     try {
       await deleteDoc(doc(db, "quizzes", quizId));
-    } catch (e) {}
-
-    // Record in deleted blacklist for cross-tab sync
-    const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
-    if (!deletedQuizIds.includes(quizId)) {
-      deletedQuizIds.push(quizId);
-      localStorage.setItem("sr_deleted_quizzes", JSON.stringify(deletedQuizIds));
+      if (targetQuiz && (targetQuiz as any)._id && (targetQuiz as any)._id !== quizId) {
+        await deleteDoc(doc(db, "quizzes", (targetQuiz as any)._id));
+      }
+    } catch (e) {
+      console.warn("Firestore delete notice:", e);
     }
 
-    const updated = customQuizzes.filter((q) => q.id !== quizId);
+    // 2. Record in permanent deleted blacklist so refresh never restores it
+    const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
+    if (!deletedQuizIds.includes(quizId)) deletedQuizIds.push(quizId);
+    if (targetQuiz?.id && !deletedQuizIds.includes(targetQuiz.id)) deletedQuizIds.push(targetQuiz.id);
+    if ((targetQuiz as any)?._id && !deletedQuizIds.includes((targetQuiz as any)._id)) deletedQuizIds.push((targetQuiz as any)._id);
+    localStorage.setItem("sr_deleted_quizzes", JSON.stringify(deletedQuizIds));
+
+    // 3. Filter custom quizzes and save
+    const updated = customQuizzes.filter((q) => q.id !== quizId && (q as any)._id !== quizId);
     setCustomQuizzes(updated);
     localStorage.setItem("sr_custom_quizzes", JSON.stringify(updated));
     if (activeManagingQuiz?.id === quizId) {

@@ -372,7 +372,7 @@ export default function CoursesCataloguePage() {
                       hours: c.duration || "4 Hours"
                     });
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-amber-900 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 hover:from-emerald-600 hover:to-teal-600 hover:text-white hover:border-emerald-600 hover:shadow-lg hover:shadow-emerald-600/30 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer text-center"
+                  className="w-full py-2.5 px-4 rounded-xl text-sm font-black text-sky-900 bg-gradient-to-r from-sky-50 to-blue-50 border-2 border-sky-400 hover:from-emerald-600 hover:to-teal-600 hover:text-white hover:border-emerald-600 hover:shadow-lg hover:shadow-emerald-600/30 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer text-center"
                 >
                   <span>Enroll Now</span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
