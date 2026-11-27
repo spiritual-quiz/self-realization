@@ -499,7 +499,27 @@ export default function AdminDashboardPage() {
       try {
         unsubAttendees = onSnapshot(collection(db, "quiz_attendees"), (snapshot) => {
           const liveList: any[] = [];
-          snapshot.forEach((d) => liveList.push({ id: d.id, ...d.data() }));
+          snapshot.forEach((d) => {
+            const data = d.data();
+            const totalM = data.totalMarks || 50;
+            const rawScore = typeof data.score === "number" ? data.score : 0;
+            const safeScore = Math.min(totalM, rawScore);
+            const safePct = totalM > 0 ? Math.min(100, Math.round((safeScore / totalM) * 100)) : 0;
+
+            if (rawScore > totalM) {
+              updateDoc(doc(db, "quiz_attendees", d.id), {
+                score: safeScore,
+                percentage: safePct,
+              }).catch(() => {});
+            }
+
+            liveList.push({
+              id: d.id,
+              ...data,
+              score: safeScore,
+              percentage: safePct,
+            });
+          });
           liveList.sort((a, b) => new Date(b.attendedAt || b.createdAt || 0).getTime() - new Date(a.attendedAt || a.createdAt || 0).getTime());
           setQuizAttendees(liveList);
           if (typeof window !== "undefined") {
@@ -557,7 +577,27 @@ export default function AdminDashboardPage() {
       try {
         const attSnap = await getDocs(query(collection(db, "quiz_attendees"), limit(500)));
         const attList: any[] = [];
-        attSnap.forEach((doc) => attList.push({ id: doc.id, ...doc.data() }));
+        attSnap.forEach((d) => {
+          const data = d.data();
+          const totalM = data.totalMarks || 50;
+          const rawScore = typeof data.score === "number" ? data.score : 0;
+          const safeScore = Math.min(totalM, rawScore);
+          const safePct = totalM > 0 ? Math.min(100, Math.round((safeScore / totalM) * 100)) : 0;
+
+          if (rawScore > totalM) {
+            updateDoc(doc(db, "quiz_attendees", d.id), {
+              score: safeScore,
+              percentage: safePct,
+            }).catch(() => {});
+          }
+
+          attList.push({
+            id: d.id,
+            ...data,
+            score: safeScore,
+            percentage: safePct,
+          });
+        });
         attList.sort((a, b) => new Date(b.attendedAt || b.createdAt || 0).getTime() - new Date(a.attendedAt || a.createdAt || 0).getTime());
         setQuizAttendees(attList);
         if (typeof window !== "undefined") {
@@ -3206,9 +3246,9 @@ export default function AdminDashboardPage() {
                             <div className="flex items-center justify-between md:justify-end gap-4 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100">
                               <div className="text-left md:text-right">
                                 <p className="text-xs font-bold text-purple-900">
-                                  Score: {att.score !== undefined ? att.score : "—"} / {att.totalMarks || 100}
+                                  Score: {att.score !== undefined ? Math.min(att.totalMarks || 50, att.score) : "—"} / {att.totalMarks || 50}
                                   {att.percentage !== undefined && (
-                                    <span className="ml-1 text-[11px] text-purple-700">({att.percentage}%)</span>
+                                    <span className="ml-1 text-[11px] text-purple-700">({Math.min(100, Math.round(Number(att.percentage)))}%)</span>
                                   )}
                                 </p>
                                 <p className="text-[11px] text-gray-500 font-medium flex items-center gap-1 md:justify-end mt-0.5">

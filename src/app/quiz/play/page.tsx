@@ -603,8 +603,9 @@ function QuizPlayInner() {
       setStreak(newStreak);
       if (newStreak > maxStreak) setMaxStreak(newStreak);
 
-      const pointsEarned = currentQ.points + (newStreak > 1 ? (newStreak - 1) * 2 : 0);
-      setScore((s) => s + pointsEarned);
+      const pointsEarned = currentQ.points;
+      const totalPossible = questions.reduce((a, b) => a + b.points, 0) || 100;
+      setScore((s) => Math.min(totalPossible, s + pointsEarned));
       setFloatingScore(pointsEarned);
       playFx("correct");
       // Trigger Lively Dancing Celebration Animation (restarts from frame 0)
@@ -665,10 +666,11 @@ function QuizPlayInner() {
       // Update attendee completion in Firestore
       try {
         const totalM = questions.reduce((a, b) => a + b.points, 0) || 100;
-        const pct = totalM > 0 ? Math.round((score / totalM) * 100) : 0;
+        const finalScore = Math.min(totalM, score);
+        const pct = totalM > 0 ? Math.min(100, Math.round((finalScore / totalM) * 100)) : 0;
         if (attendeeDocId) {
           updateDoc(doc(db, "quiz_attendees", attendeeDocId), {
-            score: score,
+            score: finalScore,
             percentage: pct,
             status: "Completed",
             completedAt: new Date().toISOString(),
@@ -678,7 +680,7 @@ function QuizPlayInner() {
           const existing: any[] = JSON.parse(localStorage.getItem("sr_quiz_attendees") || "[]");
           const updated = existing.map((a) =>
             a.id === attendeeDocId
-              ? { ...a, score, percentage: pct, status: "Completed", completedAt: new Date().toISOString() }
+              ? { ...a, score: finalScore, percentage: pct, status: "Completed", completedAt: new Date().toISOString() }
               : a
           );
           localStorage.setItem("sr_quiz_attendees", JSON.stringify(updated));
@@ -880,14 +882,15 @@ function QuizPlayInner() {
     }
 
     try {
-      const totalMarks = questions.reduce((a, b) => a + b.points, 0);
-      const percentage = (score / totalMarks) * 100;
+      const totalMarks = questions.reduce((a, b) => a + b.points, 0) || 100;
+      const finalScore = Math.min(totalMarks, score);
+      const percentage = Math.min(100, totalMarks > 0 ? (finalScore / totalMarks) * 100 : 0);
 
       const pdfBytes = await generateQuizCertificatePdf({
         certificateId,
         participantName: cleanName,
         quizTitle,
-        score,
+        score: finalScore,
         totalMarks,
         percentage,
         dateStr: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
@@ -1015,8 +1018,9 @@ function QuizPlayInner() {
 
   // SCREEN 3: QUIZ COMPLETE — EXACT CERTIFICATE & REVIEW
   if (isComplete) {
-    const totalMarks = questions.reduce((a, b) => a + b.points, 0);
-    const percentage = totalMarks > 0 ? (score / totalMarks) * 100 : 0;
+    const totalMarks = questions.reduce((a, b) => a + b.points, 0) || 100;
+    const finalScore = Math.min(totalMarks, score);
+    const percentage = totalMarks > 0 ? Math.min(100, (finalScore / totalMarks) * 100) : 0;
     const dateFormatted = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
     const formattedParticipantName = (participantName || "Devotee Seeker")
       .trim()
