@@ -1841,7 +1841,7 @@ function QuizPlayInner() {
             
             {/* PICTURE COLUMN (Responsive Adaptive Image: 100% visible according to aspect ratio) */}
             <div className="lg:col-span-5 flex flex-col justify-center">
-              <div className="relative w-full h-44 sm:h-52 lg:h-[270px] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg bg-stone-900 flex items-center justify-center ring-1 ring-amber-300/40">
+              <div className="relative w-full h-[145px] sm:h-52 lg:h-[265px] rounded-xl sm:rounded-2xl overflow-hidden border-2 border-amber-500/70 shadow-lg bg-stone-900 flex items-center justify-center ring-1 ring-amber-300/40">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={resolveImageUrlByTag(currentQ.imageUrl, "https://www.iskconpune.com/wp-content/uploads/2026/06/1-1024x683.png")}
@@ -1859,12 +1859,12 @@ function QuizPlayInner() {
             {/* QUESTION & 4 OPTIONS COLUMN */}
             <div className="lg:col-span-7 flex flex-col justify-between space-y-2 sm:space-y-3">
               
-              {/* Question Text */}
-              <div className="space-y-0.5 text-center lg:text-left relative z-10">
+              {/* Question Text (Both Hindi & English Equal Font Sizes) */}
+              <div className="space-y-1 text-center lg:text-left relative z-10">
                 <h2 className="text-sm sm:text-lg lg:text-xl font-black text-[#260B02] leading-snug tracking-tight drop-shadow-xs">
                   {currentQ.question.hi}
                 </h2>
-                <p className="text-[11px] sm:text-xs text-[#6B3210] font-semibold italic line-clamp-1">
+                <p className="text-sm sm:text-lg lg:text-xl font-bold text-[#5A2408] leading-snug tracking-tight">
                   {currentQ.question.en}
                 </p>
               </div>
@@ -1905,12 +1905,12 @@ function QuizPlayInner() {
                           {isAnswered && isCorrect ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : optKey}
                         </span>
 
-                        {/* Option Text */}
-                        <div className="leading-snug">
+                        {/* Option Text (Both Hindi & English Equal Font Sizes) */}
+                        <div className="leading-snug space-y-0.5">
                           <p className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-2">
                             {currentQ.options[optKey].hi}
                           </p>
-                          <p className="text-[10px] sm:text-[11px] opacity-75 font-medium italic line-clamp-2">
+                          <p className="text-xs sm:text-sm font-semibold text-gray-800 line-clamp-2">
                             {currentQ.options[optKey].en}
                           </p>
                         </div>
