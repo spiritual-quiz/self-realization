@@ -32,6 +32,19 @@ export function parseCSVToQuestions(csvText: string): { questions: ParsedQuizQue
       return { questions: [], error: "CSV file must contain a header line and at least one question." };
     }
 
+    // Auto-detect delimiter from the header and top lines (Tab, Comma, or Semicolon)
+    const sampleText = lines.slice(0, 3).join("\n");
+    const tabCount = (sampleText.match(/\t/g) || []).length;
+    const commaCount = (sampleText.match(/,/g) || []).length;
+    const semiCount = (sampleText.match(/;/g) || []).length;
+
+    let delimiter = ",";
+    if (tabCount > commaCount && tabCount >= 5) {
+      delimiter = "\t";
+    } else if (semiCount > commaCount && semiCount >= 5) {
+      delimiter = ";";
+    }
+
     const questions: ParsedQuizQuestion[] = [];
 
     const parseLine = (line: string): string[] => {
@@ -41,9 +54,10 @@ export function parseCSVToQuestions(csvText: string): { questions: ParsedQuizQue
 
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
-        if (char === '"' || char === "'") {
+        // Standard CSV quotes are double quotes ("). Single quotes (') can be apostrophes in English prose.
+        if (char === '"') {
           inQuotes = !inQuotes;
-        } else if (char === "," && !inQuotes) {
+        } else if (char === delimiter && !inQuotes) {
           result.push(current.trim().replace(/^["']|["']$/g, ""));
           current = "";
         } else {
@@ -70,7 +84,7 @@ export function parseCSVToQuestions(csvText: string): { questions: ParsedQuizQue
         imageUrl = ""
       ] = cols;
 
-      const answer = rawAnswer.toUpperCase().trim() as 'A' | 'B' | 'C' | 'D';
+      const answer = rawAnswer ? (rawAnswer.toUpperCase().trim() as 'A' | 'B' | 'C' | 'D') : ('' as any);
       if (!['A', 'B', 'C', 'D'].includes(answer)) {
         continue;
       }
@@ -92,7 +106,7 @@ export function parseCSVToQuestions(csvText: string): { questions: ParsedQuizQue
     }
 
     if (questions.length === 0) {
-      return { questions: [], error: "No valid questions could be parsed from the CSV." };
+      return { questions: [], error: "No valid questions could be parsed from the CSV. Please check that each question row has options A-D and correct_answer set to A, B, C, or D." };
     }
 
     return { questions };
