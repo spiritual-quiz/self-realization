@@ -39,7 +39,7 @@ import LotusAccent from "@/components/devotional/LotusAccent";
 import { parseCSVToQuestions, SAMPLE_CSV_CONTENT, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
 import { generateQuizCertificatePdf } from "@/lib/pdf/certificateGenerator";
 import { db } from "@/lib/firebase/client";
-import { doc, getDoc, collection, addDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, updateDoc } from "firebase/firestore";
 import { resolveImageUrlByTag } from "@/lib/imageLibrary";
 
 function QuizPlayInner() {
@@ -50,6 +50,7 @@ function QuizPlayInner() {
   // Participant Entry State
   const [participantName, setParticipantName] = useState("");
   const [participantPhone, setParticipantPhone] = useState("");
+  const [attendeeDocId, setAttendeeDocId] = useState<string | null>(null);
   const [quizStarted, setQuizStarted] = useState(false);
 
   // Quiz Content & Admin Config State
@@ -411,6 +412,36 @@ function QuizPlayInner() {
       whatsapp: participantPhone.trim(),
     }));
 
+    // Save attendee to Firestore collection "quiz_attendees"
+    try {
+      const now = new Date();
+      const attData = {
+        name: cleanName,
+        mobile: participantPhone.trim() || "",
+        phone: participantPhone.trim() || "",
+        quizId: quizIdParam || "vedic-quiz",
+        quizTitle: quizTitle || "Vedic Quiz Challenge",
+        score: 0,
+        totalMarks: questions.reduce((a, b) => a + b.points, 0) || 100,
+        percentage: 0,
+        certificateId: uniqueCertId,
+        status: "Started",
+        attendedAt: now.toISOString(),
+        date: now.toISOString().split("T")[0],
+        createdAt: now.toISOString(),
+      };
+      addDoc(collection(db, "quiz_attendees"), attData).then((docRef) => {
+        setAttendeeDocId(docRef.id);
+        if (typeof window !== "undefined") {
+          const existing: any[] = JSON.parse(localStorage.getItem("sr_quiz_attendees") || "[]");
+          existing.unshift({ id: docRef.id, ...attData });
+          localStorage.setItem("sr_quiz_attendees", JSON.stringify(existing.slice(0, 500)));
+        }
+      }).catch((err) => {
+        console.warn("Could not record attendee to Firestore:", err);
+      });
+    } catch (e) {}
+
     setQuizStarted(true);
     setCurrentIndex(0);
     setScore(0);
@@ -630,6 +661,29 @@ function QuizPlayInner() {
       setTimeLeft(timerDuration);
     } else {
       setIsComplete(true);
+
+      // Update attendee completion in Firestore
+      try {
+        const totalM = questions.reduce((a, b) => a + b.points, 0) || 100;
+        const pct = totalM > 0 ? Math.round((score / totalM) * 100) : 0;
+        if (attendeeDocId) {
+          updateDoc(doc(db, "quiz_attendees", attendeeDocId), {
+            score: score,
+            percentage: pct,
+            status: "Completed",
+            completedAt: new Date().toISOString(),
+          }).catch(() => {});
+        }
+        if (typeof window !== "undefined") {
+          const existing: any[] = JSON.parse(localStorage.getItem("sr_quiz_attendees") || "[]");
+          const updated = existing.map((a) =>
+            a.id === attendeeDocId
+              ? { ...a, score, percentage: pct, status: "Completed", completedAt: new Date().toISOString() }
+              : a
+          );
+          localStorage.setItem("sr_quiz_attendees", JSON.stringify(updated));
+        }
+      } catch (e) {}
 
       // Scroll immediately to the top of the viewport
       if (typeof window !== "undefined") {

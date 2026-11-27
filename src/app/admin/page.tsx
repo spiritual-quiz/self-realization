@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -38,7 +38,12 @@ import {
   Menu,
   Copy,
   Check,
-  Image as ImageIcon
+  Image as ImageIcon,
+  UserCheck,
+  Search,
+  Filter,
+  Phone,
+  CalendarDays
 } from "lucide-react";
 import { 
   AudioTrack, 
@@ -65,7 +70,7 @@ import LotusAccent from "@/components/devotional/LotusAccent";
 import { SAMPLE_CSV_CONTENT, parseCSVToQuestions, ParsedQuizQuestion, downloadSampleCsvTemplate } from "@/lib/csvQuizHelper";
 import { DEFAULT_SYSTEM_QUIZZES, SystemQuiz } from "@/lib/defaultQuizzes";
 import { db } from "@/lib/firebase/client";
-import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, query, limit } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, query, limit, updateDoc, onSnapshot } from "firebase/firestore";
 import { broadcastCatalogChange, markCourseDeleted, markQuizDeleted, getDeletedCourseIds, getDeletedQuizIds } from "@/lib/catalogSync";
 
 // Zero hardcoded courses or classes: 100% database-driven from Firestore
@@ -79,12 +84,12 @@ export default function AdminDashboardPage() {
   
   // Left Sidebar Tabs strictly matching user requests (Persisted across page refreshes)
   const [activeTab, setActiveTab] = useState<
-    "overview" | "courses" | "ongoing-courses" | "quizzes" | "media-library" | "classes" | "inquiries"
+    "overview" | "courses" | "ongoing-courses" | "quizzes" | "media-library" | "classes" | "inquiries" | "quiz-attendees"
   >(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const tabFromUrl = urlParams.get("tab");
-      const validTabs = ["overview", "courses", "ongoing-courses", "quizzes", "media-library", "classes", "inquiries"];
+      const validTabs = ["overview", "courses", "ongoing-courses", "quizzes", "media-library", "classes", "inquiries", "quiz-attendees"];
       if (tabFromUrl && validTabs.includes(tabFromUrl)) return tabFromUrl as any;
       const savedTab = localStorage.getItem("sr_admin_active_tab");
       if (savedTab && validTabs.includes(savedTab)) return savedTab as any;
@@ -94,7 +99,7 @@ export default function AdminDashboardPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Tab Selection Handler (Saves active tab to localStorage, syncs URL, and scrolls to top of page)
-  const handleSelectTab = (tab: "overview" | "courses" | "ongoing-courses" | "quizzes" | "media-library" | "classes" | "inquiries") => {
+  const handleSelectTab = (tab: "overview" | "courses" | "ongoing-courses" | "quizzes" | "media-library" | "classes" | "inquiries" | "quiz-attendees") => {
     setActiveTab(tab);
     setMobileSidebarOpen(false);
     if (typeof window !== "undefined") {
@@ -151,6 +156,138 @@ export default function AdminDashboardPage() {
     return [];
   });
   const [inquiries, setInquiries] = useState<any[]>([]);
+
+  // Quiz Attendees State (Loaded from Firestore & local cache)
+  const [quizAttendees, setQuizAttendees] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const local = localStorage.getItem("sr_quiz_attendees");
+        if (local) return JSON.parse(local);
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [attendeeSearchQuery, setAttendeeSearchQuery] = useState("");
+  const [attendeePeriodFilter, setAttendeePeriodFilter] = useState<"all" | "today" | "week" | "month" | "custom">("all");
+  const [attendeeQuizFilter, setAttendeeQuizFilter] = useState<string>("all");
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [customDateFilter, setCustomDateFilter] = useState<string>("");
+
+  // Attendee Edit Modal State
+  const [editingAttendee, setEditingAttendee] = useState<any | null>(null);
+  const [editAttendeeName, setEditAttendeeName] = useState("");
+  const [editAttendeeMobile, setEditAttendeeMobile] = useState("");
+  const [editAttendeeQuizTitle, setEditAttendeeQuizTitle] = useState("");
+  const [editAttendeeScore, setEditAttendeeScore] = useState<number>(0);
+
+  // Attendees Analytics & Metrics: Total, Daily (Today), Weekly (Mon-Sun), Monthly
+  const attendeeMetrics = useMemo(() => {
+    const now = new Date();
+    const todayDateStr = now.toISOString().split("T")[0];
+
+    // Week: Monday to Sunday
+    const dayOfWeek = now.getDay(); // 0 is Sun, 1 is Mon...
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    // Month: Selected or current month
+    const [selYear, selMonth] = selectedMonth.split("-").map(Number);
+    const monthStart = new Date(selYear, (selMonth || 1) - 1, 1, 0, 0, 0, 0);
+    const monthEnd = new Date(selYear, selMonth || 1, 0, 23, 59, 59, 999);
+
+    let todayCount = 0;
+    let weekCount = 0;
+    let monthCount = 0;
+
+    quizAttendees.forEach((att) => {
+      const attDate = new Date(att.attendedAt || att.createdAt || att.date || 0);
+      const dateStr = att.date || (att.attendedAt ? att.attendedAt.split("T")[0] : "");
+
+      // Today check
+      if (dateStr === todayDateStr || attDate.toDateString() === now.toDateString()) {
+        todayCount++;
+      }
+
+      // Weekly check (Monday to Sunday)
+      if (attDate >= monday && attDate <= sunday) {
+        weekCount++;
+      }
+
+      // Monthly check (Whole selected month, e.g. December or November)
+      if (attDate >= monthStart && attDate <= monthEnd) {
+        monthCount++;
+      }
+    });
+
+    return {
+      total: quizAttendees.length,
+      today: todayCount,
+      week: weekCount,
+      month: monthCount,
+      mondayStr: monday.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+      sundayStr: sunday.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+      monthName: monthStart.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+    };
+  }, [quizAttendees, selectedMonth]);
+
+  // Filtered Attendees for the view
+  const filteredAttendees = useMemo(() => {
+    return quizAttendees.filter((att) => {
+      // Search filter
+      if (attendeeSearchQuery.trim()) {
+        const q = attendeeSearchQuery.toLowerCase().trim();
+        const matchName = (att.name || "").toLowerCase().includes(q);
+        const matchMobile = (att.mobile || att.phone || "").toLowerCase().includes(q);
+        const matchQuiz = (att.quizTitle || "").toLowerCase().includes(q);
+        if (!matchName && !matchMobile && !matchQuiz) return false;
+      }
+
+      // Quiz filter
+      if (attendeeQuizFilter !== "all") {
+        if (att.quizId !== attendeeQuizFilter && att.quizTitle !== attendeeQuizFilter) {
+          return false;
+        }
+      }
+
+      // Period filter
+      const now = new Date();
+      const attDate = new Date(att.attendedAt || att.createdAt || att.date || 0);
+      const dateStr = att.date || (att.attendedAt ? att.attendedAt.split("T")[0] : "");
+
+      if (attendeePeriodFilter === "today") {
+        const todayStr = now.toISOString().split("T")[0];
+        return dateStr === todayStr || attDate.toDateString() === now.toDateString();
+      } else if (attendeePeriodFilter === "week") {
+        const dayOfWeek = now.getDay();
+        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diffToMonday);
+        monday.setHours(0, 0, 0, 0);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        return attDate >= monday && attDate <= sunday;
+      } else if (attendeePeriodFilter === "month") {
+        const [selYear, selMonth] = selectedMonth.split("-").map(Number);
+        const monthStart = new Date(selYear, (selMonth || 1) - 1, 1, 0, 0, 0, 0);
+        const monthEnd = new Date(selYear, selMonth || 1, 0, 23, 59, 59, 999);
+        return attDate >= monthStart && attDate <= monthEnd;
+      } else if (attendeePeriodFilter === "custom" && customDateFilter) {
+        return dateStr === customDateFilter;
+      }
+
+      return true;
+    });
+  }, [quizAttendees, attendeeSearchQuery, attendeeQuizFilter, attendeePeriodFilter, selectedMonth, customDateFilter]);
   const [customQuizzes, setCustomQuizzes] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -356,6 +493,26 @@ export default function AdminDashboardPage() {
       } catch (e) {}
       setIsAuthenticated(true);
       fetchDashboardData();
+
+      // Real-time listener for quiz attendees
+      let unsubAttendees: (() => void) | null = null;
+      try {
+        unsubAttendees = onSnapshot(collection(db, "quiz_attendees"), (snapshot) => {
+          const liveList: any[] = [];
+          snapshot.forEach((d) => liveList.push({ id: d.id, ...d.data() }));
+          liveList.sort((a, b) => new Date(b.attendedAt || b.createdAt || 0).getTime() - new Date(a.attendedAt || a.createdAt || 0).getTime());
+          setQuizAttendees(liveList);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("sr_quiz_attendees", JSON.stringify(liveList));
+          }
+        }, (err) => {
+          console.warn("quiz_attendees onSnapshot notice:", err);
+        });
+      } catch (e) {}
+
+      return () => {
+        if (unsubAttendees) unsubAttendees();
+      };
     }
   }, [router]);
 
@@ -395,6 +552,20 @@ export default function AdminDashboardPage() {
       const inqList: any[] = [];
       inqSnap.forEach((doc) => inqList.push({ id: doc.id, ...doc.data() }));
       setInquiries(inqList);
+
+      // 2b. Fetch Quiz Attendees
+      try {
+        const attSnap = await getDocs(query(collection(db, "quiz_attendees"), limit(500)));
+        const attList: any[] = [];
+        attSnap.forEach((doc) => attList.push({ id: doc.id, ...doc.data() }));
+        attList.sort((a, b) => new Date(b.attendedAt || b.createdAt || 0).getTime() - new Date(a.attendedAt || a.createdAt || 0).getTime());
+        setQuizAttendees(attList);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("sr_quiz_attendees", JSON.stringify(attList));
+        }
+      } catch (attErr) {
+        console.warn("Could not fetch quiz attendees from Firestore:", attErr);
+      }
 
       // 3. Fetch Quizzes (Include System Quizzes + User Custom Quizzes)
       const deletedQuizIds: string[] = JSON.parse(localStorage.getItem("sr_deleted_quizzes") || "[]");
@@ -1174,6 +1345,63 @@ export default function AdminDashboardPage() {
     setInquiries((prev) => prev.filter((i) => i.id !== inqId));
   };
 
+  // --- QUIZ ATTENDEES EDIT & DELETE HANDLERS ---
+  const handleOpenEditAttendee = (att: any) => {
+    setEditingAttendee(att);
+    setEditAttendeeName(att.name || "");
+    setEditAttendeeMobile(att.mobile || att.phone || "");
+    setEditAttendeeQuizTitle(att.quizTitle || "");
+    setEditAttendeeScore(att.score || 0);
+  };
+
+  const handleSaveEditAttendee = async () => {
+    if (!editingAttendee) return;
+    const updated = {
+      ...editingAttendee,
+      name: editAttendeeName.trim(),
+      mobile: editAttendeeMobile.trim(),
+      phone: editAttendeeMobile.trim(),
+      quizTitle: editAttendeeQuizTitle.trim(),
+      score: Number(editAttendeeScore),
+    };
+
+    try {
+      await updateDoc(doc(db, "quiz_attendees", editingAttendee.id), {
+        name: updated.name,
+        mobile: updated.mobile,
+        phone: updated.phone,
+        quizTitle: updated.quizTitle,
+        score: updated.score,
+      });
+    } catch (e) {
+      console.warn("Error updating attendee in Firestore:", e);
+    }
+
+    setQuizAttendees((prev) => prev.map((a) => (a.id === editingAttendee.id ? updated : a)));
+    if (typeof window !== "undefined") {
+      const existing: any[] = JSON.parse(localStorage.getItem("sr_quiz_attendees") || "[]");
+      const updatedList = existing.map((a) => (a.id === editingAttendee.id ? updated : a));
+      localStorage.setItem("sr_quiz_attendees", JSON.stringify(updatedList));
+    }
+    setEditingAttendee(null);
+  };
+
+  const handleDeleteAttendee = async (attId: string) => {
+    if (!confirm("Are you sure you want to delete this quiz attendee? This cannot be undone.")) return;
+    try {
+      await deleteDoc(doc(db, "quiz_attendees", attId));
+    } catch (e) {
+      console.warn("Error deleting attendee from Firestore:", e);
+    }
+
+    setQuizAttendees((prev) => prev.filter((a) => a.id !== attId));
+    if (typeof window !== "undefined") {
+      const existing: any[] = JSON.parse(localStorage.getItem("sr_quiz_attendees") || "[]");
+      const updatedList = existing.filter((a) => a.id !== attId);
+      localStorage.setItem("sr_quiz_attendees", JSON.stringify(updatedList));
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#F6EFE3] flex items-center justify-center p-4">
@@ -1194,6 +1422,7 @@ export default function AdminDashboardPage() {
     { id: "media-library", label: "🎵 Media & Asset Library", icon: Music, count: bgTracks.length + correctSounds.length + wrongSounds.length + imageAssets.length },
     { id: "classes", label: "Seeker Registrations", icon: Calendar, count: registrations.length },
     { id: "inquiries", label: "Contact Enquiries", icon: Mail, count: inquiries.length },
+    { id: "quiz-attendees", label: "Quiz Attended", icon: UserCheck, count: quizAttendees.length },
   ] as const;
 
   return (
@@ -1313,6 +1542,7 @@ export default function AdminDashboardPage() {
                 {activeTab === "media-library" && "🎵 Central Media & Devotional Asset Library"}
                 {activeTab === "classes" && "📋 Seeker Registrations"}
                 {activeTab === "inquiries" && "✉️ Contact Enquiries"}
+                {activeTab === "quiz-attendees" && "🎯 Quiz Attendees & Analytics"}
               </h1>
               <p className="text-xs text-amber-800 font-medium mt-0.5">
                 SelfRealization Central Administrative Console
@@ -1335,7 +1565,7 @@ export default function AdminDashboardPage() {
               ========================================================================= */}
           {activeTab === "overview" && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 
                 {/* 1. Total Course Details */}
                 <div 
@@ -1398,6 +1628,23 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
                     <Mail className="w-6 h-6" />
+                  </div>
+                </div>
+
+                {/* 5. Quiz Attended Details */}
+                <div 
+                  onClick={() => handleSelectTab("quiz-attendees")}
+                  className="bg-white p-5 rounded-3xl border border-amber-200/90 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
+                >
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Quiz Attended</p>
+                    <p className="text-3xl font-black text-purple-600 mt-1">{quizAttendees.length}</p>
+                    <p className="text-[11px] text-purple-800 font-semibold mt-1">
+                      {attendeeMetrics.today} today • {attendeeMetrics.week} this week
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                    <UserCheck className="w-6 h-6" />
                   </div>
                 </div>
 
@@ -2667,8 +2914,429 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
+          {/* =========================================================================
+              TAB 7: QUIZ ATTENDED (Attendees Analytics & Participation)
+              ========================================================================= */}
+          {activeTab === "quiz-attendees" && (
+            <div className="space-y-6">
+              {/* Header Box */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-200 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+                  <div>
+                    <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                      <UserCheck className="w-6 h-6 text-purple-600" />
+                      <span>Quiz Attendees & Participation Analytics</span>
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Track who attended quizzes, daily/weekly/monthly stats, and manage attendee records.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-purple-800 bg-purple-100 px-3 py-1.5 rounded-full border border-purple-200">
+                      Total Attendees: {quizAttendees.length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4 Cards: Total, Daily (Today), Weekly (Mon - Sun), Monthly (Whole Month) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Card 1: Total */}
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200/90 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-800">Total Attended</span>
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                        <Users className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <p className="text-3xl font-black text-amber-950 mt-2">{attendeeMetrics.total}</p>
+                    <p className="text-[11px] text-amber-700 font-medium mt-1">All-time Quiz Players</p>
+                  </div>
+
+                  {/* Card 2: Daily (Today) */}
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-200/90 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-blue-800">Daily Attended</span>
+                      <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <p className="text-3xl font-black text-blue-950 mt-2">{attendeeMetrics.today}</p>
+                    <p className="text-[11px] text-blue-700 font-medium mt-1">Today ({new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short" })})</p>
+                  </div>
+
+                  {/* Card 3: Weekly (Monday to Sunday) */}
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200/90 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">Weekly Attended</span>
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <CalendarDays className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <p className="text-3xl font-black text-emerald-950 mt-2">{attendeeMetrics.week}</p>
+                    <p className="text-[11px] text-emerald-700 font-medium mt-1">
+                      Mon – Sun ({attendeeMetrics.mondayStr} – {attendeeMetrics.sundayStr})
+                    </p>
+                  </div>
+
+                  {/* Card 4: Monthly (Whole Month with Month Selector) */}
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50/50 border border-purple-200/90 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-purple-800">Monthly Attended</span>
+                      <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                        <Award className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="flex items-baseline justify-between mt-2">
+                      <p className="text-3xl font-black text-purple-950">{attendeeMetrics.month}</p>
+                      <select
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="text-[11px] font-bold px-2 py-1 rounded-lg border border-purple-200 bg-white text-purple-900 outline-none cursor-pointer"
+                        title="Choose month"
+                      >
+                        {Array.from({ length: 12 }).map((_, idx) => {
+                          const d = new Date();
+                          d.setMonth(d.getMonth() - idx);
+                          const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                          const label = d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+                          return (
+                            <option key={val} value={val}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    <p className="text-[11px] text-purple-700 font-medium mt-1">
+                      Whole {attendeeMetrics.monthName}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="pt-2 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-stone-50/80 p-4 rounded-2xl border border-stone-200">
+                  {/* Search Box */}
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={attendeeSearchQuery}
+                      onChange={(e) => setAttendeeSearchQuery(e.target.value)}
+                      placeholder="Search attendee by name, mobile number, or quiz..."
+                      className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-white rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-400 outline-none"
+                    />
+                    {attendeeSearchQuery && (
+                      <button
+                        onClick={() => setAttendeeSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter by Period Tabs */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setAttendeePeriodFilter("all")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        attendeePeriodFilter === "all"
+                          ? "bg-purple-600 text-white shadow-xs"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAttendeePeriodFilter("today")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        attendeePeriodFilter === "today"
+                          ? "bg-blue-600 text-white shadow-xs"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAttendeePeriodFilter("week")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        attendeePeriodFilter === "week"
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      This Week (Mon-Sun)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAttendeePeriodFilter("month")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        attendeePeriodFilter === "month"
+                          ? "bg-purple-700 text-white shadow-xs"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      This Month
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAttendeePeriodFilter("custom")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        attendeePeriodFilter === "custom"
+                          ? "bg-amber-600 text-white shadow-xs"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      Custom Date
+                    </button>
+
+                    {attendeePeriodFilter === "custom" && (
+                      <input
+                        type="date"
+                        value={customDateFilter}
+                        onChange={(e) => setCustomDateFilter(e.target.value)}
+                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded-xl outline-none"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Attendees Details List (Below one after another) */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-gray-600 px-1">
+                    <span>Showing {filteredAttendees.length} of {quizAttendees.length} Attendees</span>
+                    {(attendeeSearchQuery || attendeePeriodFilter !== "all" || attendeeQuizFilter !== "all" || customDateFilter) && (
+                      <button
+                        onClick={() => {
+                          setAttendeeSearchQuery("");
+                          setAttendeePeriodFilter("all");
+                          setAttendeeQuizFilter("all");
+                          setCustomDateFilter("");
+                        }}
+                        className="text-purple-600 hover:text-purple-800 cursor-pointer"
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
+                  </div>
+
+                  {filteredAttendees.length === 0 ? (
+                    <div className="text-center py-12 px-4 bg-amber-50/40 rounded-2xl border border-amber-200/60">
+                      <UserCheck className="w-10 h-10 text-amber-500 mx-auto mb-2 opacity-60" />
+                      <p className="text-sm font-bold text-gray-800">No Quiz Attendees Found</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {quizAttendees.length === 0
+                          ? "When seekers enter their name and mobile number to attend a quiz, their records and statistics will appear here automatically."
+                          : "No attendees match your current search query or active filter."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {filteredAttendees.map((att, idx) => {
+                        const dateFormatted = att.attendedAt
+                          ? new Date(att.attendedAt).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : att.date || "Recent";
+
+                        const cleanPhone = (att.mobile || att.phone || "").replace(/\D/g, "");
+
+                        return (
+                          <div
+                            key={att.id || idx}
+                            className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 hover:border-amber-300 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                          >
+                            {/* Left: Avatar, Name, Mobile, Quiz */}
+                            <div className="flex items-start gap-3.5">
+                              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-amber-500 text-white font-black text-base flex items-center justify-center shrink-0 shadow-xs">
+                                {(att.name || "A").charAt(0).toUpperCase()}
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-gray-900 text-sm sm:text-base">
+                                    {att.name || "Unnamed Attendee"}
+                                  </span>
+                                  {att.status === "Completed" ? (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                      Completed
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                      Attended / Started
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-3 text-xs text-gray-600 flex-wrap">
+                                  {att.mobile || att.phone ? (
+                                    <span className="flex items-center gap-1 font-semibold text-gray-800">
+                                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                                      {att.mobile || att.phone}
+                                      {cleanPhone && (
+                                        <a
+                                          href={`https://wa.me/${cleanPhone}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 hover:bg-emerald-100"
+                                        >
+                                          WhatsApp
+                                        </a>
+                                      )}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 italic">No mobile number provided</span>
+                                  )}
+
+                                  <span className="text-gray-300">•</span>
+                                  <span className="text-gray-600">
+                                    Quiz: <strong className="text-gray-800">{att.quizTitle || "Vedic Quiz"}</strong>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right: Score, Date, Actions (Edit & Delete) */}
+                            <div className="flex items-center justify-between md:justify-end gap-4 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100">
+                              <div className="text-left md:text-right">
+                                <p className="text-xs font-bold text-purple-900">
+                                  Score: {att.score !== undefined ? att.score : "—"} / {att.totalMarks || 100}
+                                  {att.percentage !== undefined && (
+                                    <span className="ml-1 text-[11px] text-purple-700">({att.percentage}%)</span>
+                                  )}
+                                </p>
+                                <p className="text-[11px] text-gray-500 font-medium flex items-center gap-1 md:justify-end mt-0.5">
+                                  <Clock className="w-3 h-3 text-gray-400" />
+                                  {dateFormatted}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
+                                {/* Edit Option */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditAttendee(att)}
+                                  className="p-2 rounded-xl text-amber-700 hover:bg-amber-100 hover:text-amber-900 border border-amber-200 cursor-pointer transition-colors"
+                                  title="Edit Attendee Details"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+
+                                {/* Delete Option */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAttendee(att.id)}
+                                  className="p-2 rounded-xl text-rose-600 hover:bg-rose-100 hover:text-rose-800 border border-rose-200 cursor-pointer transition-colors"
+                                  title="Delete Attendee Record"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
+
+      {/* =========================================================================
+          MODAL: EDIT QUIZ ATTENDEE (Edit Name, Mobile, Quiz, Score)
+          ========================================================================= */}
+      {editingAttendee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border-2 border-purple-400 shadow-2xl relative space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <Edit className="w-5 h-5 text-purple-600" />
+                <span>Edit Attendee Details</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingAttendee(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs sm:text-sm">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Attendee Name *</label>
+                <input
+                  type="text"
+                  value={editAttendeeName}
+                  onChange={(e) => setEditAttendeeName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-400 outline-none font-semibold text-gray-900"
+                  placeholder="Full Name"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Mobile / WhatsApp Number *</label>
+                <input
+                  type="text"
+                  value={editAttendeeMobile}
+                  onChange={(e) => setEditAttendeeMobile(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-400 outline-none font-semibold text-gray-900"
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Quiz Title</label>
+                <input
+                  type="text"
+                  value={editAttendeeQuizTitle}
+                  onChange={(e) => setEditAttendeeQuizTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-400 outline-none text-gray-900"
+                  placeholder="Quiz Title"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Score</label>
+                <input
+                  type="number"
+                  value={editAttendeeScore}
+                  onChange={(e) => setEditAttendeeScore(Number(e.target.value))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-400 outline-none text-gray-900"
+                  placeholder="Score"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setEditingAttendee(null)}
+                className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEditAttendee}
+                className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-xs cursor-pointer"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           MODAL 0: QUIZ QUESTIONS MANAGER (View, Add, Edit, Delete Question by Question)
