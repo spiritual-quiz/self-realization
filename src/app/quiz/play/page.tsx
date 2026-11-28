@@ -1797,13 +1797,13 @@ function QuizPlayInner() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/images/quiz/dance.gif"
-                  alt="Party Celebration Emoticon Animation"
+                  alt="Star-Struck Victory Emoticon Animation"
                   className="w-full h-full object-contain filter drop-shadow-xl"
                 />
               </div>
               <div className="mt-1.5 px-4 py-1.5 rounded-full bg-emerald-600 text-white font-black text-xs sm:text-sm border-2 border-emerald-300 shadow-xl flex items-center gap-1.5 animate-pulse">
                 <span>+{floatingScore || 10} Points!</span>
-                <span>🎉 🌸</span>
+                <span>⭐ 🌸</span>
               </div>
             </div>
           )}
@@ -1815,13 +1815,13 @@ function QuizPlayInner() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/images/quiz/cry.gif"
-                  alt="Crying Sadness Emoticon Animation"
+                  alt="Gentle Tear Weeping Emoticon Animation"
                   className="w-full h-full object-contain filter drop-shadow-xl"
                 />
               </div>
               <div className="mt-1.5 px-3.5 py-1 rounded-full bg-rose-600 text-white font-black text-xs sm:text-sm border-2 border-rose-300 shadow-xl flex items-center gap-1.5">
                 <span>गलत उत्तर / Incorrect • Keep Going!</span>
-                <span>😭</span>
+                <span>😢</span>
               </div>
             </div>
           )}

@@ -162,7 +162,15 @@ export default function AdminDashboardPage() {
     if (typeof window !== "undefined") {
       try {
         const local = localStorage.getItem("sr_quiz_attendees");
-        if (local) return JSON.parse(local);
+        if (local) {
+          const parsed = JSON.parse(local);
+          return (Array.isArray(parsed) ? parsed : []).map((item: any) => {
+            const tm = item.totalMarks || 50;
+            const sc = typeof item.score === "number" ? Math.min(tm, item.score) : 0;
+            const pct = tm > 0 ? Math.min(100, Math.round((sc / tm) * 100)) : 0;
+            return { ...item, score: sc, percentage: pct };
+          });
+        }
       } catch (e) {}
     }
     return [];
@@ -1396,13 +1404,18 @@ export default function AdminDashboardPage() {
 
   const handleSaveEditAttendee = async () => {
     if (!editingAttendee) return;
+    const totalM = editingAttendee.totalMarks || 50;
+    const safeScore = Math.min(totalM, Math.max(0, Number(editAttendeeScore)));
+    const safePct = totalM > 0 ? Math.min(100, Math.round((safeScore / totalM) * 100)) : 0;
+
     const updated = {
       ...editingAttendee,
       name: editAttendeeName.trim(),
       mobile: editAttendeeMobile.trim(),
       phone: editAttendeeMobile.trim(),
       quizTitle: editAttendeeQuizTitle.trim(),
-      score: Number(editAttendeeScore),
+      score: safeScore,
+      percentage: safePct,
     };
 
     try {
@@ -1412,6 +1425,7 @@ export default function AdminDashboardPage() {
         phone: updated.phone,
         quizTitle: updated.quizTitle,
         score: updated.score,
+        percentage: updated.percentage,
       });
     } catch (e) {
       console.warn("Error updating attendee in Firestore:", e);
