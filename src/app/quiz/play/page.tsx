@@ -33,7 +33,8 @@ import {
   Trophy,
   AlertCircle,
   Volume2,
-  VolumeX
+  VolumeX,
+  Palette
 } from "lucide-react";
 import LotusAccent from "@/components/devotional/LotusAccent";
 import { parseCSVToQuestions, SAMPLE_CSV_CONTENT, ParsedQuizQuestion } from "@/lib/csvQuizHelper";
@@ -41,6 +42,231 @@ import { generateQuizCertificatePdf } from "@/lib/pdf/certificateGenerator";
 import { db } from "@/lib/firebase/client";
 import { doc, getDoc, collection, addDoc, updateDoc } from "firebase/firestore";
 import { resolveImageUrlByTag } from "@/lib/imageLibrary";
+
+// 12 Dynamic, Perfectly Harmonious Theme Combinations (Approach B: Fresh Dynamic Surprise)
+interface QuizThemeCombination {
+  id: string;
+  name: string;
+  outerBg: string;
+  outerRadial: string;
+  hudBg: string;
+  hudBorder: string;
+  hudText: string;
+  progressBarGradient: string;
+  cardBg: string;
+  cardBorder: string;
+  cardShadow: string;
+  cardRing: string;
+  qHindiText: string;
+  qEngText: string;
+}
+
+const QUIZ_THEMES: QuizThemeCombination[] = [
+  // 1. Royal Cosmic Sapphire Blue (Quiz Master Match)
+  {
+    id: "royal-sapphire",
+    name: "Royal Cosmic Sapphire",
+    outerBg: "bg-[#020617]",
+    outerRadial: "from-[#1E3A8A] via-[#0F172A] to-[#020617]",
+    hudBg: "from-[#172554] via-[#1E3A8A] to-[#172554]",
+    hudBorder: "border-blue-400/80",
+    hudText: "text-amber-200",
+    progressBarGradient: "from-sky-400 via-indigo-400 to-amber-400",
+    cardBg: "bg-white",
+    cardBorder: "border-amber-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(30,58,138,0.35)]",
+    cardRing: "ring-2 ring-amber-300/50",
+    qHindiText: "text-[#111827]",
+    qEngText: "text-[#374151]",
+  },
+  // 2. Temple Sunset Saffron & Aarti Gold
+  {
+    id: "sunset-saffron",
+    name: "Temple Sunset Saffron",
+    outerBg: "bg-[#240802]",
+    outerRadial: "from-[#9A3412] via-[#5A1A05] to-[#240802]",
+    hudBg: "from-[#431407] via-[#7C2D12] to-[#431407]",
+    hudBorder: "border-orange-400/80",
+    hudText: "text-orange-200",
+    progressBarGradient: "from-orange-400 via-amber-400 to-yellow-300",
+    cardBg: "bg-[#FFF7ED]",
+    cardBorder: "border-orange-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(154,52,18,0.35)]",
+    cardRing: "ring-2 ring-orange-300/50",
+    qHindiText: "text-[#431407]",
+    qEngText: "text-[#7C2D12]",
+  },
+  // 3. Vedic Sandalwood & Golden Ivory (All-Light Theme)
+  {
+    id: "sandalwood-light",
+    name: "Vedic Sandalwood Light",
+    outerBg: "bg-[#FDF4DC]",
+    outerRadial: "from-[#FFFDF5] via-[#FDF4DC] to-[#F5E3B5]",
+    hudBg: "from-[#B45309] via-[#D97706] to-[#B45309]",
+    hudBorder: "border-amber-400/90",
+    hudText: "text-amber-100",
+    progressBarGradient: "from-amber-400 via-orange-400 to-emerald-500",
+    cardBg: "bg-white",
+    cardBorder: "border-amber-500/90",
+    cardShadow: "shadow-[0_20px_50px_rgba(180,83,9,0.2)]",
+    cardRing: "ring-2 ring-amber-300/50",
+    qHindiText: "text-[#1F2937]",
+    qEngText: "text-[#4B5563]",
+  },
+  // 4. Royal Amethyst & Cosmic Violet Night
+  {
+    id: "amethyst-night",
+    name: "Royal Amethyst Night",
+    outerBg: "bg-[#0D031D]",
+    outerRadial: "from-[#4C1D95] via-[#240B4D] to-[#0D031D]",
+    hudBg: "from-[#2E1065] via-[#3B0764] to-[#2E1065]",
+    hudBorder: "border-purple-400/80",
+    hudText: "text-amber-200",
+    progressBarGradient: "from-fuchsia-400 via-pink-400 to-amber-300",
+    cardBg: "bg-white",
+    cardBorder: "border-amber-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(76,29,149,0.35)]",
+    cardRing: "ring-2 ring-amber-300/50",
+    qHindiText: "text-[#111827]",
+    qEngText: "text-[#374151]",
+  },
+  // 5. Vrindavan Forest & Sacred Tulasi Mint
+  {
+    id: "vrindavan-mint",
+    name: "Vrindavan Forest Mint",
+    outerBg: "bg-[#021B14]",
+    outerRadial: "from-[#064E3B] via-[#06392C] to-[#021B14]",
+    hudBg: "from-[#064E3B] via-[#047857] to-[#064E3B]",
+    hudBorder: "border-emerald-400/80",
+    hudText: "text-emerald-100",
+    progressBarGradient: "from-emerald-400 via-teal-300 to-amber-300",
+    cardBg: "bg-[#F0FDF4]",
+    cardBorder: "border-emerald-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(6,78,59,0.3)]",
+    cardRing: "ring-2 ring-emerald-300/50",
+    qHindiText: "text-[#064E3B]",
+    qEngText: "text-[#047857]",
+  },
+  // 6. Celestial Ocean Azure & Starlight
+  {
+    id: "ocean-azure",
+    name: "Celestial Ocean Azure",
+    outerBg: "bg-[#082F49]",
+    outerRadial: "from-[#0369A1] via-[#0C4A6E] to-[#082F49]",
+    hudBg: "from-[#0C4A6E] via-[#0284C7] to-[#0C4A6E]",
+    hudBorder: "border-cyan-400/80",
+    hudText: "text-cyan-100",
+    progressBarGradient: "from-cyan-400 via-sky-300 to-amber-300",
+    cardBg: "bg-[#F8FAFC]",
+    cardBorder: "border-cyan-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(3,105,161,0.3)]",
+    cardRing: "ring-2 ring-cyan-300/50",
+    qHindiText: "text-[#0C4A6E]",
+    qEngText: "text-[#0369A1]",
+  },
+  // 7. Sacred Ruby Crimson & Gold Mandir
+  {
+    id: "ruby-crimson",
+    name: "Sacred Ruby Crimson",
+    outerBg: "bg-[#1E0108]",
+    outerRadial: "from-[#881337] via-[#4C0519] to-[#1E0108]",
+    hudBg: "from-[#4C0519] via-[#9F1239] to-[#4C0519]",
+    hudBorder: "border-rose-400/80",
+    hudText: "text-amber-200",
+    progressBarGradient: "from-rose-400 via-amber-400 to-yellow-300",
+    cardBg: "bg-[#FFFDF8]",
+    cardBorder: "border-amber-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(136,19,55,0.35)]",
+    cardRing: "ring-2 ring-amber-300/50",
+    qHindiText: "text-[#111827]",
+    qEngText: "text-[#374151]",
+  },
+  // 8. Midnight Slate & Golden Sparkle
+  {
+    id: "midnight-gold",
+    name: "Midnight Slate Gold",
+    outerBg: "bg-[#020617]",
+    outerRadial: "from-[#1E293B] via-[#0F172A] to-[#020617]",
+    hudBg: "from-[#0F172A] via-[#1E293B] to-[#0F172A]",
+    hudBorder: "border-amber-400/80",
+    hudText: "text-amber-200",
+    progressBarGradient: "from-amber-400 via-yellow-400 to-emerald-400",
+    cardBg: "bg-white",
+    cardBorder: "border-amber-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(245,158,11,0.25)]",
+    cardRing: "ring-2 ring-amber-300/50",
+    qHindiText: "text-[#111827]",
+    qEngText: "text-[#374151]",
+  },
+  // 9. Sacred Lotus Blossom & Lilac Dawn
+  {
+    id: "lotus-blossom",
+    name: "Lotus Blossom Pastel",
+    outerBg: "bg-[#1E0120]",
+    outerRadial: "from-[#701A75] via-[#4A044E] to-[#1E0120]",
+    hudBg: "from-[#4A044E] via-[#86198F] to-[#4A044E]",
+    hudBorder: "border-pink-400/80",
+    hudText: "text-pink-100",
+    progressBarGradient: "from-pink-400 via-rose-300 to-amber-300",
+    cardBg: "bg-[#FAF5FF]",
+    cardBorder: "border-pink-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(112,26,117,0.3)]",
+    cardRing: "ring-2 ring-pink-300/50",
+    qHindiText: "text-[#4A044E]",
+    qEngText: "text-[#701A75]",
+  },
+  // 10. Warm Saffron Sunrise & Marigold Gold
+  {
+    id: "saffron-marigold",
+    name: "Saffron Sunrise Marigold",
+    outerBg: "bg-[#290E02]",
+    outerRadial: "from-[#B45309] via-[#78350F] to-[#290E02]",
+    hudBg: "from-[#78350F] via-[#D97706] to-[#78350F]",
+    hudBorder: "border-amber-300/80",
+    hudText: "text-amber-100",
+    progressBarGradient: "from-amber-400 via-yellow-300 to-orange-400",
+    cardBg: "bg-[#FFFBEB]",
+    cardBorder: "border-amber-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(180,83,9,0.35)]",
+    cardRing: "ring-2 ring-amber-300/50",
+    qHindiText: "text-[#451A03]",
+    qEngText: "text-[#78350F]",
+  },
+  // 11. Teal Peacock Feather
+  {
+    id: "peacock-teal",
+    name: "Teal Peacock Feather",
+    outerBg: "bg-[#042F2E]",
+    outerRadial: "from-[#0F766E] via-[#115E59] to-[#042F2E]",
+    hudBg: "from-[#115E59] via-[#0D9488] to-[#115E59]",
+    hudBorder: "border-teal-300/80",
+    hudText: "text-teal-100",
+    progressBarGradient: "from-teal-300 via-emerald-400 to-amber-300",
+    cardBg: "bg-white",
+    cardBorder: "border-teal-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(15,118,110,0.3)]",
+    cardRing: "ring-2 ring-teal-300/50",
+    qHindiText: "text-[#042F2E]",
+    qEngText: "text-[#0F766E]",
+  },
+  // 12. Divine Cosmic Indigo
+  {
+    id: "cosmic-indigo",
+    name: "Divine Cosmic Indigo",
+    outerBg: "bg-[#0B0A26]",
+    outerRadial: "from-[#312E81] via-[#1E1B4B] to-[#0B0A26]",
+    hudBg: "from-[#1E1B4B] via-[#3730A3] to-[#1E1B4B]",
+    hudBorder: "border-indigo-400/80",
+    hudText: "text-indigo-100",
+    progressBarGradient: "from-indigo-400 via-sky-300 to-amber-300",
+    cardBg: "bg-[#FFFDF7]",
+    cardBorder: "border-amber-500/85",
+    cardShadow: "shadow-[0_20px_50px_rgba(49,46,129,0.35)]",
+    cardRing: "ring-2 ring-amber-300/50",
+    qHindiText: "text-[#111827]",
+    qEngText: "text-[#374151]",
+  },
+];
 
 function QuizPlayInner() {
   const { language } = useLanguage();
@@ -71,6 +297,18 @@ function QuizPlayInner() {
   const [selectedOption, setSelectedOption] = useState<'A' | 'B' | 'C' | 'D' | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [answersLog, setAnswersLog] = useState<{ questionId: number; selected: string; correct: string; isCorrect: boolean }[]>([]);
+  
+  // Dynamic Quiz Theme Selection (Approach B: Randomly picks from 12 harmonious pairs per play session)
+  const [activeTheme, setActiveTheme] = useState<QuizThemeCombination>(() => {
+    return QUIZ_THEMES[Math.floor(Math.random() * QUIZ_THEMES.length)];
+  });
+
+  const handleShuffleTheme = () => {
+    setActiveTheme((prev) => {
+      const remaining = QUIZ_THEMES.filter((t) => t.id !== prev.id);
+      return remaining[Math.floor(Math.random() * remaining.length)];
+    });
+  };
   
   // Audio Controls (Configured centrally by Admin)
   const [soundFxEnabled, setSoundFxEnabled] = useState(true);
@@ -378,6 +616,9 @@ function QuizPlayInner() {
   const handleStartQuiz = (e: React.FormEvent) => {
     e.preventDefault();
     if (!participantName.trim()) return;
+
+    // Approach B: Pick a fresh surprise theme combination on every quiz start
+    setActiveTheme(QUIZ_THEMES[Math.floor(Math.random() * QUIZ_THEMES.length)]);
 
     // Unlock Web Audio context & audio elements on user interaction (vital for Mobile browsers)
     try {
@@ -1685,18 +1926,18 @@ function QuizPlayInner() {
   const isTimerUrgent = timeLeft <= 3 && timerDuration > 0 && !isAnswered;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#041611] text-white flex flex-col justify-between overflow-hidden select-none p-2 sm:p-4">
+    <div className={`fixed inset-0 z-50 ${activeTheme.outerBg} text-white flex flex-col justify-between overflow-hidden select-none p-2 sm:p-4 transition-colors duration-500`}>
       
-      {/* Devotional Panoramic Background with Sacred Vrindavan Emerald & Golden Glow */}
-      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#041611]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/25 via-[#0A3026] to-[#020D0A]" />
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#020D0A] via-transparent to-transparent" />
+      {/* Devotional Panoramic Dynamic Background */}
+      <div className={`fixed inset-0 pointer-events-none -z-10 ${activeTheme.outerBg}`}>
+        <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] ${activeTheme.outerRadial}`} />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
       </div>
 
       <div className="w-full max-w-5xl mx-auto flex flex-col h-full justify-between gap-1 sm:gap-2 relative z-10">
         
         {/* 1. COMPACT STREAMLINED ROYAL HUD BAR */}
-        <div className="shrink-0 bg-gradient-to-r from-[#07251D] via-[#0E4032] to-[#07251D] border-2 border-emerald-400/80 rounded-2xl px-3 sm:px-5 py-1.5 sm:py-2 shadow-[0_4px_25px_rgba(4,32,24,0.6)] flex items-center justify-between gap-2 text-white">
+        <div className={`shrink-0 bg-gradient-to-r ${activeTheme.hudBg} border-2 ${activeTheme.hudBorder} rounded-2xl px-3 sm:px-5 py-1.5 sm:py-2 shadow-[0_4px_25px_rgba(0,0,0,0.5)] flex items-center justify-between gap-2 text-white transition-all`}>
           
           {/* Left: Exit Link & Progress Pill */}
           <div className="flex items-center gap-2">
@@ -1719,7 +1960,7 @@ function QuizPlayInner() {
 
           {/* Center: Open Gita Plaque & Live Timer */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden md:flex items-center gap-1.5 bg-amber-900/60 border border-amber-400/60 px-3 py-0.5 rounded-xl shadow-xs">
+            <div className="hidden md:flex items-center gap-1.5 bg-black/30 border border-amber-400/60 px-3 py-0.5 rounded-xl shadow-xs">
               <span className="text-xs">📖</span>
               <span className="text-xs font-serif font-black text-amber-200 tracking-wide">{quizTitle}</span>
             </div>
@@ -1734,12 +1975,23 @@ function QuizPlayInner() {
             </div>
           </div>
 
-            {/* Right: Score & Audio Toggle */}
+            {/* Right: Score, Audio Toggle & Theme Shuffle */}
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="flex items-center gap-1 bg-amber-400/20 border border-amber-300/60 px-2.5 py-0.5 rounded-xl">
                 <Trophy className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
                 <span className="font-black text-amber-300 text-xs">{score} Pts</span>
               </div>
+
+              {/* Theme Shuffle Button (Approach B: click anytime for a fresh surprise color!) */}
+              <button
+                type="button"
+                onClick={handleShuffleTheme}
+                className="flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-xs"
+                title={`Current Theme: ${activeTheme.name} (Click to shuffle colors)`}
+              >
+                <Palette className="w-3.5 h-3.5 text-amber-300" />
+                <span className="hidden sm:inline">Theme</span>
+              </button>
 
               {/* Music Toggle (Pre-configured volume set by Admin) */}
               <button
@@ -1759,15 +2011,15 @@ function QuizPlayInner() {
         </div>
 
         {/* 2. THIN NEON PROGRESS BAR */}
-        <div className="shrink-0 w-full h-1.5 bg-emerald-950/80 border border-emerald-400/40 rounded-full overflow-hidden shadow-inner">
+        <div className="shrink-0 w-full h-1.5 bg-black/40 border border-white/20 rounded-full overflow-hidden shadow-inner">
           <div
-            className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300"
+            className={`h-full rounded-full transition-all duration-1000 bg-gradient-to-r ${activeTheme.progressBarGradient}`}
             style={{ width: `${timerFraction * 100}%` }}
           />
         </div>
 
-        {/* 3. CENTER QUESTION & OPTIONS CARD (RICH VEDIC GOLDEN-PARCHMENT THEME - 100% ZERO-SCROLL) */}
-        <div className={`grow flex flex-col justify-center bg-gradient-to-br from-[#FFFDF6] via-[#FFF8E7] to-[#FDF0D2] text-gray-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 border-2 sm:border-4 border-amber-500/85 shadow-[0_20px_50px_rgba(5,150,105,0.25)] ring-2 ring-amber-300/50 relative overflow-hidden my-auto ${
+        {/* 3. CENTER QUESTION & OPTIONS CARD (DYNAMIC MATCHED HARMONIOUS THEME - 100% ZERO-SCROLL) */}
+        <div className={`grow flex flex-col justify-center ${activeTheme.cardBg} ${activeTheme.cardBorder} border-2 sm:border-4 ${activeTheme.cardShadow} ${activeTheme.cardRing} rounded-2xl sm:rounded-3xl p-3 sm:p-5 relative overflow-hidden my-auto transition-all duration-300 ${
           isAnswered && selectedOption !== currentQ.correctAnswer ? "animate-shake" : ""
         }`}>
           
@@ -1867,10 +2119,10 @@ function QuizPlayInner() {
               
               {/* Question Text (Both Hindi & English Equal Font Sizes) */}
               <div className="space-y-1 text-center lg:text-left relative z-10">
-                <h2 className="text-sm sm:text-lg lg:text-xl font-black text-[#260B02] leading-snug tracking-tight drop-shadow-xs">
+                <h2 className={`text-sm sm:text-lg lg:text-xl font-black ${activeTheme.qHindiText || "text-[#260B02]"} leading-snug tracking-tight drop-shadow-xs`}>
                   {currentQ.question.hi}
                 </h2>
-                <p className="text-sm sm:text-lg lg:text-xl font-bold text-[#5A2408] leading-snug tracking-tight">
+                <p className={`text-sm sm:text-lg lg:text-xl font-bold ${activeTheme.qEngText || "text-[#5A2408]"} leading-snug tracking-tight`}>
                   {currentQ.question.en}
                 </p>
               </div>
