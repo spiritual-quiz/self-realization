@@ -49,7 +49,7 @@ export default function Header() {
     }
   };
 
-  // Exactly the 5 items requested by the user
+  // Exactly the items in the requested order: Home, Quiz, Courses, E-Learning, Live Like a Monk
   const navigationItems = [
     {
       href: "/",
@@ -58,6 +58,14 @@ export default function Header() {
       icon: Home,
       exact: true,
       color: "text-amber-700",
+    },
+    {
+      href: "/quiz",
+      label: language === "hi" ? "क्विज़" : "Quiz",
+      fullLabel: "🏆 Quiz",
+      icon: Award,
+      exact: false,
+      color: "text-amber-500",
     },
     {
       href: "/live-classes",
@@ -74,14 +82,6 @@ export default function Header() {
       icon: GraduationCap,
       exact: false,
       color: "text-orange-600",
-    },
-    {
-      href: "/quiz",
-      label: language === "hi" ? "क्विज़" : "Quiz",
-      fullLabel: "🏆 Quiz",
-      icon: Award,
-      exact: false,
-      color: "text-amber-500",
     },
     {
       href: "/live-like-a-monk",
@@ -285,7 +285,22 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* 2. 📖 Courses */}
+        {/* 2. 🏆 Quiz */}
+        <Link
+          href="/quiz"
+          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
+            pathname.startsWith("/quiz") 
+              ? "bg-emerald-500/25 text-emerald-300 font-black scale-105 ring-1 ring-emerald-400/50" 
+              : "text-slate-300 hover:text-white font-medium"
+          }`}
+        >
+          <Award className={`w-5 h-5 ${pathname.startsWith("/quiz") ? "text-emerald-400 stroke-[2.5]" : "text-slate-300"}`} />
+          <span className="text-[10px] mt-0.5 leading-tight truncate">
+            {language === "hi" ? "क्विज़" : "Quiz"}
+          </span>
+        </Link>
+
+        {/* 3. 📖 Courses */}
         <Link
           href="/live-classes"
           className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
@@ -300,7 +315,7 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* 3. 🎓 E-Learning */}
+        {/* 4. 🎓 E-Learning */}
         <Link
           href="/courses"
           className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
@@ -312,21 +327,6 @@ export default function Header() {
           <GraduationCap className={`w-5 h-5 ${pathname.startsWith("/courses") ? "text-emerald-400 stroke-[2.5]" : "text-slate-300"}`} />
           <span className="text-[10px] mt-0.5 leading-tight truncate">
             {language === "hi" ? "ई-लर्निंग" : "E-Learning"}
-          </span>
-        </Link>
-
-        {/* 4. 🏆 Quiz */}
-        <Link
-          href="/quiz"
-          className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all grow text-center ${
-            pathname.startsWith("/quiz") 
-              ? "bg-emerald-500/25 text-emerald-300 font-black scale-105 ring-1 ring-emerald-400/50" 
-              : "text-slate-300 hover:text-white font-medium"
-          }`}
-        >
-          <Award className={`w-5 h-5 ${pathname.startsWith("/quiz") ? "text-emerald-400 stroke-[2.5]" : "text-slate-300"}`} />
-          <span className="text-[10px] mt-0.5 leading-tight truncate">
-            {language === "hi" ? "क्विज़" : "Quiz"}
           </span>
         </Link>
 

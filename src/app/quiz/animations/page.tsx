@@ -101,8 +101,53 @@ export default function AnimationsPreviewPage() {
     },
   ];
 
-  const handleSimulate = (src: string, mode: "wrong" | "correct") => {
-    setActiveSimulation({ src, mode });
+  const thinkingOptions = [
+    {
+      id: "t1",
+      title: "Option T1 (Active): 🤔 Classic Chin-Stroke Face",
+      description: "Finger on chin, furrowed brow, looking up in thought. The universal standard thinking emoticon.",
+      src: "/images/quiz/thinking_1_classic.gif",
+      badge: "Option T1 (Active)",
+    },
+    {
+      id: "t2",
+      title: "Option T2: 🧐 Scholar Monocle Face",
+      description: "Wearing a golden monocle, scrutinizing the question deeply like a scholar or detective.",
+      src: "/images/quiz/thinking_2_monocle.gif",
+      badge: "Option T2",
+    },
+    {
+      id: "t3",
+      title: "Option T3: 🤨 Raised Eyebrow Pondering",
+      description: "One eyebrow raised high, weighing choices and questioning possibilities with intense contemplation.",
+      src: "/images/quiz/thinking_3_eyebrow.gif",
+      badge: "Option T3",
+    },
+    {
+      id: "t4",
+      title: "Option T4: 😕 Puzzled & Wondering Face",
+      description: "Slightly confused slanted expression, searching memory for the right scripture reference.",
+      src: "/images/quiz/thinking_4_confused.gif",
+      badge: "Option T4",
+    },
+    {
+      id: "t5",
+      title: "Option T5: 🧠 Cognitive Brainpower",
+      description: "3D pulsating animated brain, symbolizing deep intellect, memory recall, and Vedic contemplation.",
+      src: "/images/quiz/thinking_5_brain.gif",
+      badge: "Option T5",
+    },
+    {
+      id: "t6",
+      title: "Option T6: 💡 Glowing Light Bulb / Idea",
+      description: "Shining yellow filament light bulb, blinking with inspiration as the player thinks through the answer.",
+      src: "/images/quiz/thinking_6_bulb.gif",
+      badge: "Option T6",
+    },
+  ];
+
+  const handleSimulate = (src: string, mode: "wrong" | "correct" | "thinking") => {
+    setActiveSimulation({ src, mode: mode === "thinking" ? "correct" : mode });
     setTimeout(() => {
       setActiveSimulation(null);
     }, mode === "correct" ? 2000 : 1500);
@@ -224,6 +269,70 @@ export default function AnimationsPreviewPage() {
                   className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-md cursor-pointer active:scale-95 transition-all"
                 >
                   ▶ Test Simulation (2.0s)
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* SECTION 3: THINKING CONTEMPLATION (T1 to T6) */}
+        <div className="mb-14">
+          <div className="flex items-center gap-2 pb-3 border-b border-amber-500/30 mb-6">
+            <span className="text-2xl">🤔</span>
+            <h2 className="text-xl sm:text-2xl font-bold text-amber-300 font-serif">
+              Thinking / Contemplation Animation Options (Shown after 5s)
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {thinkingOptions.map((opt) => (
+              <div 
+                key={opt.id}
+                className={`rounded-3xl p-5 flex flex-col items-center text-center backdrop-blur-md shadow-xl transition-all hover:-translate-y-1 ${
+                  opt.id === "t1" 
+                    ? "bg-amber-500/15 border-2 border-amber-400 ring-2 ring-amber-400/30" 
+                    : "bg-white/5 border-2 border-amber-500/30 hover:border-amber-400"
+                }`}
+              >
+                <div className="flex items-center justify-between w-full mb-3">
+                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${
+                    opt.id === "t1" 
+                      ? "bg-amber-400 text-amber-950 font-black shadow-xs" 
+                      : "bg-amber-900/40 text-amber-300 border border-amber-500/30"
+                  }`}>
+                    {opt.badge}
+                  </span>
+                  {opt.id === "t1" && (
+                    <span className="text-[10px] font-bold text-amber-300 flex items-center gap-1">
+                      <Check className="w-3 h-3 text-amber-400" /> Active
+                    </span>
+                  )}
+                </div>
+
+                {/* Animated GIF Display */}
+                <div className="relative w-36 h-36 my-2 flex items-center justify-center p-2 rounded-2xl bg-black/30 border border-white/5">
+                  <Image
+                    src={opt.src}
+                    alt={opt.title}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+
+                <h3 className="font-bold text-amber-100 text-base mt-2">
+                  {opt.title}
+                </h3>
+                <p className="text-xs text-amber-200/70 mt-1 mb-4 flex-1">
+                  {opt.description}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => handleSimulate(opt.src, "thinking")}
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-amber-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-md cursor-pointer transition-all transform active:scale-95"
+                >
+                  ▶ Test Simulation
                 </button>
               </div>
             ))}

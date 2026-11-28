@@ -1685,18 +1685,18 @@ function QuizPlayInner() {
   const isTimerUrgent = timeLeft <= 3 && timerDuration > 0 && !isAnswered;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#120822] text-white flex flex-col justify-between overflow-hidden select-none p-2 sm:p-4">
+    <div className="fixed inset-0 z-50 bg-[#041611] text-white flex flex-col justify-between overflow-hidden select-none p-2 sm:p-4">
       
-      {/* Devotional Panoramic Background with Yamuna & Golden Glow */}
-      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#120822]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-600/20 via-[#221035] to-[#0D0417]" />
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#0D0417] via-transparent to-transparent" />
+      {/* Devotional Panoramic Background with Sacred Vrindavan Emerald & Golden Glow */}
+      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#041611]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/25 via-[#0A3026] to-[#020D0A]" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#020D0A] via-transparent to-transparent" />
       </div>
 
       <div className="w-full max-w-5xl mx-auto flex flex-col h-full justify-between gap-1 sm:gap-2 relative z-10">
         
         {/* 1. COMPACT STREAMLINED ROYAL HUD BAR */}
-        <div className="shrink-0 bg-gradient-to-r from-[#20103A] via-[#2D164E] to-[#20103A] border-2 border-amber-400/80 rounded-2xl px-3 sm:px-5 py-1.5 sm:py-2 shadow-xl flex items-center justify-between gap-2 text-white">
+        <div className="shrink-0 bg-gradient-to-r from-[#07251D] via-[#0E4032] to-[#07251D] border-2 border-emerald-400/80 rounded-2xl px-3 sm:px-5 py-1.5 sm:py-2 shadow-[0_4px_25px_rgba(4,32,24,0.6)] flex items-center justify-between gap-2 text-white">
           
           {/* Left: Exit Link & Progress Pill */}
           <div className="flex items-center gap-2">
@@ -1759,15 +1759,15 @@ function QuizPlayInner() {
         </div>
 
         {/* 2. THIN NEON PROGRESS BAR */}
-        <div className="shrink-0 w-full h-1.5 bg-amber-950/70 border border-amber-400/40 rounded-full overflow-hidden shadow-inner">
+        <div className="shrink-0 w-full h-1.5 bg-emerald-950/80 border border-emerald-400/40 rounded-full overflow-hidden shadow-inner">
           <div
-            className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400"
+            className="h-full rounded-full transition-all duration-1000 bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300"
             style={{ width: `${timerFraction * 100}%` }}
           />
         </div>
 
         {/* 3. CENTER QUESTION & OPTIONS CARD (RICH VEDIC GOLDEN-PARCHMENT THEME - 100% ZERO-SCROLL) */}
-        <div className={`grow flex flex-col justify-center bg-gradient-to-br from-[#FFFDF6] via-[#FFF8E7] to-[#FDF0D2] text-gray-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 border-2 sm:border-4 border-amber-500/85 shadow-[0_20px_50px_rgba(217,119,6,0.22)] ring-2 ring-amber-300/50 relative overflow-hidden my-auto ${
+        <div className={`grow flex flex-col justify-center bg-gradient-to-br from-[#FFFDF6] via-[#FFF8E7] to-[#FDF0D2] text-gray-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 border-2 sm:border-4 border-amber-500/85 shadow-[0_20px_50px_rgba(5,150,105,0.25)] ring-2 ring-amber-300/50 relative overflow-hidden my-auto ${
           isAnswered && selectedOption !== currentQ.correctAnswer ? "animate-shake" : ""
         }`}>
           
@@ -1788,6 +1788,8 @@ function QuizPlayInner() {
             <img src="/images/quiz/dance.gif" alt="preloaded dance" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/quiz/cry.gif" alt="preloaded cry" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/quiz/thinking.gif" alt="preloaded thinking" />
           </div>
 
           {/* Correct Answer Celebration Emoticon (Restarts from frame 0, clearly positioned below header on mobile) */}
@@ -1826,14 +1828,14 @@ function QuizPlayInner() {
             </div>
           )}
 
-          {/* Thinking Animation (Direct Thinking Boy Character visible after 5s when user is thinking) */}
+          {/* Thinking Animation (3D Animated Thinking Emoticon T1 visible after 5s when user is thinking) */}
           {isThinking && !isAnswered && (
             <div className="fixed sm:absolute top-20 sm:top-3 right-3 sm:right-6 z-50 pointer-events-none animate-think-float drop-shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
               <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/images/quiz/thinking.png"
-                  alt="Thinking Character"
+                  src="/images/quiz/thinking.gif"
+                  alt="Thinking Emoticon Animation"
                   className="w-full h-full object-contain filter drop-shadow-lg"
                 />
               </div>
